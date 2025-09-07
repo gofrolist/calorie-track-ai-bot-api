@@ -19,6 +19,7 @@ sync:
 precommit:
 	uv run pre-commit autoupdate
 	uv run pre-commit install-hooks
+	uv run pre-commit install -f
 	uv run pre-commit run --all-files
 
 .PHONY: run

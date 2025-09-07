@@ -1,16 +1,16 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.11
+    rev: v0.12.12
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.404
+    rev: v1.1.405
     hooks:
       - id: pyright
-        args: [--project, pyproject.toml, src/buddy_gym_bot]
+        args: [--project, pyproject.toml, src/calorie_track_ai_bot]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
