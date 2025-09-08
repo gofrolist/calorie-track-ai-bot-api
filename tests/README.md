@@ -41,10 +41,11 @@ export SUPABASE_URL="https://test.supabase.co"
 export SUPABASE_SERVICE_ROLE="test-supabase-key"
 export OPENAI_API_KEY="sk-test123"
 export REDIS_URL="redis://localhost:6379"
-export TIGRIS_ENDPOINT="https://test.tigris.com"
-export TIGRIS_ACCESS_KEY="test-access-key"
-export TIGRIS_SECRET_KEY="test-secret-key"
-export TIGRIS_BUCKET="test-bucket"
+export AWS_ENDPOINT_URL_S3="https://test.tigris.com"
+export AWS_ACCESS_KEY_ID="test-access-key"
+export AWS_SECRET_ACCESS_KEY="test-secret-key"
+export BUCKET_NAME="test-bucket"
+export AWS_REGION="auto"
 
 uv run pytest tests/services/test_config.py tests/api/v1/test_health.py tests/api/v1/test_auth.py -v
 ```
@@ -106,7 +107,7 @@ Tests use mock environment variables to avoid requiring real service credentials
 - `SUPABASE_SERVICE_ROLE`: Mock Supabase key
 - `OPENAI_API_KEY`: Mock OpenAI API key
 - `REDIS_URL`: Mock Redis URL
-- `TIGRIS_*`: Mock Tigris/S3 credentials
+- `AWS_*`: Mock Tigris/S3 credentials
 
 ## Contributing
 

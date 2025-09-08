@@ -2,16 +2,16 @@
 
 from calorie_track_ai_bot.services.config import (
     APP_ENV,
+    AWS_ACCESS_KEY_ID,
+    AWS_ENDPOINT_URL_S3,
+    AWS_REGION,
+    AWS_SECRET_ACCESS_KEY,
+    BUCKET_NAME,
     OPENAI_API_KEY,
     OPENAI_MODEL,
     REDIS_URL,
     SUPABASE_KEY,
     SUPABASE_URL,
-    TIGRIS_ACCESS_KEY,
-    TIGRIS_BUCKET,
-    TIGRIS_ENDPOINT,
-    TIGRIS_REGION,
-    TIGRIS_SECRET_KEY,
 )
 
 
@@ -26,9 +26,9 @@ class TestConfig:
         """Test OPENAI_MODEL default value."""
         assert OPENAI_MODEL == "gpt-5-mini"
 
-    def test_tigris_region_default(self):
-        """Test TIGRIS_REGION default value."""
-        assert TIGRIS_REGION == "auto"
+    def test_aws_region_default(self):
+        """Test AWS_REGION default value."""
+        assert AWS_REGION == "auto"
 
     def test_app_env_from_env(self):
         """Test APP_ENV can be set from environment."""
@@ -49,10 +49,10 @@ class TestConfig:
         assert SUPABASE_URL is None or isinstance(SUPABASE_URL, str)
         assert SUPABASE_KEY is None or isinstance(SUPABASE_KEY, str)
         assert REDIS_URL is None or isinstance(REDIS_URL, str)
-        assert TIGRIS_ENDPOINT is None or isinstance(TIGRIS_ENDPOINT, str)
-        assert TIGRIS_ACCESS_KEY is None or isinstance(TIGRIS_ACCESS_KEY, str)
-        assert TIGRIS_SECRET_KEY is None or isinstance(TIGRIS_SECRET_KEY, str)
-        assert TIGRIS_BUCKET is None or isinstance(TIGRIS_BUCKET, str)
+        assert AWS_ENDPOINT_URL_S3 is None or isinstance(AWS_ENDPOINT_URL_S3, str)
+        assert AWS_ACCESS_KEY_ID is None or isinstance(AWS_ACCESS_KEY_ID, str)
+        assert AWS_SECRET_ACCESS_KEY is None or isinstance(AWS_SECRET_ACCESS_KEY, str)
+        assert BUCKET_NAME is None or isinstance(BUCKET_NAME, str)
 
     def test_openai_api_key_from_env(self):
         """Test OPENAI_API_KEY can be set from environment."""

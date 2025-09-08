@@ -1,4 +1,4 @@
-app = 'calorie-track-ai-bot-api'
+app = 'calorie-track-ai-bot'
 primary_region = 'lax'
 
 [build]
@@ -6,7 +6,7 @@ primary_region = 'lax'
 
 [env]
   USE_WEBHOOK = 'true'
-  WEBHOOK_URL = 'https://calorie-track-ai-bot-api.fly.dev/bot'
+  WEBHOOK_URL = 'https://calorie-track-ai-bot.fly.dev/bot'
   FF_ADMIN_ALERTS = "true"
 
 [processes]

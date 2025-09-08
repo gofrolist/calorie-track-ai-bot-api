@@ -78,11 +78,12 @@ SUPABASE_KEY=your-service-role-key
 # Redis
 REDIS_URL=redis://localhost:6379
 
-# Tigris/S3
-TIGRIS_ENDPOINT=https://fly.tigris.dev
-TIGRIS_ACCESS_KEY=your-access-key
-TIGRIS_SECRET_KEY=your-secret-key
-TIGRIS_BUCKET=your-bucket-name
+# Tigris/S3 (using standard AWS S3 environment variables)
+AWS_ENDPOINT_URL_S3=https://fly.storage.tigris.dev
+AWS_ACCESS_KEY_ID=tid_xxxxxx
+AWS_SECRET_ACCESS_KEY=tsec_xxxxxx
+BUCKET_NAME=your-bucket-name
+AWS_REGION=auto
 ```
 
 ### GitHub Actions

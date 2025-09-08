@@ -3,12 +3,20 @@ from typing import Any
 
 from openai import OpenAI
 
-from .config import OPENAI_API_KEY, OPENAI_MODEL
+from .config import APP_ENV, OPENAI_API_KEY, OPENAI_MODEL
 
-if OPENAI_API_KEY is None:
+# Initialize OpenAI client only if configuration is available
+client: OpenAI | None = None
+
+if OPENAI_API_KEY is not None:
+    client = OpenAI(api_key=OPENAI_API_KEY)
+elif APP_ENV == "dev":
+    # In development mode, allow missing OpenAI config
+    print("WARNING: OpenAI configuration not set. AI estimation functionality will be disabled.")
+    print("To enable AI estimation, set the following environment variable:")
+    print("- OPENAI_API_KEY")
+else:
     raise ValueError("OPENAI_API_KEY must be set")
-
-client = OpenAI(api_key=OPENAI_API_KEY)
 
 SCHEMA = {
     "type": "object",
@@ -35,6 +43,11 @@ SCHEMA = {
 
 
 async def estimate_from_image_url(image_url: str) -> dict[str, Any]:
+    if client is None:
+        raise RuntimeError(
+            "OpenAI configuration not available. AI estimation functionality is disabled."
+        )
+
     resp = client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=[

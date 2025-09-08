@@ -10,8 +10,10 @@ SUPABASE_KEY: str | None = os.getenv("SUPABASE_KEY")
 
 REDIS_URL: str | None = os.getenv("REDIS_URL")
 
-TIGRIS_ENDPOINT: str | None = os.getenv("TIGRIS_ENDPOINT")
-TIGRIS_REGION: str = os.getenv("TIGRIS_REGION", "auto")
-TIGRIS_ACCESS_KEY: str | None = os.getenv("TIGRIS_ACCESS_KEY")
-TIGRIS_SECRET_KEY: str | None = os.getenv("TIGRIS_SECRET_KEY")
-TIGRIS_BUCKET: str | None = os.getenv("TIGRIS_BUCKET")
+# Tigris S3-compatible storage configuration
+# Using standard AWS S3 environment variables as per Fly.io Tigris documentation
+AWS_ENDPOINT_URL_S3: str | None = os.getenv("AWS_ENDPOINT_URL_S3")
+AWS_ACCESS_KEY_ID: str | None = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY: str | None = os.getenv("AWS_SECRET_ACCESS_KEY")
+BUCKET_NAME: str | None = os.getenv("BUCKET_NAME")
+AWS_REGION: str = os.getenv("AWS_REGION", "auto")

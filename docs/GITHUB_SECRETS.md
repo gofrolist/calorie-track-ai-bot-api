@@ -31,10 +31,11 @@ To enable full testing and deployment, you need to add the following secrets to 
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `TIGRIS_ENDPOINT` | Tigris endpoint URL | `https://fly.tigris.dev` |
-| `TIGRIS_ACCESS_KEY` | Tigris access key | `your-access-key` |
-| `TIGRIS_SECRET_KEY` | Tigris secret key | `your-secret-key` |
-| `TIGRIS_BUCKET` | Tigris bucket name | `your-bucket-name` |
+| `AWS_ENDPOINT_URL_S3` | Tigris endpoint URL | `https://fly.storage.tigris.dev` |
+| `AWS_ACCESS_KEY_ID` | Tigris access key | `your-access-key` |
+| `AWS_SECRET_ACCESS_KEY` | Tigris secret key | `your-secret-key` |
+| `BUCKET_NAME` | Tigris bucket name | `your-bucket-name` |
+| `AWS_REGION` | AWS region | `auto` |
 
 ## Deployment Secrets
 

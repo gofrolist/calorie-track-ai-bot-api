@@ -18,12 +18,12 @@ class TestEstimateWorker:
             patch("calorie_track_ai_bot.services.config.SUPABASE_KEY", "test-key"),
             patch("calorie_track_ai_bot.services.config.OPENAI_API_KEY", "test-key"),
             patch("calorie_track_ai_bot.services.config.REDIS_URL", "redis://test"),
-            patch("calorie_track_ai_bot.services.config.TIGRIS_ENDPOINT", "test-endpoint"),
-            patch("calorie_track_ai_bot.services.config.TIGRIS_ACCESS_KEY", "test-access"),
-            patch("calorie_track_ai_bot.services.config.TIGRIS_SECRET_KEY", "test-secret"),
-            patch("calorie_track_ai_bot.services.config.TIGRIS_BUCKET", "test-bucket"),
+            patch("calorie_track_ai_bot.services.config.AWS_ENDPOINT_URL_S3", "test-endpoint"),
+            patch("calorie_track_ai_bot.services.config.AWS_ACCESS_KEY_ID", "test-access"),
+            patch("calorie_track_ai_bot.services.config.AWS_SECRET_ACCESS_KEY", "test-secret"),
+            patch("calorie_track_ai_bot.services.config.BUCKET_NAME", "test-bucket"),
             patch("calorie_track_ai_bot.workers.estimate_worker.s3") as mock_s3,
-            patch("calorie_track_ai_bot.workers.estimate_worker.TIGRIS_BUCKET", "test-bucket"),
+            patch("calorie_track_ai_bot.workers.estimate_worker.BUCKET_NAME", "test-bucket"),
             patch(
                 "calorie_track_ai_bot.workers.estimate_worker.estimate_from_image_url"
             ) as mock_estimate,
