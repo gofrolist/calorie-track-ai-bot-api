@@ -1,0 +1,190 @@
+openapi: 3.1.1
+info:
+  title: Calories Count API
+  version: 0.1.0
+
+paths:
+  /api/v1/photos:
+    post:
+      summary: Begin a new photo upload
+      operationId: createPhoto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhotoCreateRequest'
+      responses:
+        "200":
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignResponse'
+
+  /api/v1/photos/{photo_id}/estimate:
+    post:
+      summary: Enqueue an estimation job for a photo
+      operationId: enqueueEstimate
+      parameters:
+        - in: path
+          name: photo_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateQueuedResponse'
+
+  /api/v1/estimates/{estimate_id}:
+    get:
+      summary: Fetch an estimate
+      operationId: getEstimate
+      parameters:
+        - in: path
+          name: estimate_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Estimate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateResponse'
+
+  /api/v1/meals:
+    post:
+      summary: Create a meal (manual or from estimate)
+      operationId: createMeal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/MealCreateManualRequest'
+                - $ref: '#/components/schemas/MealCreateFromEstimateRequest'
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealCreateResponse'
+
+components:
+  schemas:
+    # ---------- Enums (string) ----------
+    Status:
+      type: string
+      enum: [queued, running, done, failed]
+
+    MealType:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]
+
+    # ---------- Shared models ----------
+    EstimateItem:
+      type: object
+      properties:
+        label:
+          type: string
+        kcal:
+          type: number
+        confidence:
+          type: number
+      required: [label, kcal, confidence]
+
+    # ---------- Requests ----------
+    PhotoCreateRequest:
+      type: object
+      properties:
+        content_type:
+          type: string
+          description: MIME type of the image (e.g., image/jpeg)
+      required: [content_type]
+
+    MealCreateManualRequest:
+      type: object
+      properties:
+        meal_date:
+          type: string
+          format: date
+        meal_type:
+          $ref: '#/components/schemas/MealType'
+        kcal_total:
+          type: number
+        macros:
+          type: object
+          additionalProperties: true
+      required: [meal_date, meal_type, kcal_total]
+
+    MealCreateFromEstimateRequest:
+      type: object
+      properties:
+        meal_date:
+          type: string
+          format: date
+        meal_type:
+          $ref: '#/components/schemas/MealType'
+        estimate_id:
+          type: string
+        overrides:
+          type: object
+          additionalProperties: true
+      required: [meal_date, meal_type, estimate_id]
+
+    MealCreateResponse:
+      type: object
+      properties:
+        meal_id: { type: string }
+      required: [meal_id]
+
+    # ---------- Responses ----------
+    PresignResponse:
+      type: object
+      properties:
+        photo_id:
+          type: string
+        upload_url:
+          type: string
+      required: [photo_id, upload_url]
+
+    EstimateQueuedResponse:
+      type: object
+      properties:
+        estimate_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+      required: [estimate_id, status]
+
+    EstimateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Estimate ID
+        photo_id:
+          type: string
+        kcal_mean:
+          type: number
+        kcal_min:
+          type: number
+        kcal_max:
+          type: number
+        confidence:
+          type: number
+        breakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateItem'
+        status:
+          $ref: '#/components/schemas/Status'
+      required: [id, photo_id, kcal_mean, kcal_min, kcal_max, confidence, breakdown]
