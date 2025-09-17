@@ -1,4 +1,4 @@
-# Tasks: Telegram Food Photo Nutrition Analyzer
+# Tasks: Frontend Telegram Mini App
 
 **Input**: Design documents from `/specs/001-description-i-am/`
 **Prerequisites**: plan.md (required), research.md, data-model.md, contracts/
@@ -27,61 +27,51 @@
 - Include exact file paths in descriptions
 
 ## Phase 3.1: Setup
-- [x] T001 Create Mini App scaffold from community template (reference in README) [docs only]
-- [x] T002 Ensure backend FastAPI project uses Python 3.12 (verify `backend/pyproject.toml`)
-- [x] T003 [P] Configure linting/type-check hooks in Makefile (`uv run ruff check`, `uv run pyright`, `uv run pytest`)
-- [x] T004 [P] Add `.env.example` fields per backend README and constitution
+- [ ] T001 Create `frontend/` using community template (React+Vite or Next) — `frontend/`
+- [ ] T002 Initialize project config: package.json scripts, tsconfig, eslint/prettier — `frontend/`
+- [ ] T003 [P] Install deps: `@telegram-apps/sdk` or `tma.js`, i18n, axios/fetch wrapper — `frontend/`
+- [ ] T004 [P] Add i18n scaffolding (EN, RU) — `frontend/src/i18n/`
 
 ## Phase 3.2: Tests First (TDD)
-- [x] T005 [P] Contract test POST `/api/v1/photos` in `backend/tests/api/v1/test_photos.py` (presign schema)
-- [x] T006 [P] Contract test POST `/api/v1/photos/{photo_id}/estimate` in `backend/tests/api/v1/test_estimates.py`
-- [x] T007 [P] Contract test GET `/api/v1/estimates/{estimate_id}` in `backend/tests/api/v1/test_estimates.py`
-- [x] T008 [P] Contract test POST `/api/v1/meals` in `backend/tests/api/v1/test_meals.py`
-- [x] T009 [P] Bot webhook flow test in `backend/tests/api/v1/test_bot.py` (photo message → enqueue)
-- [x] T010 [P] Mini App auth test in `backend/tests/api/v1/test_auth.py`
-- [x] T011 Integration test: Today view totals (backend aggregation) in `backend/tests/services/test_db.py`
+- [ ] T005 [P] Unit test: i18n loader selects EN/RU — `frontend/tests/i18n.test.ts`
+- [ ] T006 [P] Contract tests: typed client shapes for `/photos`, `/photos/{id}/estimate`, `/estimates/{id}`, `/meals` — `frontend/tests/contracts/*.test.ts`
+- [ ] T007 [P] Integration test (Playwright): Today view lists meals and totals — `frontend/tests/e2e/today.spec.ts`
+- [ ] T008 [P] Integration test: Meal detail allows corrections and saves — `frontend/tests/e2e/meal-detail.spec.ts`
+- [ ] T009 [P] Integration test: Goals update progress indicators — `frontend/tests/e2e/goals.spec.ts`
 
 ## Phase 3.3: Core Implementation
-- [x] T012 [P] Implement `User`, `FoodPhoto`, `Estimate`, `Meal`, `Goal` models in `backend/src/calorie_track_ai_bot/schemas.py` and persistence layer in `backend/src/calorie_track_ai_bot/services/db.py`
-- [x] T013 [P] Presign upload endpoint `POST /api/v1/photos` in `backend/src/calorie_track_ai_bot/api/v1/photos.py`
-- [x] T014 [P] Enqueue estimate endpoint `POST /api/v1/photos/{photo_id}/estimate` in `backend/src/calorie_track_ai_bot/api/v1/estimates.py`
-- [x] T015 [P] Get estimate endpoint `GET /api/v1/estimates/{estimate_id}` in `backend/src/calorie_track_ai_bot/api/v1/estimates.py`
-- [x] T016 [P] Create meal endpoint `POST /api/v1/meals` in `backend/src/calorie_track_ai_bot/api/v1/meals.py`
-- [x] T017 [P] Telegram webhook `POST /bot` minimal flow in `backend/src/calorie_track_ai_bot/api/v1/bot.py`
-- [x] T018 [P] Worker: consume queue, call vision, persist estimate in `backend/src/calorie_track_ai_bot/workers/estimate_worker.py`
+- [ ] T010 [P] App shell with Telegram WebApp integration — `frontend/src/main.tsx`, `frontend/src/app.tsx`
+- [ ] T011 [P] API client wrapper with base URL, initData/session token, correlation ID — `frontend/src/services/api.ts`
+- [ ] T012 [P] Today view: list + totals — `frontend/src/pages/today.tsx`
+- [ ] T013 [P] Meal detail: edit and save — `frontend/src/pages/meal-detail.tsx`
+- [ ] T014 [P] Week/Month stats with charts — `frontend/src/pages/stats.tsx`
+- [ ] T015 [P] Goals UI — `frontend/src/pages/goals.tsx`
+- [ ] T016 [P] Share action — `frontend/src/components/share.tsx`
 
 ## Phase 3.4: Integration
-- [x] T019 Wire presigned URLs to Tigris (no proxy) in `backend/src/calorie_track_ai_bot/services/storage.py`
-- [x] T020 Redis queue integration in `backend/src/calorie_track_ai_bot/services/queue.py`
-- [x] T021 OpenAI Vision integration in `backend/src/calorie_track_ai_bot/services/estimator.py`
-- [x] T022 Supabase Postgres integration (RLS-aware) in `backend/src/calorie_track_ai_bot/services/db.py`
-- [x] T023 Internationalization baseline (EN, RU) in bot replies and Mini App strings (docs)
-- [x] T024 Share action entry point in Mini App (docs)
+- [ ] T017 Configure backend base URL and environment handling — `frontend/src/config.ts`
+- [ ] T018 Wire typed client to `/photos`, `/estimates`, `/meals` endpoints — `frontend/src/services/api.ts`
+- [ ] T019 Error boundary and loading states — `frontend/src/components/*`
+- [ ] T020 i18n strings for all screens (EN, RU) — `frontend/src/i18n/*`
 
 ## Phase 3.5: Polish
-- [x] T025 [P] Unit tests for estimator edge cases in `backend/tests/services/test_estimator.py`
-- [x] T026 [P] Unit tests for queue idempotency in `backend/tests/services/test_queue.py`
-- [x] T027 [P] Unit tests for storage mime-type validation in `backend/tests/services/test_storage.py`
-- [x] T028 Performance validation: webhook/presign p95 and e2e estimate P95 (docs)
-- [x] T029 [P] Update `specs/001-description-i-am/quickstart.md` with Mini App setup steps
-- [x] T030 [P] Update `README.md` references and environment variable tables
+- [ ] T021 [P] Lighthouse pass: mobile performance and a11y — docs
+- [ ] T022 [P] E2E happy-path runbook and screenshots — docs
+- [ ] T023 [P] Update `frontend/README.md` with setup, scripts, deploy
 
 ## Dependencies
-- Tests (T005–T011) before implementation (T012–T018)
-- T012 unblocks T013–T016, T022
-- T017 unblocks T019–T021
-- Implementation before polish (T025–T030)
+- Setup (T001–T004) → Tests (T005–T009) → Core (T010–T016) → Integration (T017–T020) → Polish (T021–T023)
 
 ## Parallel Example
 ```
-# Launch contract tests together (different files):
-T005, T006, T007, T008, T009, T010
+# Parallelizable test tasks (different files):
+T005, T006, T007, T008, T009
 ```
 
 ## Validation Checklist
-- [x] All contracts have corresponding tests (T005–T010)
-- [x] All entities have model tasks (T012)
-- [x] All tests come before implementation
-- [x] Parallel tasks truly independent
-- [x] Each task specifies exact file path
-- [x] No task modifies same file as another [P] task
+- [ ] All contracts have corresponding tests
+- [ ] All entities have model tasks
+- [ ] All tests come before implementation
+- [ ] Parallel tasks truly independent
+- [ ] Each task specifies exact file path
+- [ ] No task modifies same file as another [P] task
