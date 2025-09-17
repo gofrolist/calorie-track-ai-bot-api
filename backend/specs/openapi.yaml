@@ -78,6 +78,141 @@ paths:
               schema:
                 $ref: '#/components/schemas/MealCreateResponse'
 
+  # ---------- Health Check Endpoints ----------
+  /healthz:
+    get:
+      summary: Health check endpoint
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /health/live:
+    get:
+      summary: Liveness probe
+      operationId: livenessProbe
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "alive"
+
+  /health/ready:
+    get:
+      summary: Readiness probe
+      operationId: readinessProbe
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ready"
+
+  # ---------- Telegram Bot Endpoints ----------
+  /bot:
+    post:
+      summary: Telegram webhook handler
+      operationId: telegramWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramUpdate'
+      responses:
+        "200":
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /bot/setup:
+    post:
+      summary: Setup Telegram webhook
+      operationId: setupTelegramWebhook
+      responses:
+        "200":
+          description: Webhook configured
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "webhook_set"
+
+  /bot/webhook-info:
+    get:
+      summary: Get Telegram webhook information
+      operationId: getTelegramWebhookInfo
+      responses:
+        "200":
+          description: Webhook information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramWebhookInfo'
+
+  /bot/webhook:
+    delete:
+      summary: Delete Telegram webhook
+      operationId: deleteTelegramWebhook
+      responses:
+        "200":
+          description: Webhook deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "webhook_deleted"
+
+  # ---------- Authentication Endpoints ----------
+  /auth/telegram/init:
+    post:
+      summary: Initialize Telegram authentication
+      operationId: initTelegramAuth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramAuthRequest'
+      responses:
+        "200":
+          description: Authentication initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramAuthResponse'
+
 components:
   schemas:
     # ---------- Enums (string) ----------
@@ -188,3 +323,161 @@ components:
         status:
           $ref: '#/components/schemas/Status'
       required: [id, photo_id, kcal_mean, kcal_min, kcal_max, confidence, breakdown]
+
+    # ---------- Telegram Bot Schemas ----------
+    TelegramUpdate:
+      type: object
+      properties:
+        update_id:
+          type: integer
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        callback_query:
+          $ref: '#/components/schemas/TelegramCallbackQuery'
+      required: [update_id]
+
+    TelegramMessage:
+      type: object
+      properties:
+        message_id:
+          type: integer
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+        chat:
+          $ref: '#/components/schemas/TelegramChat'
+        date:
+          type: integer
+        text:
+          type: string
+        photo:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelegramPhotoSize'
+        document:
+          $ref: '#/components/schemas/TelegramDocument'
+      required: [message_id, from, chat, date]
+
+    TelegramUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        is_bot:
+          type: boolean
+        first_name:
+          type: string
+        last_name:
+          type: string
+        username:
+          type: string
+        language_code:
+          type: string
+      required: [id, is_bot, first_name]
+
+    TelegramChat:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [private, group, supergroup, channel]
+        title:
+          type: string
+        username:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+      required: [id, type]
+
+    TelegramPhotoSize:
+      type: object
+      properties:
+        file_id:
+          type: string
+        file_unique_id:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        file_size:
+          type: integer
+      required: [file_id, file_unique_id, width, height]
+
+    TelegramDocument:
+      type: object
+      properties:
+        file_id:
+          type: string
+        file_unique_id:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        file_size:
+          type: integer
+      required: [file_id, file_unique_id]
+
+    TelegramCallbackQuery:
+      type: object
+      properties:
+        id:
+          type: string
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        data:
+          type: string
+      required: [id, from]
+
+    TelegramWebhookInfo:
+      type: object
+      properties:
+        url:
+          type: string
+        has_custom_certificate:
+          type: boolean
+        pending_update_count:
+          type: integer
+        ip_address:
+          type: string
+        last_error_date:
+          type: integer
+        last_error_message:
+          type: string
+        max_connections:
+          type: integer
+        allowed_updates:
+          type: array
+          items:
+            type: string
+      required: [url, has_custom_certificate, pending_update_count]
+
+    # ---------- Authentication Schemas ----------
+    TelegramAuthRequest:
+      type: object
+      properties:
+        init_data:
+          type: string
+          description: Telegram WebApp init data
+        hash:
+          type: string
+          description: Hash for verification
+      required: [init_data, hash]
+
+    TelegramAuthResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+        session_token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required: [user_id, session_token, expires_at]

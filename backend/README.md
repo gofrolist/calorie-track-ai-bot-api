@@ -72,6 +72,7 @@ uv run pyright
 - `DELETE /bot/webhook` → Delete current webhook
 
 OpenAPI JSON: `GET /openapi.json`.
+Complete API documentation: `specs/openapi.yaml`
 
 ## Logging and Debugging
 
