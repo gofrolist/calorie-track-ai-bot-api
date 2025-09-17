@@ -27,14 +27,14 @@
 - Include exact file paths in descriptions
 
 ## Phase 3.1: Setup
-- [ ] T001 Create `frontend/` using community template (React+Vite or Next) — `frontend/`
-- [ ] T002 Initialize project config: package.json scripts, tsconfig, eslint/prettier — `frontend/`
-- [ ] T003 [P] Install deps: `@telegram-apps/sdk` or `tma.js`, i18n, axios/fetch wrapper — `frontend/`
-- [ ] T004 [P] Add i18n scaffolding (EN, RU) — `frontend/src/i18n/`
+- [x] T001 Create `frontend/` using community template (React+Vite or Next) — `frontend/`
+- [x] T002 Initialize project config: package.json scripts, tsconfig, eslint/prettier — `frontend/`
+- [x] T003 [P] Install deps: `@telegram-apps/sdk` or `tma.js`, i18n, axios/fetch wrapper — `frontend/`
+- [x] T004 [P] Add i18n scaffolding (EN, RU) — `frontend/src/i18n/`
 
 ## Phase 3.2: Tests First (TDD)
-- [ ] T005 [P] Unit test: i18n loader selects EN/RU — `frontend/tests/i18n.test.ts`
-- [ ] T006 [P] Contract tests: typed client shapes for `/photos`, `/photos/{id}/estimate`, `/estimates/{id}`, `/meals` — `frontend/tests/contracts/*.test.ts`
+- [x] T005 [P] Unit test: i18n loader selects EN/RU — `frontend/src/tests/i18n.test.ts`
+- [x] T006 [P] Contract tests: typed client shapes for `/photos`, `/photos/{id}/estimate`, `/estimates/{id}`, `/meals` — `frontend/src/tests/contracts/*.test.ts`
 - [ ] T007 [P] Integration test (Playwright): Today view lists meals and totals — `frontend/tests/e2e/today.spec.ts`
 - [ ] T008 [P] Integration test: Meal detail allows corrections and saves — `frontend/tests/e2e/meal-detail.spec.ts`
 - [ ] T009 [P] Integration test: Goals update progress indicators — `frontend/tests/e2e/goals.spec.ts`
