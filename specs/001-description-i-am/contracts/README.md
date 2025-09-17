@@ -1,6 +1,6 @@
-# Contracts Overview (Phase 1)
+# Contracts Overview (Phase 1) — Frontend API Usage
 
-Source of truth: `backend/specs/openapi.yaml`
+Source of truth: `backend/specs/openapi.yaml`. The Mini App consumes these endpoints via a typed client.
 
 ## Endpoint Mapping to Requirements
 - FR-001 (analyze photo, reply with calories/macros)
@@ -8,8 +8,9 @@ Source of truth: `backend/specs/openapi.yaml`
   - Photo upload init: `POST /api/v1/photos`
   - Enqueue estimate: `POST /api/v1/photos/{photo_id}/estimate`
   - Fetch estimate: `GET /api/v1/estimates/{estimate_id}`
-- FR-003/FR-004/FR-005 (logs, corrections, deletions in Mini App)
+- FR-003/FR-004/FR-005 (logs, corrections in Mini App)
   - Create meal: `POST /api/v1/meals` (manual or from estimate with overrides)
+  - [Future] List meals, update/delete meals endpoints will be added in backend spec.
 - Health & Ops
   - `GET /health/live`, `GET /health/ready`, `GET /healthz`
 - Telegram Bot management
@@ -17,4 +18,7 @@ Source of truth: `backend/specs/openapi.yaml`
 - Mini App auth (Telegram WebApp)
   - `POST /auth/telegram/init`
 
-Note: Listing meals, updating meals, or statistics endpoints may be designed in subsequent iterations and added to the spec accordingly.
+Client considerations:
+- Include Telegram initData → session token from `/auth/telegram/init` when calling APIs
+- Add correlation ID header for observability
+- Handle 4xx/5xx gracefully and surface actionable messages in UI

@@ -1,5 +1,5 @@
 
-# Implementation Plan: Telegram Food Photo Nutrition Analyzer
+# Implementation Plan: Frontend Telegram Mini App
 
 **Branch**: `001-description-i-am` | **Date**: 2025-09-17 | **Spec**: `/Users/evgenii.vasilenko/gofrolist/calorie-track-ai-bot-api/specs/001-description-i-am/spec.md`
 **Input**: Feature specification from `/specs/001-description-i-am/spec.md`
@@ -31,30 +31,27 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-Enable a minimal Telegram bot flow where users send a food photo and receive calories/macros, while a modern, mobile-first Mini App provides detailed logs, corrections, goals, and stats. The backend exposes API and Telegram webhook endpoints, persists meals, and runs background estimation. Frontend is built atop community Mini App templates ([Telegram-Mini-Apps](https://github.com/telegram-mini-apps)).
+Build a modern, mobile-first Telegram Mini App that complements the minimal bot. The Mini App shows Today/Week/Month stats, meal details with corrections, and goals, supporting EN and RU. Start from community templates to accelerate delivery ([Telegram-Mini-Apps](https://github.com/telegram-mini-apps)).
 
 ## Technical Context
-**Language/Version**: Python 3.12
-**Primary Dependencies**: FastAPI, OpenAPI (contract), OpenAI Vision (model gpt-5-mini), Telegram Bot API, tigris (S3-compatible), Upstash Redis, Supabase Postgres
-**Storage**: Supabase Postgres (RLS enabled), Tigris object storage via presigned URLs
-**Testing**: pytest, ruff, pyright; CI gates require all green
-**Target Platform**: Backend on Fly.io; Frontend (Mini App) hosted on Vercel; Telegram WebApp
-**Project Type**: web (frontend + backend)
-**Performance Goals**: P95 API ≤ 300 ms for light endpoints; enqueue ≤ 500 ms; end-to-end estimation P95 ≤ 8 s
-**Constraints**: Secrets via platform; no secrets in `fly.toml`; API-first per `backend/specs/openapi.yaml`; mobile-first UX
-**Scale/Scope**: Initial launch; concurrency target ≥ 10 RPS for webhook/presign; languages: English and Russian
+**Language/Version**: TypeScript (Node LTS)
+**Primary Dependencies**: `@telegram-apps/sdk` or `tma.js`, React or Next.js, Vite/Next build, i18n library
+**Storage**: N/A (stateless client; relies on backend APIs)
+**Testing**: Vitest/Jest + Playwright (E2E) [initial plan]
+**Target Platform**: Telegram WebApp (Mini App), hosted on Vercel
+**Project Type**: web frontend (with existing backend API)
+**Performance Goals**: TTI < 2s on 3G, P95 interactions < 200ms after hydration
+**Constraints**: No secrets in client; API-first from `backend/specs/openapi.yaml`; mobile-first; EN+RU
+**Scale/Scope**: MVP screens: Today, Meal Detail, Week/Month, Goals, Settings
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- API-first: All endpoints conform to `backend/specs/openapi.yaml` (PASS)
-- Test-first CI gates: ruff, pyright, pytest required before merge (PASS)
-- Privacy/security: RLS, no secrets in repo, presigned uploads, redact logs (PASS)
-- Simplicity/reliability: Idempotent webhook/worker, retries with jitter, timeouts (PASS)
-- Observability: Structured logs, request IDs, queue/latency metrics, health probes (PASS)
-- Config/secrets: Use platform secrets; prefer `SUPABASE_URL` and DB password, avoid `DATABASE_URL` plain (PASS)
-- Bot requirements: Webhook setup/info/delete, minimal chat replies, path to Mini App (PASS)
-- Frontend templates: Use community templates for Mini Apps ([Telegram-Mini-Apps](https://github.com/telegram-mini-apps)) (PASS)
+- API-first: consume backend per `openapi.yaml` (PASS)
+- Privacy/security: no secrets in client; use Telegram initData; redact logs (PASS)
+- Simplicity: client is stateless; server handles persistence (PASS)
+- Observability: basic client analytics optional; error boundaries (PASS)
+- Config/secrets: none embedded; use runtime env for base API URL (PASS)
 
 ## Project Structure
 
@@ -106,7 +103,7 @@ ios/ or android/
 └── [platform-specific structure]
 ```
 
-**Structure Decision**: Option 2 (Web application: `backend/` + `frontend/`)
+**Structure Decision**: Option 2 (web app): add `frontend/` with Mini App scaffold
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
@@ -127,7 +124,7 @@ ios/ or android/
    - Rationale: [why chosen]
    - Alternatives considered: [what else evaluated]
 
-**Output**: research.md with all NEEDS CLARIFICATION resolved
+**Output**: research.md with Mini App tech choices resolved
 
 ## Phase 1: Design & Contracts
 *Prerequisites: research.md complete*
@@ -159,7 +156,7 @@ ios/ or android/
    - Keep under 150 lines for token efficiency
    - Output to repository root
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**Output**: data-model.md (UI view models), /contracts/* (API usage notes), quickstart.md, agent-specific file
 
 ## Phase 2: Task Planning Approach
 *This section describes what the /tasks command will do - DO NOT execute during /plan*

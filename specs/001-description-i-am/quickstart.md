@@ -51,7 +51,7 @@ npm run build   # Build for production
 - Meal detail: edit calories/macros
 - Week/Month stats: charts and trends
 - Goals: daily calorie targets
-- Share functionality
+- Share functionality (promotional)
 - Internationalization: English + Russian
 
 ### Deploy

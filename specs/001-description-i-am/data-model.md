@@ -1,6 +1,6 @@
-# Data Model (Phase 1)
+# Data Model (Phase 1) — Frontend View Models
 
-This document enumerates entities, core fields, relationships, and key validation rules derived from the feature specification.
+This document enumerates UI-facing view models, core fields, and relationships derived from the feature specification.
 
 ## Entities
 
