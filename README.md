@@ -1,108 +1,100 @@
-# Calories Count — Photo‑First POC
+# Calorie Track AI Bot
 
-Frontend: Vercel (Telegram Mini App) • Backend: FastAPI on Fly.io • Redis: Upstash • DB: Supabase • Object Storage: Tigris • Vision: OpenAI gpt‑5‑mini
+[![Backend CI](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml)
+[![Backend Build](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-build.yml/badge.svg)](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-build.yml)
 
-## Features
-- Presigned PUT to Tigris (S3‑compatible) for meal photos
-- Queue job to Upstash Redis; background worker processes photos
-- Vision estimate via OpenAI gpt‑5‑mini → deterministic kcal aggregation with min/max
-- Persist users/photos/estimates/meals in Supabase Postgres
+A full-stack application for tracking calories using AI-powered photo analysis.
 
-## Quick start
+## Repository Structure
 
-### Development Setup
+This repository is organized into backend and frontend components:
+
+- `backend/` - FastAPI application with Telegram bot functionality
+- `frontend/` - Frontend application (to be added)
+
+## Quick Start
+
+### Backend Development
+
+See [backend/README.md](backend/README.md) for detailed backend setup instructions.
+
 ```bash
 # Install dependencies
-uv sync
-
-# Edit .env file with your actual service credentials
-nano .env
+cd backend && uv sync
 
 # Start development server
-uv run uvicorn src.calorie_track_ai_bot.main:app --reload --host 0.0.0.0 --port 8000
-
-# Health check
-curl http://localhost:8000/health/live
+cd backend && uv run uvicorn src.calorie_track_ai_bot.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Docker Setup
-```bash
-cp .env.example .env
-# fill values
-docker compose up --build
+### Frontend Development
 
-# In another terminal (optional) create tables in Supabase:
-psql "$SUPABASE_DATABASE_URL" -f infra/schema.sql
-```
-
-### Testing
-```bash
-# Run basic tests (no external services required)
-uv run pytest tests/services/test_config.py tests/api/v1/test_health.py tests/api/v1/test_auth.py -v
-
-# Run all tests (requires .env with real credentials)
-uv run pytest tests/ -v
-
-# Run linting
-uv run ruff check
-
-# Run type checking
-uv run pyright
-```
-
-## Endpoints
-- `POST /api/v1/photos` → presign URL
-- `POST /api/v1/photos/{photo_id}/estimate` → enqueue estimation
-- `GET /api/v1/estimates/{id}` → fetch estimate
-- `POST /api/v1/meals` → create from estimate or manual kcal
-
-OpenAPI JSON: `GET /openapi.json`.
-
-## Environment Configuration
-
-### Local Development
-Create a `.env` file in the project root with your service credentials:
-
-```bash
-# Application
-APP_ENV=dev
-
-# OpenAI
-OPENAI_API_KEY=sk-your-openai-key
-OPENAI_MODEL=gpt-5-mini
-
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-service-role-key
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# Tigris/S3 (using standard AWS S3 environment variables)
-AWS_ENDPOINT_URL_S3=https://fly.storage.tigris.dev
-AWS_ACCESS_KEY_ID=tid_xxxxxx
-AWS_SECRET_ACCESS_KEY=tsec_xxxxxx
-BUCKET_NAME=your-bucket-name
-AWS_REGION=auto
-```
-
-### GitHub Actions
-For CI/CD, configure GitHub secrets in your repository settings. See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for detailed instructions.
+Frontend components will be added to the `frontend/` folder in future iterations.
 
 ## Available Commands
 
 ```bash
-# Development
-uv sync                    # Install dependencies
-uv run uvicorn src.calorie_track_ai_bot.main:app --reload  # Start dev server
-uv run pytest tests/ -v   # Run all tests
-uv run ruff check         # Run linting
-uv run pyright           # Run type checking
+# Backend development (run from backend folder)
+cd backend
+make venv               # Install dependencies
+make run                # Start dev server
+make test               # Run all tests
+make precommit          # Run linting and formatting
+make validate           # Validate OpenAPI spec
+make codegen            # Generate schemas from OpenAPI spec
 
-# Docker
-docker compose up --build  # Build and run with Docker
-docker compose down        # Stop Docker containers
+# Or run commands directly with uv
+cd backend
+uv sync --all-extras    # Install dependencies
+uv run uvicorn calorie_track_ai_bot.main:app --reload  # Start dev server
+uv run pytest           # Run all tests
+uv run ruff check       # Run linting
+uv run pyright          # Run type checking
 
-# Deployment
-flyctl deploy            # Deploy to Fly.io (requires flyctl)
+# Deployment (requires flyctl)
+cd backend
+flyctl deploy           # Deploy to Fly.io
 ```
+
+## Architecture
+
+- **Backend**: FastAPI on Fly.io
+- **Database**: Supabase Postgres
+- **Queue**: Redis (Upstash)
+- **Storage**: Tigris (S3-compatible)
+- **AI**: OpenAI GPT-5-mini for image analysis
+- **Frontend**: Telegram Mini App (planned)
+
+## CI/CD Workflows
+
+This repository uses optimized GitHub Actions workflows that only run when relevant files change:
+
+### Workflow Strategy
+
+- **`backend-ci.yml`** - Backend CI (tests, linting, type checking)
+  - Triggers: Backend changes, workflow changes
+  - Skips: Frontend-only changes
+
+- **`backend-build.yml`** - Docker image build and push
+  - Triggers: Backend changes, workflow changes
+  - Skips: Frontend-only changes
+
+- **`backend-deploy.yml`** - Deploy to Fly.io
+  - Triggers: After successful build or on version tags
+  - Only runs when backend is actually built
+
+- **`frontend-ci.yml`** - Frontend CI (when implemented)
+  - Triggers: Frontend changes only
+  - Placeholder for future frontend development
+
+### Benefits
+
+✅ **Efficient**: No unnecessary backend builds for frontend changes
+✅ **Fast**: Parallel execution of backend and frontend CI when both change
+✅ **Cost-effective**: Reduced GitHub Actions minutes usage
+✅ **Simple**: Clear, focused workflows without duplication
+✅ **Scalable**: Easy to add more workflows as the project grows
+
+## Documentation
+
+- [Backend Documentation](backend/README.md)
+- [GitHub Secrets Setup](docs/GITHUB_SECRETS.md)
