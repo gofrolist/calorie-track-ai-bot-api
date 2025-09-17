@@ -24,10 +24,39 @@ curl http://localhost:8000/bot/webhook-info
 ```
 
 ## Frontend (Mini App)
-- Initialize from community templates: see [Telegram-Mini-Apps](https://github.com/telegram-mini-apps)
-  - Recommended: `reactjs-template` or `nextjs-template`
-- Implement views for: Today (list + totals), Meal detail (edit), Week/Month stats, Goals
-- Ensure mobile-first responsive design; support English and Russian
+
+### Setup from Template
+```bash
+# Choose one:
+# Option 1: React template
+npx degit telegram-mini-apps/reactjs-template frontend/
+cd frontend/
+npm install
+
+# Option 2: Next.js template
+npx degit telegram-mini-apps/nextjs-template frontend/
+cd frontend/
+npm install
+```
+
+### Development
+```bash
+cd frontend/
+npm run dev     # Start dev server
+npm run build   # Build for production
+```
+
+### Features to Implement
+- Today view: meal list + daily totals
+- Meal detail: edit calories/macros
+- Week/Month stats: charts and trends
+- Goals: daily calorie targets
+- Share functionality
+- Internationalization: English + Russian
+
+### Deploy
+- Host on Vercel: `npm run deploy`
+- Ensure no secrets in client code
 
 ## Try It
 1. In Telegram, send `/start` to your bot.

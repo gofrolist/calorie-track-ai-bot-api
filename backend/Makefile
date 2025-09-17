@@ -7,6 +7,8 @@ help:
 	@echo "  venv           - Install project deps with uv"
 	@echo "  precommit      - Run pre-commit on all files"
 	@echo "  run            - Start bot locally (polling)"
+	@echo "  lint           - Run ruff linter"
+	@echo "  typecheck      - Run pyright type checker"
 	@echo "  test           - Run tests"
 	@echo "  validate       - Validate OpenAPI spec"
 	@echo "  codegen        - Generate schemas from OpenAPI spec"
@@ -26,6 +28,14 @@ precommit:
 .PHONY: run
 run:
 	uv run uvicorn calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8000 --reload
+
+.PHONY: lint
+lint:
+	uv run ruff check
+
+.PHONY: typecheck
+typecheck:
+	uv run pyright
 
 .PHONY: test
 test:
