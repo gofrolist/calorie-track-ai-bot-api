@@ -35,7 +35,7 @@
 ## Phase 3.2: Tests First (TDD)
 - [x] T005 [P] Unit test: i18n loader selects EN/RU — `frontend/src/tests/i18n.test.ts`
 - [x] T006 [P] Contract tests: typed client shapes for `/photos`, `/photos/{id}/estimate`, `/estimates/{id}`, `/meals` — `frontend/src/tests/contracts/*.test.ts`
-- [ ] T007 [P] Integration test (Playwright): Today view lists meals and totals — `frontend/tests/e2e/today.spec.ts`
+- [x] T007 [P] Integration test (Playwright): Today view lists meals and totals — `frontend/tests/e2e/today.spec.ts`
 - [ ] T008 [P] Integration test: Meal detail allows corrections and saves — `frontend/tests/e2e/meal-detail.spec.ts`
 - [ ] T009 [P] Integration test: Goals update progress indicators — `frontend/tests/e2e/goals.spec.ts`
 

@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/i18n/index.ts","./src/pages/goals.tsx","./src/pages/meal-detail.tsx","./src/pages/stats.tsx","./src/pages/today.tsx","./src/services/api.ts","./src/tests/i18n.test.ts","./src/tests/contracts/estimates.test.ts","./src/tests/contracts/meals.test.ts","./src/tests/contracts/photos.test.ts"],"version":"5.9.2"}

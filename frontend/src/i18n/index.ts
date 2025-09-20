@@ -7,6 +7,15 @@ const resources = {
       today: {
         title: 'Today',
         empty: 'No meals yet. Send a photo to the bot to start.',
+        total: 'Total: {{calories}} kcal',
+        loading: 'Loading...',
+        error: 'Failed to load meals',
+        mealTypes: {
+          breakfast: 'Breakfast',
+          lunch: 'Lunch',
+          dinner: 'Dinner',
+          snack: 'Snack',
+        },
       },
       mealDetail: {
         title: 'Meal Detail',
@@ -27,6 +36,15 @@ const resources = {
       today: {
         title: 'Сегодня',
         empty: 'Пока нет приёмов пищи. Отправьте фото боту, чтобы начать.',
+        total: 'Всего: {{calories}} ккал',
+        loading: 'Загрузка...',
+        error: 'Не удалось загрузить приёмы пищи',
+        mealTypes: {
+          breakfast: 'Завтрак',
+          lunch: 'Обед',
+          dinner: 'Ужин',
+          snack: 'Перекус',
+        },
       },
       mealDetail: {
         title: 'Приём пищи',
