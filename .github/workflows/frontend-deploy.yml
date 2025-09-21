@@ -6,10 +6,6 @@ on:
   push:
     tags: [ 'v*' ]
 
-defaults:
-  run:
-    working-directory: frontend
-
 jobs:
   vercel-deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' || startsWith(github.ref, 'refs/tags/v') }}
@@ -26,9 +22,11 @@ jobs:
 
     - name: Install dependencies
       run: npm ci
+      working-directory: frontend
 
     - name: Build
       run: npm run build
+      working-directory: frontend
 
     - name: Install Vercel CLI
       run: npm install --global vercel@latest
@@ -39,4 +37,4 @@ jobs:
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       run: |
-        vercel --prod --token $VERCEL_TOKEN
+        cd frontend && vercel --prod --token $VERCEL_TOKEN
