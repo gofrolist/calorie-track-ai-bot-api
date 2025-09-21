@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Today } from './pages/today';
 import { MealDetail } from './pages/meal-detail';
 import { Stats } from './pages/stats';
@@ -101,6 +102,7 @@ const App: React.FC = () => {
           <RouterProvider router={router} />
         </div>
       </ErrorBoundary>
+      <SpeedInsights />
     </TelegramWebAppContext.Provider>
   );
 };
