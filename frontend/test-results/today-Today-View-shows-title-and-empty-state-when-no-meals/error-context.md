@@ -1,15 +1,42 @@
 # Page snapshot
 
 ```yaml
-- generic [ref=e3]:
-  - heading "Unexpected Application Error!" [level=2] [ref=e4]
-  - heading "meals.map is not a function" [level=3] [ref=e5]
-  - generic [ref=e6]: "TypeError: meals.map is not a function at Today (http://localhost:5173/src/pages/today.tsx:365:66) at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:11596:26) at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:14630:28) at beginWork (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:15972:22) at beginWork$1 (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:19806:22) at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:19251:20) at workLoopSync (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:19190:13) at renderRootSync (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:19169:15) at recoverFromConcurrentError (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:18786:28) at performConcurrentWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/chunk-NXESFFTV.js?v=9bc68326:18734:30)"
-  - paragraph [ref=e7]: 💿 Hey developer 👋
-  - paragraph [ref=e8]:
-    - text: You can provide a way better UX than this when your app throws errors by providing your own
-    - code [ref=e9]: ErrorBoundary
-    - text: or
-    - code [ref=e10]: errorElement
-    - text: prop on your route.
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - heading "Today" [level=1] [ref=e6]
+    - generic [ref=e7]: Saturday, September 20, 2025
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - heading "Daily Summary" [level=2] [ref=e10]
+      - button "📤 Share" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12] [cursor=pointer]: 📤
+        - generic [ref=e13] [cursor=pointer]: Share
+    - generic [ref=e16]: 0 kcal
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: 0g
+        - generic [ref=e20]: Protein
+      - generic [ref=e21]:
+        - generic [ref=e22]: 0g
+        - generic [ref=e23]: Fat
+      - generic [ref=e24]:
+        - generic [ref=e25]: 0g
+        - generic [ref=e26]: Carbs
+  - generic [ref=e27]:
+    - generic [ref=e28]:
+      - heading "Meals" [level=2] [ref=e29]
+      - button "Add Meal" [ref=e30] [cursor=pointer]
+    - generic [ref=e31]:
+      - generic [ref=e32]: 🍽️
+      - generic [ref=e33]: No meals recorded today
+  - navigation [ref=e34]:
+    - generic [ref=e35]:
+      - generic [ref=e36]: 📊
+      - generic [ref=e37]: Today
+    - generic [ref=e38]:
+      - generic [ref=e39]: 📈
+      - generic [ref=e40]: Stats
+    - generic [ref=e41]:
+      - generic [ref=e42]: 🎯
+      - generic [ref=e43]: Goals
 ```

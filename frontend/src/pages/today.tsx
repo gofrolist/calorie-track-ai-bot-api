@@ -42,7 +42,8 @@ export const Today: React.FC = () => {
         // Handle today data (meals + daily summary)
         if (todayResult.status === 'fulfilled') {
           const { meals: fetchedMeals, daily_summary } = todayResult.value;
-          setMeals(fetchedMeals);
+          // Ensure meals is always an array
+          setMeals(Array.isArray(fetchedMeals) ? fetchedMeals : []);
           setDailySummary(daily_summary);
         } else {
           console.error('Failed to fetch today data:', todayResult.reason);
@@ -53,9 +54,12 @@ export const Today: React.FC = () => {
           ]);
 
           if (mealsResult.status === 'fulfilled') {
-            setMeals(mealsResult.value);
+            // Ensure meals is always an array
+            setMeals(Array.isArray(mealsResult.value) ? mealsResult.value : []);
           } else {
             console.error('Failed to fetch meals:', mealsResult.reason);
+            // Set empty array as fallback
+            setMeals([]);
           }
 
           if (summaryResult.status === 'fulfilled') {
@@ -92,7 +96,7 @@ export const Today: React.FC = () => {
     };
 
     fetchTodayData();
-  }, [telegramContext.user?.id, meals.length]); // Re-fetch when user changes or meals are updated
+  }, [telegramContext.user?.id, Array.isArray(meals) ? meals.length : 0]); // Re-fetch when user changes or meals are updated
 
   const formatCalories = (calories: number): string => {
     return calories.toLocaleString();
@@ -261,7 +265,7 @@ export const Today: React.FC = () => {
           <Share
             shareData={{
               calories: dailySummary?.kcal_total,
-              meals: meals.length,
+              meals: Array.isArray(meals) ? meals.length : 0,
               goal: goal?.daily_kcal_target,
               date: new Date().toLocaleDateString()
             }}
@@ -330,7 +334,7 @@ export const Today: React.FC = () => {
           </button>
         </div>
 
-        {meals.length === 0 ? (
+        {!Array.isArray(meals) || meals.length === 0 ? (
           <div className="tg-card" style={{ textAlign: 'center', padding: 32 }}>
             <div style={{ fontSize: '2em', marginBottom: 16 }}>🍽️</div>
             <div style={{ color: 'var(--tg-hint-color)' }}>{t('today.meals.empty')}</div>
