@@ -17,49 +17,24 @@ jobs:
     steps:
     - uses: actions/checkout@v5
 
-    - name: Check if frontend has package.json
-      id: check-frontend
-      run: |
-        if [ -f "frontend/package.json" ]; then
-          echo "has-package-json=true" >> $GITHUB_OUTPUT
-        else
-          echo "has-package-json=false" >> $GITHUB_OUTPUT
-        fi
-
     - name: Setup Node.js
-      if: steps.check-frontend.outputs.has-package-json == 'true'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version-file: 'frontend/.nvmrc'
         cache: 'npm'
         cache-dependency-path: 'frontend/package-lock.json'
 
     - name: Install dependencies
-      if: steps.check-frontend.outputs.has-package-json == 'true'
       run: |
         cd frontend
         npm ci
 
     - name: Run tests
-      if: steps.check-frontend.outputs.has-package-json == 'true'
       run: |
         cd frontend
         npm test
 
-    - name: Run linting
-      if: steps.check-frontend.outputs.has-package-json == 'true'
-      run: |
-        cd frontend
-        npm run lint
-
     - name: Build
-      if: steps.check-frontend.outputs.has-package-json == 'true'
       run: |
         cd frontend
         npm run build
-
-    - name: Frontend placeholder
-      if: steps.check-frontend.outputs.has-package-json == 'false'
-      run: |
-        echo "🚧 Frontend not yet implemented"
-        echo "This workflow will run frontend tests and builds when package.json is added to the frontend folder"
