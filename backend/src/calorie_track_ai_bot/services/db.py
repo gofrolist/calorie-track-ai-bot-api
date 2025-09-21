@@ -133,7 +133,6 @@ async def db_create_meal_from_manual(data: MealCreateManualRequest) -> dict[str,
         "meal_date": data.meal_date.isoformat(),
         "meal_type": data.meal_type.value,
         "kcal_total": data.kcal_total,
-        "macros": data.macros,
         "source": "manual",
     }
     sb.table("meals").insert(payload).execute()
@@ -156,9 +155,197 @@ async def db_create_meal_from_estimate(data: MealCreateFromEstimateRequest) -> d
         "meal_date": data.meal_date.isoformat(),
         "meal_type": data.meal_type.value,
         "kcal_total": kcal_total if kcal_total is not None else 0,
-        "overrides": data.overrides,
         "source": "photo",
         "estimate_id": data.estimate_id,
     }
     sb.table("meals").insert(payload).execute()
     return {"meal_id": mid}
+
+
+async def db_get_meals_by_date(meal_date: str, user_id: str | None = None) -> list[dict[str, Any]]:
+    """Get meals for a specific date."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    query = sb.table("meals").select("*").eq("meal_date", meal_date)
+    if user_id:
+        query = query.eq("user_id", user_id)
+
+    res = query.execute()
+    return res.data if res.data else []
+
+
+async def db_get_meal(meal_id: str) -> dict[str, Any] | None:
+    """Get a specific meal by ID."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    res = sb.table("meals").select("*").eq("id", meal_id).execute()
+    return res.data[0] if res.data else None
+
+
+async def db_update_meal(meal_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+    """Update a meal with the given updates."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    res = sb.table("meals").update(updates).eq("id", meal_id).execute()
+    return res.data[0] if res.data else None
+
+
+async def db_delete_meal(meal_id: str) -> bool:
+    """Delete a meal by ID."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    res = sb.table("meals").delete().eq("id", meal_id).execute()
+    return len(res.data) > 0 if res.data else False
+
+
+async def db_get_daily_summary(date: str, user_id: str | None = None) -> dict[str, Any] | None:
+    """Get daily summary for a specific date."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    query = sb.table("meals").select("kcal_total").eq("meal_date", date)
+    if user_id:
+        query = query.eq("user_id", user_id)
+
+    res = query.execute()
+    meals = res.data if res.data else []
+
+    # Calculate totals
+    total_kcal = sum(meal.get("kcal_total", 0) for meal in meals)
+
+    # Since macros column doesn't exist in the current schema, return zeros
+    macro_totals = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
+
+    return {
+        "user_id": user_id,
+        "date": date,
+        "kcal_total": total_kcal,
+        "macros_totals": macro_totals,
+    }
+
+
+def db_get_goal(user_id: str) -> dict[str, Any] | None:
+    """Get user's goal."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    res = sb.table("goals").select("*").eq("user_id", user_id).execute()
+    return res.data[0] if res.data else None
+
+
+def db_create_or_update_goal(user_id: str, daily_kcal_target: int) -> dict[str, Any]:
+    """Create or update user's goal."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    # Try to find existing goal
+    existing = db_get_goal(user_id)
+
+    if existing:
+        # Update existing goal
+        res = (
+            sb.table("goals")
+            .update({"daily_kcal_target": daily_kcal_target, "updated_at": "now()"})
+            .eq("id", existing["id"])
+            .execute()
+        )
+        if res.data:
+            return res.data[0]
+        else:
+            # Fallback to creating new goal if update failed
+            goal_id = str(uuid.uuid4())
+            goal_data = {"id": goal_id, "user_id": user_id, "daily_kcal_target": daily_kcal_target}
+            sb.table("goals").insert(goal_data).execute()
+            return goal_data
+    else:
+        # Create new goal
+        goal_id = str(uuid.uuid4())
+        goal_data = {"id": goal_id, "user_id": user_id, "daily_kcal_target": daily_kcal_target}
+        sb.table("goals").insert(goal_data).execute()
+        return goal_data
+
+
+async def db_get_summaries_by_date_range(
+    start_date: str, end_date: str, user_id: str | None = None
+) -> dict[str, dict[str, Any]]:
+    """Get summaries for a date range in a single query."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    query = (
+        sb.table("meals")
+        .select("meal_date, kcal_total")
+        .gte("meal_date", start_date)
+        .lte("meal_date", end_date)
+    )
+    if user_id:
+        query = query.eq("user_id", user_id)
+
+    res = query.execute()
+    meals = res.data if res.data else []
+
+    # Group meals by date and calculate summaries
+    summaries = {}
+    for meal in meals:
+        date = meal["meal_date"]
+        if date not in summaries:
+            summaries[date] = {
+                "user_id": user_id,
+                "date": date,
+                "kcal_total": 0,
+                "macros_totals": {"protein_g": 0, "fat_g": 0, "carbs_g": 0},
+            }
+
+        summaries[date]["kcal_total"] += meal.get("kcal_total", 0)
+
+    return summaries
+
+
+async def db_get_today_data(date: str, user_id: str | None = None) -> dict[str, Any]:
+    """Get all data needed for the Today page in a single query."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    # Get all meals for the date
+    query = sb.table("meals").select("*").eq("meal_date", date)
+    if user_id:
+        query = query.eq("user_id", user_id)
+
+    res = query.execute()
+    meals = res.data if res.data else []
+
+    # Calculate daily summary
+    daily_summary = {
+        "user_id": user_id,
+        "date": date,
+        "kcal_total": sum(meal.get("kcal_total", 0) for meal in meals),
+        "macros_totals": {
+            "protein_g": 0,  # Will be calculated when macros column exists
+            "fat_g": 0,
+            "carbs_g": 0,
+        },
+    }
+
+    return {"meals": meals, "daily_summary": daily_summary}

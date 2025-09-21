@@ -5,5 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173
+  },
+  test: {
+    exclude: ['tests/e2e/**/*', 'node_modules/**/*']
   }
 });

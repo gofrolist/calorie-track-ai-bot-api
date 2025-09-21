@@ -63,7 +63,7 @@ class TestStorageFunctions:
 
             # Should return tuple
             assert isinstance(result, tuple)
-            key, url = result
+            key, _url = result
 
             # Key should still end with .jpg regardless of content type
             assert key.endswith(".jpg")

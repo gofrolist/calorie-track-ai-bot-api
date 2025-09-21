@@ -1,0 +1,179 @@
+/* Telegram WebApp styling */
+:root {
+  /* Light theme defaults */
+  --tg-bg-color: #ffffff;
+  --tg-text-color: #000000;
+  --tg-hint-color: #999999;
+  --tg-link-color: #007aff;
+  --tg-button-color: #007aff;
+  --tg-button-text-color: #ffffff;
+  --tg-secondary-bg-color: #f0f0f0;
+}
+
+[data-theme="dark"] {
+  /* Dark theme defaults */
+  --tg-bg-color: #1c1c1e;
+  --tg-text-color: #ffffff;
+  --tg-hint-color: #8e8e93;
+  --tg-link-color: #0a84ff;
+  --tg-button-color: #0a84ff;
+  --tg-button-text-color: #ffffff;
+  --tg-secondary-bg-color: #2c2c2e;
+}
+
+.telegram-webapp {
+  background-color: var(--tg-bg-color);
+  color: var(--tg-text-color);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Remove default body margin and padding for full screen experience */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--tg-bg-color);
+}
+
+/* Button styling that matches Telegram theme */
+.tg-button {
+  background-color: var(--tg-button-color);
+  color: var(--tg-button-text-color);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.tg-button:hover {
+  opacity: 0.8;
+}
+
+.tg-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Secondary button styling */
+.tg-button-secondary {
+  background-color: var(--tg-secondary-bg-color);
+  color: var(--tg-text-color);
+  border: 1px solid var(--tg-hint-color);
+}
+
+/* Link styling */
+.tg-link {
+  color: var(--tg-link-color);
+  text-decoration: none;
+}
+
+.tg-link:hover {
+  text-decoration: underline;
+}
+
+/* Text styling */
+.tg-hint {
+  color: var(--tg-hint-color);
+}
+
+/* Card/panel styling */
+.tg-card {
+  background-color: var(--tg-secondary-bg-color);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 8px 0;
+}
+
+/* Safe area adjustments for mobile */
+.telegram-webapp {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Loading states */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  color: var(--tg-hint-color);
+}
+
+/* Error states */
+.error {
+  background-color: #ff3b30;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+/* Success states */
+.success {
+  background-color: #34c759;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+/* Progress bars */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: var(--tg-secondary-bg-color);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--tg-button-color);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+/* Navigation styling */
+.navigation {
+  display: flex;
+  justify-content: space-around;
+  padding: 12px;
+  background-color: var(--tg-secondary-bg-color);
+  border-top: 1px solid var(--tg-hint-color);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.navigation-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--tg-hint-color);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.navigation-item.active {
+  color: var(--tg-link-color);
+  background-color: var(--tg-bg-color);
+}
+
+.navigation-item:hover {
+  background-color: var(--tg-bg-color);
+}
+
+/* Content padding to account for fixed navigation */
+.main-content {
+  padding-bottom: 80px;
+}

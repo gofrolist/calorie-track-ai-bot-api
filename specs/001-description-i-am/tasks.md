@@ -36,28 +36,28 @@
 - [x] T005 [P] Unit test: i18n loader selects EN/RU — `frontend/src/tests/i18n.test.ts`
 - [x] T006 [P] Contract tests: typed client shapes for `/photos`, `/photos/{id}/estimate`, `/estimates/{id}`, `/meals` — `frontend/src/tests/contracts/*.test.ts`
 - [x] T007 [P] Integration test (Playwright): Today view lists meals and totals — `frontend/tests/e2e/today.spec.ts`
-- [ ] T008 [P] Integration test: Meal detail allows corrections and saves — `frontend/tests/e2e/meal-detail.spec.ts`
-- [ ] T009 [P] Integration test: Goals update progress indicators — `frontend/tests/e2e/goals.spec.ts`
+- [x] T008 [P] Integration test: Meal detail allows corrections and saves — `frontend/tests/e2e/meal-detail.spec.ts`
+- [x] T009 [P] Integration test: Goals update progress indicators — `frontend/tests/e2e/goals.spec.ts`
 
 ## Phase 3.3: Core Implementation
-- [ ] T010 [P] App shell with Telegram WebApp integration — `frontend/src/main.tsx`, `frontend/src/app.tsx`
-- [ ] T011 [P] API client wrapper with base URL, initData/session token, correlation ID — `frontend/src/services/api.ts`
-- [ ] T012 [P] Today view: list + totals — `frontend/src/pages/today.tsx`
-- [ ] T013 [P] Meal detail: edit and save — `frontend/src/pages/meal-detail.tsx`
-- [ ] T014 [P] Week/Month stats with charts — `frontend/src/pages/stats.tsx`
-- [ ] T015 [P] Goals UI — `frontend/src/pages/goals.tsx`
-- [ ] T016 [P] Share action — `frontend/src/components/share.tsx`
+- [x] T010 [P] App shell with Telegram WebApp integration — `frontend/src/main.tsx`, `frontend/src/app.tsx`
+- [x] T011 [P] API client wrapper with base URL, initData/session token, correlation ID — `frontend/src/services/api.ts`
+- [x] T012 [P] Today view: list + totals — `frontend/src/pages/today.tsx`
+- [x] T013 [P] Meal detail: edit and save — `frontend/src/pages/meal-detail.tsx`
+- [x] T014 [P] Week/Month stats with charts — `frontend/src/pages/stats.tsx`
+- [x] T015 [P] Goals UI — `frontend/src/pages/goals.tsx`
+- [x] T016 [P] Share action — `frontend/src/components/share.tsx`
 
 ## Phase 3.4: Integration
-- [ ] T017 Configure backend base URL and environment handling — `frontend/src/config.ts`
-- [ ] T018 Wire typed client to `/photos`, `/estimates`, `/meals` endpoints — `frontend/src/services/api.ts`
-- [ ] T019 Error boundary and loading states — `frontend/src/components/*`
-- [ ] T020 i18n strings for all screens (EN, RU) — `frontend/src/i18n/*`
+- [x] T017 Configure backend base URL and environment handling — `frontend/src/config.ts`
+- [x] T018 Wire typed client to `/photos`, `/estimates`, `/meals` endpoints — `frontend/src/services/api.ts`
+- [x] T019 Error boundary and loading states — `frontend/src/components/*`
+- [x] T020 i18n strings for all screens (EN, RU) — `frontend/src/i18n/*`
 
 ## Phase 3.5: Polish
-- [ ] T021 [P] Lighthouse pass: mobile performance and a11y — docs
-- [ ] T022 [P] E2E happy-path runbook and screenshots — docs
-- [ ] T023 [P] Update `frontend/README.md` with setup, scripts, deploy
+- [x] T021 [P] Lighthouse pass: mobile performance and a11y — docs
+- [x] T022 [P] E2E happy-path runbook and screenshots — docs
+- [x] T023 [P] Update `frontend/README.md` with setup, scripts, deploy
 
 ## Dependencies
 - Setup (T001–T004) → Tests (T005–T009) → Core (T010–T016) → Integration (T017–T020) → Polish (T021–T023)
