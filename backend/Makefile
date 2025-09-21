@@ -7,9 +7,12 @@ help:
 	@echo "  venv           - Install project deps with uv"
 	@echo "  precommit      - Run pre-commit on all files"
 	@echo "  run            - Start bot locally (polling)"
+	@echo "  lint           - Run ruff linter"
+	@echo "  typecheck      - Run pyright type checker"
 	@echo "  test           - Run tests"
 	@echo "  validate       - Validate OpenAPI spec"
 	@echo "  codegen        - Generate schemas from OpenAPI spec"
+	@echo "  migrate        - Run database migrations"
 	@echo "  clean          - Clean up temporary files and caches"
 
 .PHONY: venv
@@ -25,7 +28,21 @@ precommit:
 
 .PHONY: run
 run:
-	uv run uvicorn calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8000 --reload
+	@if [ -f .env ]; then \
+		echo "Loading environment variables from .env file"; \
+		uv run dotenv run uvicorn calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8000 --reload; \
+	else \
+		echo "Warning: .env file not found. Using system environment variables only."; \
+		uv run uvicorn calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8000 --reload; \
+	fi
+
+.PHONY: lint
+lint:
+	uv run ruff check
+
+.PHONY: typecheck
+typecheck:
+	uv run pyright
 
 .PHONY: test
 test:
@@ -43,6 +60,17 @@ codegen:
 		--output src/calorie_track_ai_bot/schemas.py \
 		--output-model-type pydantic_v2.BaseModel \
 		--target-python-version 3.12
+
+.PHONY: migrate
+migrate:
+	@if [ -f .env ]; then \
+		echo "Loading environment variables from .env file"; \
+		uv run dotenv run python run_local_migration.py; \
+	else \
+		echo "Warning: .env file not found. Using system environment variables only."; \
+		uv run python run_local_migration.py; \
+	fi
+
 
 .PHONY: clean
 clean:

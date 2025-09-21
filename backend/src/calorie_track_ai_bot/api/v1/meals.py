@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from ...schemas import (
     MealCreateFromEstimateRequest,
@@ -8,6 +8,10 @@ from ...schemas import (
 from ...services.db import (
     db_create_meal_from_estimate,
     db_create_meal_from_manual,
+    db_delete_meal,
+    db_get_meal,
+    db_get_meals_by_date,
+    db_update_meal,
 )
 
 router = APIRouter()
@@ -19,5 +23,69 @@ async def create_meal(payload: MealCreateManualRequest | MealCreateFromEstimateR
         if isinstance(payload, MealCreateManualRequest):
             return await db_create_meal_from_manual(payload)
         return await db_create_meal_from_estimate(payload)
+    except Exception as e:
+        raise HTTPException(500, str(e)) from e
+
+
+@router.get("/meals")
+async def get_meals(date: str = Query(..., description="Date in YYYY-MM-DD format")):
+    """Get meals for a specific date."""
+    try:
+        meals = await db_get_meals_by_date(date)
+        return meals
+    except Exception as e:
+        raise HTTPException(500, str(e)) from e
+
+
+@router.get("/meals/{meal_id}")
+async def get_meal(meal_id: str):
+    """Get a specific meal by ID."""
+    try:
+        meal = await db_get_meal(meal_id)
+        if not meal:
+            raise HTTPException(404, "Meal not found")
+        return meal
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e)) from e
+
+
+@router.patch("/meals/{meal_id}")
+async def update_meal(meal_id: str, updates: dict):
+    """Update a meal."""
+    try:
+        # Validate meal exists
+        existing_meal = await db_get_meal(meal_id)
+        if not existing_meal:
+            raise HTTPException(404, "Meal not found")
+
+        updated_meal = await db_update_meal(meal_id, updates)
+        if not updated_meal:
+            raise HTTPException(500, "Failed to update meal")
+
+        return updated_meal
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e)) from e
+
+
+@router.delete("/meals/{meal_id}")
+async def delete_meal(meal_id: str):
+    """Delete a meal."""
+    try:
+        # Validate meal exists
+        existing_meal = await db_get_meal(meal_id)
+        if not existing_meal:
+            raise HTTPException(404, "Meal not found")
+
+        success = await db_delete_meal(meal_id)
+        if not success:
+            raise HTTPException(500, "Failed to delete meal")
+
+        return {"message": "Meal deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e)) from e

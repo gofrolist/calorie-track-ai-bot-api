@@ -40,5 +40,14 @@ create table if not exists meals (
   created_at timestamptz default now()
 );
 
+create table if not exists goals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  daily_kcal_target integer not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 create index if not exists idx_photos_user_created on photos(user_id, created_at);
 create index if not exists idx_meals_user_date on meals(user_id, meal_date);
+create index if not exists idx_goals_user_id on goals(user_id);

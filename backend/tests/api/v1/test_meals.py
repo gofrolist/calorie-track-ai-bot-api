@@ -153,14 +153,19 @@ class TestMealsEndpoints:
         response = client.post("/meals", json=payload)
         assert response.status_code == 500
 
-    def test_create_meal_methods(self, client):
-        """Test that create meal only accepts POST requests."""
+    def test_meals_endpoint_methods(self, client):
+        """Test that meals endpoint handles different HTTP methods correctly."""
+        # GET /meals without date parameter should return 422 (validation error)
         get_response = client.get("/meals")
-        assert get_response.status_code == 405  # Method Not Allowed
+        assert (
+            get_response.status_code == 422
+        )  # Unprocessable Entity (missing required query param)
 
+        # PUT /meals should return 405 (Method Not Allowed)
         put_response = client.put("/meals")
         assert put_response.status_code == 405
 
+        # DELETE /meals should return 405 (Method Not Allowed)
         delete_response = client.delete("/meals")
         assert delete_response.status_code == 405
 

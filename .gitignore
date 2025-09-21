@@ -214,3 +214,11 @@ webapp/node_modules/
 webapp/.next/
 webapp/out/
 local_dev.db
+
+# Frontend test artifacts
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/
+frontend/.nyc_output/
+frontend/dist/
+frontend/.vite/

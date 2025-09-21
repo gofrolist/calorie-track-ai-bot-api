@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -102,7 +102,7 @@ class TestBotWebhook:
             # Mock httpx client
             mock_client = AsyncMock()
             mock_httpx.return_value.__aenter__.return_value = mock_client
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_client.put.return_value = mock_response
 
@@ -214,7 +214,7 @@ class TestBotWebhook:
             # Mock httpx client
             mock_client = AsyncMock()
             mock_httpx.return_value.__aenter__.return_value = mock_client
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.raise_for_status.return_value = None
             mock_client.put.return_value = mock_response
 

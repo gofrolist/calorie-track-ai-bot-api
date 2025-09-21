@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.v1 import auth, bot, estimates, health, meals, photos
+from .api.v1 import auth, bot, daily_summary, estimates, goals, health, meals, photos
 from .services.config import TELEGRAM_BOT_TOKEN, USE_WEBHOOK, WEBHOOK_URL, logger
 from .services.telegram import get_bot
 
@@ -62,6 +62,8 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(photos.router, prefix="/api/v1", tags=["photos"])
 app.include_router(estimates.router, prefix="/api/v1", tags=["estimates"])
 app.include_router(meals.router, prefix="/api/v1", tags=["meals"])
+app.include_router(daily_summary.router, prefix="/api/v1", tags=["daily-summary"])
+app.include_router(goals.router, prefix="/api/v1", tags=["goals"])
 app.include_router(bot.router, tags=["bot"])
 
 
