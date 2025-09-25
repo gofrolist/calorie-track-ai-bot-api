@@ -50,7 +50,7 @@ const isDevelopment = environment === 'development';
 
 // API Configuration
 const apiBaseUrl = getEnvVar('VITE_API_BASE_URL',
-  isDevelopment ? 'http://localhost:8000' : 'https://api.calorietrack.app'
+  isDevelopment ? 'http://localhost:8000' : 'https://calorie-track-ai-bot.fly.dev'
 );
 
 // Telegram Configuration
@@ -121,7 +121,7 @@ export const environments = {
     enableDevTools: false,
   },
   production: {
-    apiBaseUrl: 'https://api.calorietrack.app',
+    apiBaseUrl: 'https://calorie-track-ai-bot.fly.dev',
     enableLogging: false,
     enableDevTools: false,
   },

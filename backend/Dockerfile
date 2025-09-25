@@ -32,9 +32,6 @@ ENV TZ=Etc/UTC
 
 # Copy the environment and necessary files
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/alembic.ini /app/alembic.ini
-COPY --from=builder /app/migrations /app/migrations
-COPY --from=builder /app/run_migration.py /app/run_migration.py
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Run the application
