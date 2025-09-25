@@ -12,6 +12,7 @@ help: ## Show this help message
 	@echo "  make setup     - Complete setup (backend + frontend)"
 	@echo "  make dev       - Start both backend and frontend in development mode"
 	@echo "  make test      - Run all tests (backend + frontend)"
+	@echo "  make supabase  - Start Supabase local development"
 	@echo ""
 	@echo "Available Commands:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -171,33 +172,31 @@ restart: ## Restart development servers
 	@sleep 2
 	@$(MAKE) dev
 
-# Environment setup helpers
-.PHONY: env-example
-env-example: ## Show example environment configuration
-	@echo "Example backend/.env file:"
-	@echo ""
-	@echo "# Application"
-	@echo "APP_ENV=dev"
-	@echo ""
-	@echo "# OpenAI"
-	@echo "OPENAI_API_KEY=sk-your-openai-key"
-	@echo "OPENAI_MODEL=gpt-5-mini"
-	@echo ""
-	@echo "# Supabase"
-	@echo "SUPABASE_URL=https://your-project.supabase.co"
-	@echo "SUPABASE_SERVICE_ROLE_KEY=your-service-role-key"
-	@echo ""
-	@echo "# Redis"
-	@echo "REDIS_URL=redis://localhost:6379"
-	@echo ""
-	@echo "# Tigris/S3"
-	@echo "AWS_ENDPOINT_URL_S3=https://fly.storage.tigris.dev"
-	@echo "AWS_ACCESS_KEY_ID=tid_xxxxxx"
-	@echo "AWS_SECRET_ACCESS_KEY=tsec_xxxxxx"
-	@echo "BUCKET_NAME=your-bucket-name"
-	@echo ""
-	@echo "# Telegram"
-	@echo "TELEGRAM_BOT_TOKEN=your-telegram-bot-token"
-	@echo ""
-	@echo "# Logging"
-	@echo "LOG_LEVEL=INFO"
+.PHONY: supabase
+supabase: ## Start Supabase local development
+	@echo "Starting Supabase local development..."
+	@supabase start
+	@echo "Supabase is running at:"
+	@echo "  API URL: http://localhost:54321"
+	@echo "  Studio: http://localhost:54323"
+	@echo "  DB URL: postgresql://postgres:postgres@localhost:54322/postgres"
+
+.PHONY: supabase-stop
+supabase-stop: ## Stop Supabase local development
+	@supabase stop
+
+.PHONY: supabase-reset
+supabase-reset: ## Reset Supabase local database
+	@supabase db reset
+
+.PHONY: supabase-gen-types
+supabase-gen-types: ## Generate TypeScript types from Supabase
+	@supabase gen types typescript --local > types.gen.ts
+	@echo "TypeScript types generated in types.gen.ts"
+
+.PHONY: supabase-deploy
+supabase-deploy: ## Deploy migrations to production (requires SUPABASE_ACCESS_TOKEN, PRODUCTION_DB_PASSWORD, PRODUCTION_PROJECT_ID)
+	@echo "Deploying migrations to production..."
+	@supabase link --project-ref $${PRODUCTION_PROJECT_ID}
+	@supabase db push
+	@echo "Migrations deployed successfully!"

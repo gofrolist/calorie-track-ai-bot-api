@@ -12,7 +12,10 @@ help:
 	@echo "  test           - Run tests"
 	@echo "  validate       - Validate OpenAPI spec"
 	@echo "  codegen        - Generate schemas from OpenAPI spec"
-	@echo "  migrate        - Run database migrations"
+	@echo "  supabase-start - Start Supabase local development"
+	@echo "  supabase-stop  - Stop Supabase local development"
+	@echo "  supabase-reset - Reset Supabase local database"
+	@echo "  supabase-gen   - Generate TypeScript types from Supabase"
 	@echo "  clean          - Clean up temporary files and caches"
 
 .PHONY: venv
@@ -61,15 +64,21 @@ codegen:
 		--output-model-type pydantic_v2.BaseModel \
 		--target-python-version 3.12
 
-.PHONY: migrate
-migrate:
-	@if [ -f .env ]; then \
-		echo "Loading environment variables from .env file"; \
-		uv run dotenv run python run_local_migration.py; \
-	else \
-		echo "Warning: .env file not found. Using system environment variables only."; \
-		uv run python run_local_migration.py; \
-	fi
+.PHONY: supabase-start
+supabase-start:
+	cd .. && supabase start
+
+.PHONY: supabase-stop
+supabase-stop:
+	cd .. && supabase stop
+
+.PHONY: supabase-reset
+supabase-reset:
+	cd .. && supabase db reset
+
+.PHONY: supabase-gen
+supabase-gen:
+	cd .. && supabase gen types typescript --local > types.gen.ts
 
 
 .PHONY: clean
