@@ -1,7 +1,10 @@
 name: Backend Build
 on:
-  push:
+  workflow_run:
+    workflows: ["Backend CI"]
+    types: [completed]
     branches: [ main ]
+  push:
     tags: [ 'v*' ]
     paths:
       - 'backend/**'
@@ -13,6 +16,7 @@ permissions:
 
 jobs:
   docker:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
