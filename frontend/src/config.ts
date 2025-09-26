@@ -7,7 +7,7 @@ export interface AppConfig {
   apiTimeout: number;
 
   // Environment
-  environment: 'development' | 'staging' | 'production';
+  environment: 'development' | 'production';
   isProduction: boolean;
   isDevelopment: boolean;
 
@@ -114,11 +114,6 @@ export const environments = {
     apiBaseUrl: 'http://localhost:8000',
     enableLogging: true,
     enableDevTools: true,
-  },
-  staging: {
-    apiBaseUrl: 'https://staging-api.calorietrack.app',
-    enableLogging: true,
-    enableDevTools: false,
   },
   production: {
     apiBaseUrl: 'https://calorie-track-ai-bot.fly.dev',

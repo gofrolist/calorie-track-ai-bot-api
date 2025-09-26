@@ -1,8 +1,11 @@
 
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Backend-Frontend Integration & Modern UI/UX Enhancement
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `002-i-need-to` | **Date**: 2025-09-25 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/002-i-need-to/spec.md`
+
+## Summary
+Update UI interface using Telegram Mini Apps React template, fix mobile safe areas, resolve connectivity issues between frontend and backend, improve logging system, enhance local development experience, and optimize Makefile for better readability and maintainability.
 
 ## Execution Flow (/plan command scope)
 ```
@@ -34,20 +37,42 @@
 [Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript 5.x, Python 3.11, React 18, FastAPI
+**Primary Dependencies**: @telegram-apps/sdk, tma.js, Vite, Supabase CLI, Upstash Redis, Tigris Storage
+**Storage**: Supabase PostgreSQL (local + production), Upstash Redis (production), Tigris S3-compatible storage
+**Testing**: Jest, Playwright, pytest, integration tests
+**Target Platform**: Telegram WebApp (mobile-first), Fly.io (backend), Vercel (frontend)
+**Project Type**: Web application (frontend + backend)
+**Performance Goals**: <200ms API response time, <2s page load, optimal CPU/memory usage
+**Constraints**: Mobile safe areas compliance, CORS resolution, offline-capable UI
+**Scale/Scope**: Multi-user calorie tracking bot with AI photo analysis
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+### Core Principles Compliance
+- ✅ **AI-First Nutrition Analysis**: Maintains existing AI photo analysis capabilities
+- ✅ **Telegram Bot Excellence**: Enhances UI/UX following Telegram best practices
+- ✅ **API-First Architecture**: Fixes connectivity issues while maintaining RESTful design
+- ✅ **Test-Driven Development**: Includes comprehensive testing for all changes
+- ✅ **Observability & Monitoring**: Improves logging system with structured logging
+- ✅ **Internationalization & Accessibility**: Maintains multi-language support
+- ✅ **Modern UI/UX Excellence**: Primary focus - mobile-first design with safe areas
+- ✅ **Feature Flag Management**: Maintains existing feature flag capabilities
+- ✅ **Data Protection & Privacy**: No changes to data handling, maintains compliance
+
+### Technical Standards Compliance
+- ✅ **Frontend Mini-App Requirements**: Updates to modern React template with safe areas
+- ✅ **Backend API Standards**: Maintains FastAPI with improved logging
+- ✅ **AI/ML Pipeline Standards**: No changes to AI processing pipeline
+
+### Quality Gates Compliance
+- ✅ **Test Coverage**: Maintains 80% minimum with new integration tests
+- ✅ **Performance Benchmarks**: Optimizes CPU/memory usage as required
+- ✅ **Accessibility Testing**: Enhanced mobile safe area compliance
+- ✅ **Documentation Updates**: Comprehensive architecture and integration docs
+
+**Status**: PASS - All constitutional requirements maintained or enhanced
 
 ## Project Structure
 
@@ -63,50 +88,43 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
 ├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+│   ├── calorie_track_ai_bot/
+│   │   ├── api/v1/           # API endpoints
+│   │   ├── services/         # Business logic
+│   │   ├── workers/          # Background tasks
+│   │   └── main.py          # FastAPI app
+│   └── tests/
+│       ├── api/             # API tests
+│       ├── services/        # Service tests
+│       └── workers/         # Worker tests
+├── Dockerfile
+├── fly.toml
+└── pyproject.toml
 
 frontend/
 ├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
+│   ├── components/          # React components
+│   ├── pages/              # Page components
+│   ├── services/           # API services
+│   ├── config.ts           # Configuration
+│   └── telegram-webapp.css # Telegram styling
+├── tests/
+│   ├── e2e/                # End-to-end tests
+│   └── contracts/          # API contract tests
+├── package.json
+└── vite.config.ts
 
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
+docs/
+├── ARCHITECTURE.md         # System architecture
+└── INTEGRATION_TESTING.md  # Testing guide
 
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+Makefile                    # Optimized build commands
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Web application structure with separate frontend and backend directories, comprehensive testing structure, and centralized documentation
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
@@ -173,12 +191,56 @@ directories captured above]
 - Each user story → integration test task
 - Implementation tasks to make tests pass
 
+**Specific Task Categories**:
+
+### Frontend UI/UX Tasks
+- Update to Telegram Mini Apps React template
+- Implement mobile safe areas with CSS env() functions
+- Add modern UI components following Telegram design system
+- Implement theme switching (light/dark)
+- Add responsive design for mobile-first approach
+- Test safe areas on different devices
+
+### Backend Integration Tasks
+- Fix CORS configuration for development/production
+- Add structured logging with correlation IDs
+- Implement connectivity health check endpoint
+- Add UI configuration management API
+- Create development environment status endpoint
+- Add logging submission endpoint
+
+### Development Environment Tasks
+- Set up Docker Compose for local development
+- Create comprehensive integration test suite
+- Optimize Makefile for readability and maintainability
+- Add development scripts for easy testing
+- Create environment configuration management
+- Add performance monitoring tools
+
+### Testing Tasks
+- Create API contract tests for all new endpoints
+- Add integration tests for frontend-backend connectivity
+- Implement E2E tests for mobile safe areas
+- Add performance tests for CPU/memory optimization
+- Create connectivity testing utilities
+- Add logging system tests
+
+### Documentation Tasks
+- Update architecture documentation with new components
+- Create integration testing guide
+- Add mobile safe area implementation guide
+- Update API documentation with new endpoints
+- Create development environment setup guide
+- Add troubleshooting documentation
+
 **Ordering Strategy**:
 - TDD order: Tests before implementation
 - Dependency order: Models before services before UI
 - Mark [P] for parallel execution (independent files)
+- Frontend tasks can run parallel to backend tasks
+- Testing tasks follow implementation tasks
 
-**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
+**Estimated Output**: 70-75 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -202,18 +264,18 @@ directories captured above]
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
-- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [x] Phase 0: Research complete (/plan command)
+- [x] Phase 1: Design complete (/plan command)
+- [x] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [ ] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS
-- [ ] All NEEDS CLARIFICATION resolved
-- [ ] Complexity deviations documented
+- [x] Initial Constitution Check: PASS
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved
+- [x] Complexity deviations documented
 
 ---
 *Based on Constitution v2.1.1 - See `/memory/constitution.md`*
