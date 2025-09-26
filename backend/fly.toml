@@ -7,14 +7,10 @@ primary_region = 'lax'
 [env]
   USE_WEBHOOK = 'true'
   WEBHOOK_URL = 'https://calorie-track-ai-bot.fly.dev/bot'
-  FF_ADMIN_ALERTS = "true"
 
 [processes]
   api = "uvicorn calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8080"
   worker = "python -m calorie_track_ai_bot.workers.estimate_worker"
-
-[deploy]
-  release_command = "/app/.venv/bin/python /app/run_migration.py"
 
 [[services]]
   processes = ["api"]
