@@ -2,62 +2,123 @@
 
 ## Overview
 
-The Calorie Track AI Bot is a comprehensive Telegram-based application that uses computer vision to analyze food photos and provide detailed nutritional information. The system consists of multiple components working together to deliver a seamless user experience.
+The Calorie Track AI Bot is a comprehensive Telegram Mini App that uses AI-powered computer vision to analyze food photos and provide detailed nutritional information. The system features a modern, mobile-first design with automatic theme detection, multi-language support, and enterprise-grade observability. The architecture prioritizes scalability, performance, and developer experience.
 
 ## High-Level Architecture
 
 ```mermaid
 graph TB
-    subgraph "User Layer"
+    subgraph "Client Layer"
         U[Telegram Users]
-        WA[Telegram WebApp]
+        TG[Telegram Mini App]
+        WEB[Web Interface]
     end
 
-    subgraph "Frontend Layer"
-        FE[React Frontend]
-        UI[Modern UI Components]
+    subgraph "Frontend Layer (Vercel)"
+        FE[React App]
+        THEME[Theme Detection]
+        LANG[Language Detection]
+        SAFE[Safe Area Handling]
+        CONFIG[Configuration Service]
     end
 
-    subgraph "API Gateway"
-        API[FastAPI Backend]
-        AUTH[Authentication]
-        CORS[CORS Middleware]
+    subgraph "Backend Layer (Fly.io)"
+        API[FastAPI API]
+        WORKER[Background Worker]
+        MIDDLEWARE[Middleware Stack]
+        MONITOR[Performance Monitor]
     end
 
-    subgraph "AI Processing Layer"
+    subgraph "Database Layer (Supabase)"
+        DB[PostgreSQL Database]
+        STUDIO[Supabase Studio]
+        AUTH_DB[Auth Service]
+        MIGRATIONS[Migration System]
+    end
+
+    subgraph "External Services"
+        REDIS[Upstash Redis]
+        S3[Tigris Storage]
+        OPENAI[OpenAI API]
+        BOT_API[Telegram Bot API]
+    end
+
+    subgraph "AI Processing"
         CV[Computer Vision]
-        ML[ML Models]
-        QUEUE[Background Queue]
+        ESTIMATOR[Nutrition Estimator]
+        QUEUE[Job Queue]
     end
 
-    subgraph "Data Layer"
-        DB[(PostgreSQL)]
-        REDIS[(Redis Cache)]
-        S3[(Tigris Storage)]
+    subgraph "Observability"
+        LOGS[Structured Logging]
+        METRICS[Performance Metrics]
+        HEALTH[Health Checks]
+        ALERTS[Error Tracking]
     end
 
-    subgraph "Infrastructure"
-        FLY[Fly.io Deployment]
-        CDN[CDN]
-        MONITOR[Monitoring]
-    end
+    %% User interactions
+    U --> TG
+    U --> WEB
+    TG --> FE
+    WEB --> FE
 
-    U --> WA
-    WA --> FE
+    %% Frontend services
+    FE --> THEME
+    FE --> LANG
+    FE --> SAFE
+    FE --> CONFIG
+
+    %% Frontend to backend
     FE --> API
-    API --> AUTH
-    API --> CORS
-    API --> CV
-    CV --> ML
-    CV --> QUEUE
+
+    %% Backend services
+    API --> MIDDLEWARE
+    API --> MONITOR
+    API --> WORKER
+
+    %% Database connections
     API --> DB
+    API --> AUTH_DB
+    WORKER --> DB
+    MIGRATIONS --> DB
+
+    %% External service connections
     API --> REDIS
     API --> S3
-    FLY --> API
-    FLY --> FE
-    CDN --> FE
-    MONITOR --> API
-    MONITOR --> FE
+    API --> BOT_API
+    WORKER --> REDIS
+    WORKER --> OPENAI
+
+    %% AI processing
+    API --> CV
+    CV --> ESTIMATOR
+    ESTIMATOR --> QUEUE
+    QUEUE --> WORKER
+
+    %% Observability
+    API --> LOGS
+    WORKER --> LOGS
+    API --> METRICS
+    WORKER --> METRICS
+    API --> HEALTH
+    LOGS --> ALERTS
+
+    %% Styling
+    classDef client fill:#e3f2fd
+    classDef frontend fill:#e1f5fe
+    classDef backend fill:#f3e5f5
+    classDef database fill:#e8f5e8
+    classDef external fill:#fff8e1
+    classDef ai fill:#fce4ec
+    classDef observability fill:#f1f8e9
+
+    class U,TG,WEB client
+    class FE,THEME,LANG,SAFE,CONFIG frontend
+    class API,WORKER,MIDDLEWARE,MONITOR backend
+    class DB,STUDIO,AUTH_DB,MIGRATIONS database
+    class REDIS,S3,OPENAI,BOT_API external
+    class CV,ESTIMATOR,QUEUE ai
+    class LOGS,METRICS,HEALTH,ALERTS observability
 ```
 
 ## Component Architecture
@@ -66,96 +127,171 @@ graph TB
 
 ```mermaid
 graph TD
-    subgraph "React Frontend"
-        APP[App.tsx]
+    subgraph "React Frontend Application"
+        APP[App.tsx<br/>Main Application]
         ROUTER[React Router]
-        CONTEXT[Telegram Context]
+        CONTEXT[Telegram WebApp Context]
 
-        subgraph "Pages"
-            TODAY[Today Page]
-            MEAL[Meal Detail]
-            STATS[Stats Page]
-            GOALS[Goals Page]
+        subgraph "Core Pages"
+            TODAY[Today Page<br/>Main Dashboard]
+            MEAL[Meal Detail<br/>Nutrition View]
+            STATS[Stats Page<br/>Analytics]
+            GOALS[Goals Page<br/>Target Setting]
         end
 
-        subgraph "Components"
-            ERROR[Error Boundary]
-            LOADING[Loading Component]
-            SHARE[Share Component]
+        subgraph "UI Components"
+            ERROR[Error Boundary<br/>Error Handling]
+            LOADING[Loading Component<br/>State Management]
+            SHARE[Share Component<br/>Social Features]
+            SAFE_AREA[Safe Area Wrapper<br/>Mobile Layout]
         end
 
-        subgraph "Services"
-            API_SVC[API Service]
-            CONFIG[Configuration]
-            I18N[Internationalization]
+        subgraph "Detection Services"
+            THEME_DETECT[Theme Detector<br/>Auto Light/Dark]
+            LANG_DETECT[Language Detector<br/>Auto EN/RU]
+            SAFE_DETECT[Safe Area Detection<br/>Mobile Insets]
         end
 
-        subgraph "Styling"
-            CSS[Telegram WebApp CSS]
-            THEMES[Theme System]
-            SAFE[Safe Areas]
+        subgraph "Configuration Services"
+            CONFIG_SVC[Configuration Service<br/>Runtime Config]
+            API_CLIENT[API Client<br/>HTTP Layer]
+            AUTH_MGR[Authentication<br/>Telegram Auth]
+        end
+
+        subgraph "State Management"
+            CONTEXT_API[React Context]
+            LOCAL_STATE[Component State]
+            SESSION_MGR[Session Manager]
+        end
+
+        subgraph "Styling & UX"
+            CSS_MODULES[CSS Modules<br/>Scoped Styles]
+            THEME_SYS[Theme System<br/>Dynamic Theming]
+            I18N[Internationalization<br/>Multi-language]
+            RESPONSIVE[Responsive Design<br/>Mobile-first]
         end
     end
 
+    %% Main app flow
     APP --> ROUTER
     APP --> CONTEXT
+    APP --> ERROR
+
+    %% Router connections
     ROUTER --> TODAY
     ROUTER --> MEAL
     ROUTER --> STATS
     ROUTER --> GOALS
-    APP --> ERROR
-    APP --> LOADING
-    APP --> SHARE
-    API_SVC --> CONFIG
-    CONFIG --> I18N
-    CSS --> THEMES
-    THEMES --> SAFE
+
+    %% Component integration
+    APP --> SAFE_AREA
+    SAFE_AREA --> LOADING
+    SAFE_AREA --> SHARE
+
+    %% Detection services
+    APP --> THEME_DETECT
+    APP --> LANG_DETECT
+    APP --> SAFE_DETECT
+
+    %% Configuration services
+    APP --> CONFIG_SVC
+    CONFIG_SVC --> API_CLIENT
+    API_CLIENT --> AUTH_MGR
+
+    %% State management
+    CONTEXT --> CONTEXT_API
+    CONTEXT_API --> LOCAL_STATE
+    AUTH_MGR --> SESSION_MGR
+
+    %% Styling connections
+    THEME_DETECT --> THEME_SYS
+    LANG_DETECT --> I18N
+    SAFE_DETECT --> RESPONSIVE
+    CSS_MODULES --> THEME_SYS
+
+    %% Styling
+    classDef core fill:#e1f5fe
+    classDef components fill:#f3e5f5
+    classDef services fill:#e8f5e8
+    classDef state fill:#fff3e0
+    classDef styling fill:#fce4ec
+
+    class APP,ROUTER,CONTEXT,TODAY,MEAL,STATS,GOALS core
+    class ERROR,LOADING,SHARE,SAFE_AREA components
+    class THEME_DETECT,LANG_DETECT,SAFE_DETECT,CONFIG_SVC,API_CLIENT,AUTH_MGR services
+    class CONTEXT_API,LOCAL_STATE,SESSION_MGR state
+    class CSS_MODULES,THEME_SYS,I18N,RESPONSIVE styling
 ```
 
 ### Backend Architecture
 
 ```mermaid
 graph TD
-    subgraph "FastAPI Backend"
-        MAIN[main.py]
-        LIFESPAN[Lifespan Manager]
+    subgraph "FastAPI Backend Application"
+        MAIN[main.py<br/>Application Entry]
+        LIFESPAN[Lifespan Manager<br/>Startup/Shutdown]
 
-        subgraph "API Routes"
-            HEALTH[Health Check]
-            AUTH_ROUTE[Auth Routes]
-            PHOTOS_ROUTE[Photos Routes]
-            ESTIMATES_ROUTE[Estimates Routes]
-            MEALS_ROUTE[Meals Routes]
-            SUMMARY_ROUTE[Summary Routes]
-            GOALS_ROUTE[Goals Routes]
-            BOT_ROUTE[Bot Routes]
+        subgraph "Middleware Stack"
+            CORS_MW[CORS Middleware<br/>Cross-Origin]
+            TRUSTED_MW[Trusted Host Middleware<br/>Security]
+            CORRELATION_MW[Correlation ID Middleware<br/>Tracing]
+            LOGGING_MW[Request Logging Middleware<br/>Observability]
         end
 
-        subgraph "Services"
-            CONFIG_SVC[Config Service]
-            DB_SVC[Database Service]
-            STORAGE_SVC[Storage Service]
-            TELEGRAM_SVC[Telegram Service]
-            ESTIMATOR_SVC[Estimator Service]
-            QUEUE_SVC[Queue Service]
+        subgraph "API Routes v1"
+            HEALTH[Health & Connectivity<br/>/health/*]
+            CONFIG_ROUTE[Configuration<br/>/api/v1/config/*]
+            LOGS_ROUTE[Logging<br/>/api/v1/logs/*]
+            DEV_ROUTE[Development<br/>/api/v1/dev/*]
+            AUTH_ROUTE[Authentication<br/>/api/v1/auth/*]
+            PHOTOS_ROUTE[Photo Management<br/>/api/v1/photos/*]
+            ESTIMATES_ROUTE[AI Estimates<br/>/api/v1/estimates/*]
+            MEALS_ROUTE[Meal Tracking<br/>/api/v1/meals/*]
+            SUMMARY_ROUTE[Daily Summary<br/>/api/v1/daily-summary/*]
+            GOALS_ROUTE[User Goals<br/>/api/v1/goals/*]
+            BOT_ROUTE[Telegram Bot<br/>/api/v1/bot/*]
         end
 
-        subgraph "Workers"
-            ESTIMATE_WORKER[Estimate Worker]
+        subgraph "Core Services"
+            CONFIG_SVC[Configuration Service<br/>Settings & Features]
+            DB_SVC[Database Service<br/>Supabase Integration]
+            STORAGE_SVC[Storage Service<br/>Tigris S3]
+            TELEGRAM_SVC[Telegram Service<br/>Bot API]
+            ESTIMATOR_SVC[AI Estimator Service<br/>OpenAI Integration]
+            QUEUE_SVC[Queue Service<br/>Redis Tasks]
+            MONITORING_SVC[Monitoring Service<br/>Performance Metrics]
+        end
+
+        subgraph "Background Workers"
+            ESTIMATE_WORKER[Estimate Worker<br/>AI Processing]
         end
     end
 
+    %% Main application flow
     MAIN --> LIFESPAN
-    MAIN --> HEALTH
-    MAIN --> AUTH_ROUTE
-    MAIN --> PHOTOS_ROUTE
-    MAIN --> ESTIMATES_ROUTE
-    MAIN --> MEALS_ROUTE
-    MAIN --> SUMMARY_ROUTE
-    MAIN --> GOALS_ROUTE
-    MAIN --> BOT_ROUTE
+    MAIN --> CORS_MW
+    MAIN --> TRUSTED_MW
+    MAIN --> CORRELATION_MW
+    MAIN --> LOGGING_MW
 
-    AUTH_ROUTE --> CONFIG_SVC
+    %% Middleware to routes
+    CORS_MW --> HEALTH
+    CORS_MW --> CONFIG_ROUTE
+    CORS_MW --> LOGS_ROUTE
+    CORS_MW --> DEV_ROUTE
+    CORS_MW --> AUTH_ROUTE
+    CORS_MW --> PHOTOS_ROUTE
+    CORS_MW --> ESTIMATES_ROUTE
+    CORS_MW --> MEALS_ROUTE
+    CORS_MW --> SUMMARY_ROUTE
+    CORS_MW --> GOALS_ROUTE
+    CORS_MW --> BOT_ROUTE
+
+    %% Route to service connections
+    CONFIG_ROUTE --> CONFIG_SVC
+    LOGS_ROUTE --> MONITORING_SVC
+    DEV_ROUTE --> CONFIG_SVC
+    AUTH_ROUTE --> TELEGRAM_SVC
     PHOTOS_ROUTE --> STORAGE_SVC
     ESTIMATES_ROUTE --> ESTIMATOR_SVC
     MEALS_ROUTE --> DB_SVC
@@ -163,8 +299,29 @@ graph TD
     GOALS_ROUTE --> DB_SVC
     BOT_ROUTE --> TELEGRAM_SVC
 
+    %% Service interconnections
+    CONFIG_ROUTE --> DB_SVC
     ESTIMATOR_SVC --> QUEUE_SVC
     QUEUE_SVC --> ESTIMATE_WORKER
+    ESTIMATE_WORKER --> DB_SVC
+    ESTIMATE_WORKER --> ESTIMATOR_SVC
+
+    %% Monitoring connections
+    LOGGING_MW --> MONITORING_SVC
+    CORRELATION_MW --> MONITORING_SVC
+
+    %% Styling
+    classDef main fill:#e1f5fe
+    classDef middleware fill:#f3e5f5
+    classDef routes fill:#e8f5e8
+    classDef services fill:#fff3e0
+    classDef workers fill:#fce4ec
+
+    class MAIN,LIFESPAN main
+    class CORS_MW,TRUSTED_MW,CORRELATION_MW,LOGGING_MW middleware
+    class HEALTH,CONFIG_ROUTE,LOGS_ROUTE,DEV_ROUTE,AUTH_ROUTE,PHOTOS_ROUTE,ESTIMATES_ROUTE,MEALS_ROUTE,SUMMARY_ROUTE,GOALS_ROUTE,BOT_ROUTE routes
+    class CONFIG_SVC,DB_SVC,STORAGE_SVC,TELEGRAM_SVC,ESTIMATOR_SVC,QUEUE_SVC,MONITORING_SVC services
+    class ESTIMATE_WORKER workers
 ```
 
 ## Data Flow Architecture
@@ -353,29 +510,36 @@ graph LR
 
 ### Frontend Technologies
 - **React 18**: Modern React with hooks and concurrent features
-- **TypeScript**: Type-safe development
+- **TypeScript**: Type-safe development with strict mode
 - **Vite**: Fast build tool and dev server
 - **React Router**: Client-side routing
-- **Axios**: HTTP client with interceptors
-- **CSS Custom Properties**: Dynamic theming
-- **Telegram WebApp API**: Native Telegram integration
+- **Axios**: HTTP client with interceptors and correlation IDs
+- **CSS Modules**: Scoped styling with dynamic theming
+- **Telegram WebApp API**: Native Telegram Mini App integration
+- **Zod**: Runtime type validation for configuration
+- **i18next**: Internationalization (English/Russian)
 
 ### Backend Technologies
-- **FastAPI**: Modern Python web framework
-- **PostgreSQL**: Primary database
-- **Redis**: Caching and session storage
-- **Celery**: Background task processing
+- **FastAPI**: Modern Python web framework with OpenAPI 3.1.1
+- **Python 3.12**: Latest Python with type hints
+- **Supabase**: PostgreSQL database with real-time features
+- **Upstash Redis**: Serverless Redis for caching and queues
 - **Tigris**: S3-compatible object storage
-- **OpenAI API**: AI model integration
-- **Telegram Bot API**: Bot functionality
+- **OpenAI API**: GPT-5-mini for nutrition analysis
+- **Telegram Bot API**: Bot functionality and webhooks
+- **Structlog**: Structured logging with correlation IDs
+- **Pydantic v2**: Data validation and serialization
+- **psutil**: System monitoring and performance metrics
 
 ### Infrastructure Technologies
-- **Fly.io**: Container deployment platform
-- **Docker**: Containerization
+- **Fly.io**: Container deployment platform for backend
+- **Vercel**: Edge deployment for frontend
+- **Docker**: Containerization with multi-stage builds
+- **Supabase CLI**: Local development and migrations
 - **GitHub Actions**: CI/CD pipeline
-- **Supabase**: Database hosting
-- **Structured Logging**: Observability
-- **Health Checks**: Monitoring
+- **Performance Monitoring**: Real-time metrics collection
+- **Health Checks**: Comprehensive connectivity monitoring
+- **Correlation IDs**: Distributed tracing
 
 ## Security Architecture
 

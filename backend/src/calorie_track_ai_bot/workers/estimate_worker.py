@@ -23,6 +23,9 @@ async def handle_job(job: dict[str, Any]) -> None:
         logger.debug(f"Retrieved tigris_key for photo {photo_id}: {tigris_key}")
 
         # Generate presigned URL using the actual storage key
+        if s3 is None:
+            raise RuntimeError("S3 client not available. Tigris configuration is missing.")
+
         url = s3.generate_presigned_url(
             "get_object", Params={"Bucket": BUCKET_NAME, "Key": tigris_key}, ExpiresIn=900
         )

@@ -1,5 +1,6 @@
 import calendar
 from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -9,7 +10,7 @@ router = APIRouter()
 
 
 @router.get("/daily-summary/{date}")
-async def get_daily_summary(date: str):
+async def get_daily_summary(date: str) -> dict[str, Any]:
     """Get daily summary for a specific date."""
     try:
         summary = await db_get_daily_summary(date)
@@ -29,7 +30,7 @@ async def get_daily_summary(date: str):
 @router.get("/weekly-summary")
 async def get_weekly_summary(
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
-):
+) -> list[dict[str, Any]]:
     """Get weekly summary starting from the given date."""
     try:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")

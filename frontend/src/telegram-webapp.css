@@ -87,11 +87,192 @@ body {
   margin: 8px 0;
 }
 
-/* Safe area adjustments for mobile */
+/* ========================================
+   MOBILE SAFE AREAS IMPLEMENTATION
+   Comprehensive support for all device orientations and notches
+   ======================================== */
+
+/* Define safe area CSS custom properties with fallbacks */
+:root {
+  /* Safe area insets with fallbacks for non-supporting browsers */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+
+  /* Additional safe area properties for fine-grained control */
+  --safe-area-header-height: max(44px, var(--safe-area-inset-top));
+  --safe-area-footer-height: max(34px, var(--safe-area-inset-bottom));
+
+  /* Dynamic content padding based on safe areas */
+  --content-padding-top: max(20px, var(--safe-area-inset-top));
+  --content-padding-bottom: max(20px, var(--safe-area-inset-bottom));
+  --content-padding-horizontal: max(16px, var(--safe-area-inset-left), var(--safe-area-inset-right));
+}
+
+/* Main app container with comprehensive safe area support */
 .telegram-webapp {
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+  /* Apply safe area padding on all sides */
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+
+  /* Ensure full viewport coverage including safe areas */
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for better mobile support */
+
+  /* iOS viewport meta support */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Safe area utilities for specific positioning needs */
+.safe-area-top {
+  padding-top: var(--safe-area-inset-top);
+}
+
+.safe-area-right {
+  padding-right: var(--safe-area-inset-right);
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: var(--safe-area-inset-left);
+}
+
+.safe-area-horizontal {
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+.safe-area-vertical {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-area-all {
+  padding: var(--safe-area-inset-top) var(--safe-area-inset-right) var(--safe-area-inset-bottom) var(--safe-area-inset-left);
+}
+
+/* Header components that need to account for notches */
+.header-safe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: var(--tg-bg-color);
+  border-bottom: 1px solid var(--tg-hint-color);
+
+  /* Ensure header extends into safe area */
+  padding-top: var(--safe-area-inset-top);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+
+  /* Content padding within header */
+  box-sizing: border-box;
+}
+
+.header-content {
+  padding: 12px var(--content-padding-horizontal);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Footer/navigation that respects home indicator */
+.footer-safe {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: var(--tg-secondary-bg-color);
+  border-top: 1px solid var(--tg-hint-color);
+
+  /* Ensure footer extends into safe area */
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+.footer-content {
+  padding: 12px var(--content-padding-horizontal);
+  min-height: 44px;
+}
+
+/* Main content area that accounts for fixed headers/footers */
+.main-content-safe {
+  /* Account for safe areas and fixed headers/footers */
+  padding-top: calc(var(--safe-area-header-height) + 20px);
+  padding-bottom: calc(var(--safe-area-footer-height) + 20px);
+  padding-left: var(--content-padding-horizontal);
+  padding-right: var(--content-padding-horizontal);
+
+  /* Minimum content height */
+  min-height: calc(100vh - var(--safe-area-header-height) - var(--safe-area-footer-height));
+  min-height: calc(100dvh - var(--safe-area-header-height) - var(--safe-area-footer-height));
+}
+
+/* Landscape orientation adjustments */
+@media screen and (orientation: landscape) {
+  :root {
+    /* Adjust padding for landscape mode */
+    --content-padding-horizontal: max(20px, var(--safe-area-inset-left), var(--safe-area-inset-right));
+  }
+
+  .telegram-webapp {
+    /* Increase horizontal padding in landscape */
+    padding-left: var(--content-padding-horizontal);
+    padding-right: var(--content-padding-horizontal);
+  }
+}
+
+/* iPhone X/11/12/13/14/15 series specific adjustments */
+@supports (padding: max(0px)) {
+  .telegram-webapp {
+    /* Use max() for better safe area support */
+    padding-top: max(var(--safe-area-inset-top), 20px);
+    padding-bottom: max(var(--safe-area-inset-bottom), 20px);
+    padding-left: max(var(--safe-area-inset-left), 16px);
+    padding-right: max(var(--safe-area-inset-right), 16px);
+  }
+}
+
+/* Fullscreen/immersive mode support */
+@media (display-mode: fullscreen) {
+  .telegram-webapp {
+    /* Additional padding for fullscreen mode */
+    padding-top: max(var(--safe-area-inset-top), 24px);
+    padding-bottom: max(var(--safe-area-inset-bottom), 24px);
+  }
+}
+
+/* High-density display adjustments */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .safe-area-debug {
+    /* Debug visualization for safe areas */
+    border: 2px solid rgba(255, 0, 0, 0.3);
+  }
+
+  .safe-area-debug::before {
+    content: "Safe Area Debug";
+    position: absolute;
+    top: var(--safe-area-inset-top);
+    left: var(--safe-area-inset-left);
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    z-index: 9999;
+  }
 }
 
 /* Loading states */
@@ -138,11 +319,10 @@ body {
   border-radius: 4px;
 }
 
-/* Navigation styling */
+/* Navigation styling with safe area support */
 .navigation {
   display: flex;
   justify-content: space-around;
-  padding: 12px;
   background-color: var(--tg-secondary-bg-color);
   border-top: 1px solid var(--tg-hint-color);
   position: fixed;
@@ -150,6 +330,14 @@ body {
   left: 0;
   right: 0;
   z-index: 100;
+
+  /* Apply safe area bottom padding */
+  padding: 12px var(--content-padding-horizontal) var(--safe-area-inset-bottom);
+
+  /* Extend into safe area */
+  padding-bottom: max(12px, var(--safe-area-inset-bottom));
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
 }
 
 .navigation-item {
@@ -162,6 +350,8 @@ body {
   text-decoration: none;
   color: var(--tg-hint-color);
   transition: background-color 0.2s, color 0.2s;
+  min-height: 44px; /* Ensure touch target size */
+  justify-content: center;
 }
 
 .navigation-item.active {
@@ -173,7 +363,12 @@ body {
   background-color: var(--tg-bg-color);
 }
 
-/* Content padding to account for fixed navigation */
+/* Content padding to account for fixed navigation and safe areas */
 .main-content {
-  padding-bottom: 80px;
+  padding-bottom: calc(80px + var(--safe-area-inset-bottom));
+}
+
+/* Alternative main content with comprehensive safe area support */
+.main-content-safe {
+  /* Already defined above with comprehensive safe area handling */
 }

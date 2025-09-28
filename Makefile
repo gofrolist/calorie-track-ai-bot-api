@@ -63,6 +63,14 @@ test-frontend: ## Run frontend tests
 test-e2e: ## Run end-to-end tests
 	@cd frontend && npm run test:e2e
 
+.PHONY: test-watch
+test-watch: ## Run tests in watch mode (backend only)
+	@cd backend && make test-watch
+
+.PHONY: coverage
+coverage: ## Generate test coverage report (backend only)
+	@cd backend && make coverage
+
 .PHONY: lint
 lint: lint-backend lint-frontend ## Run linting for both backend and frontend
 
@@ -79,7 +87,7 @@ build: build-backend build-frontend ## Build both backend and frontend
 
 .PHONY: build-backend
 build-backend: ## Build backend
-	@cd backend && make codegen
+	@cd backend && make build
 
 .PHONY: build-frontend
 build-frontend: ## Build frontend for production
@@ -146,6 +154,10 @@ api-docs: ## Open API documentation in browser
 	@open http://localhost:8000/docs 2>/dev/null || \
 		xdg-open http://localhost:8000/docs 2>/dev/null || \
 		echo "Please open http://localhost:8000/docs in your browser"
+
+.PHONY: docs
+docs: ## Start API documentation server
+	@cd backend && make docs
 
 .PHONY: frontend-preview
 frontend-preview: ## Preview built frontend

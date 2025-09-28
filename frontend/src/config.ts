@@ -15,12 +15,35 @@ export interface AppConfig {
   telegramBotName?: string;
   telegramAppUrl?: string;
 
+  // UI/UX Configuration
+  ui: {
+    enableSafeAreas: boolean;
+    enableThemeDetection: boolean;
+    enableLanguageDetection: boolean;
+    defaultTheme: 'light' | 'dark' | 'auto';
+    defaultLanguage: string;
+    supportedLanguages: ('en' | 'ru')[];
+  };
+
+  // Connectivity Configuration
+  connectivity: {
+    enableMonitoring: boolean;
+    checkInterval: number;
+    retryAttempts: number;
+    timeout: number;
+  };
+
   // Features
   features: {
     enableDebugLogging: boolean;
     enableErrorReporting: boolean;
     enableAnalytics: boolean;
     enableDevTools: boolean;
+    enableThemeDetection: boolean;
+    enableLanguageDetection: boolean;
+    enableSafeAreas: boolean;
+    enableConnectivityMonitoring: boolean;
+    enableLogging: boolean;
   };
 
   // App Metadata
@@ -57,12 +80,35 @@ const apiBaseUrl = getEnvVar('VITE_API_BASE_URL',
 const telegramBotName = import.meta.env.VITE_TELEGRAM_BOT_NAME;
 const telegramAppUrl = import.meta.env.VITE_TELEGRAM_APP_URL;
 
+// UI/UX Configuration
+const ui = {
+  enableSafeAreas: getBooleanEnvVar('VITE_ENABLE_SAFE_AREAS', true),
+  enableThemeDetection: getBooleanEnvVar('VITE_ENABLE_THEME_DETECTION', true),
+  enableLanguageDetection: getBooleanEnvVar('VITE_ENABLE_LANGUAGE_DETECTION', true),
+  defaultTheme: (getEnvVar('VITE_DEFAULT_THEME', 'auto') as 'light' | 'dark' | 'auto'),
+  defaultLanguage: getEnvVar('VITE_DEFAULT_LANGUAGE', 'en'),
+  supportedLanguages: (getEnvVar('VITE_SUPPORTED_LANGUAGES', 'en,ru')).split(',') as ('en' | 'ru')[],
+};
+
+// Connectivity Configuration
+const connectivity = {
+  enableMonitoring: getBooleanEnvVar('VITE_ENABLE_CONNECTIVITY_MONITORING', true),
+  checkInterval: parseInt(getEnvVar('VITE_CONNECTIVITY_CHECK_INTERVAL', '30000'), 10),
+  retryAttempts: parseInt(getEnvVar('VITE_CONNECTIVITY_RETRY_ATTEMPTS', '5'), 10),
+  timeout: parseInt(getEnvVar('VITE_CONNECTIVITY_TIMEOUT', '10000'), 10),
+};
+
 // Feature flags
 const features = {
   enableDebugLogging: getBooleanEnvVar('VITE_ENABLE_DEBUG_LOGGING', isDevelopment),
   enableErrorReporting: getBooleanEnvVar('VITE_ENABLE_ERROR_REPORTING', isProduction),
   enableAnalytics: getBooleanEnvVar('VITE_ENABLE_ANALYTICS', isProduction),
   enableDevTools: getBooleanEnvVar('VITE_ENABLE_DEV_TOOLS', isDevelopment),
+  enableThemeDetection: ui.enableThemeDetection,
+  enableLanguageDetection: ui.enableLanguageDetection,
+  enableSafeAreas: ui.enableSafeAreas,
+  enableConnectivityMonitoring: connectivity.enableMonitoring,
+  enableLogging: getBooleanEnvVar('VITE_ENABLE_LOGGING', true),
 };
 
 // App metadata
@@ -83,6 +129,12 @@ export const config: AppConfig = {
   // Telegram
   telegramBotName,
   telegramAppUrl,
+
+  // UI/UX
+  ui,
+
+  // Connectivity
+  connectivity,
 
   // Features
   features,
@@ -144,16 +196,70 @@ export const configUtils = {
   },
 
   // Get user language preference
-  getUserLanguage: (): 'en' | 'ru' => {
+  getUserLanguage: (): string => {
     // Try Telegram user language first
     if (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code) {
       const lang = window.Telegram.WebApp.initDataUnsafe.user.language_code;
-      if (lang.startsWith('ru')) return 'ru';
+      // Check if language is supported
+      if (config.ui.supportedLanguages.includes(lang)) {
+        return lang;
+      }
+      // Try language without region (e.g., 'en-US' -> 'en')
+      const primaryLang = lang.split('-')[0];
+      if (config.ui.supportedLanguages.includes(primaryLang)) {
+        return primaryLang;
+      }
     }
 
     // Fall back to browser language
-    const browserLang = navigator.language || 'en';
-    return browserLang.startsWith('ru') ? 'ru' : 'en';
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      const browserLang = navigator.language.split('-')[0];
+      if (config.ui.supportedLanguages.includes(browserLang as 'en' | 'ru')) {
+        return browserLang;
+      }
+    }
+
+    // Default language
+    return config.ui.defaultLanguage;
+  },
+
+  // Get user theme preference
+  getUserTheme: (): 'light' | 'dark' | 'auto' => {
+    // Try Telegram theme first
+    if (window.Telegram?.WebApp?.colorScheme) {
+      return window.Telegram.WebApp.colorScheme as 'light' | 'dark';
+    }
+
+    // Try system preference
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return prefersDark ? 'dark' : 'light';
+    }
+
+    // Default theme
+    return config.ui.defaultTheme;
+  },
+
+  // Check if safe areas are needed
+  needsSafeAreas: (): boolean => {
+    if (!config.ui.enableSafeAreas) return false;
+
+    // Check if device has safe areas
+    if (typeof window !== 'undefined' && CSS.supports) {
+      return CSS.supports('padding-top: env(safe-area-inset-top)');
+    }
+
+    return false;
+  },
+
+  // Get supported languages
+  getSupportedLanguages: (): string[] => {
+    return [...config.ui.supportedLanguages];
+  },
+
+  // Check if language is supported
+  isLanguageSupported: (language: string): boolean => {
+    return config.ui.supportedLanguages.includes(language as 'en' | 'ru');
   },
 
   // Log configuration info

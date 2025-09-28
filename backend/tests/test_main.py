@@ -82,18 +82,18 @@ class TestMainApplication:
     def test_cors_headers(self, client):
         """Test that CORS headers are properly set."""
         # Make a regular request with Origin header to test CORS
-        response = client.get("/health/live", headers={"Origin": "https://example.com"})
+        response = client.get("/health/live", headers={"Origin": "http://localhost:5173"})
 
         # Should have CORS headers
         assert "access-control-allow-origin" in response.headers
-        assert response.headers["access-control-allow-origin"] == "*"
+        assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
     def test_cors_preflight_request(self, client):
         """Test CORS preflight request."""
         response = client.options(
             "/api/v1/photos",
             headers={
-                "Origin": "https://example.com",
+                "Origin": "http://localhost:5173",
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Headers": "Content-Type",
             },

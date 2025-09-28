@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides comprehensive instructions for testing the integration between the frontend and backend components of the Calorie Track AI Bot system.
+This guide provides comprehensive instructions for testing the integration between the frontend and backend components of the Calorie Track AI Bot system. It covers contract testing, API integration, E2E testing, performance validation, and mobile device testing for the Telegram Mini App.
 
 ## Integration Test Architecture
 
@@ -10,40 +10,58 @@ This guide provides comprehensive instructions for testing the integration betwe
 graph TB
     subgraph "Test Environment"
         subgraph "Frontend Tests"
-            UNIT_FE[Unit Tests]
-            INTEGRATION_FE[Integration Tests]
-            E2E_FE[E2E Tests]
+            UNIT_FE[Unit Tests<br/>Vitest]
+            CONTRACT_FE[Contract Tests<br/>API Validation]
+            COMPONENT_FE[Component Tests<br/>React Testing]
+            E2E_FE[E2E Tests<br/>Playwright]
         end
 
         subgraph "Backend Tests"
-            UNIT_BE[Unit Tests]
-            INTEGRATION_BE[Integration Tests]
-            API_TESTS[API Tests]
+            UNIT_BE[Unit Tests<br/>Pytest]
+            CONTRACT_BE[Contract Tests<br/>API Specs]
+            INTEGRATION_BE[Integration Tests<br/>Database & Redis]
+            PERFORMANCE_BE[Performance Tests<br/>Load & Stress]
         end
 
         subgraph "Full Stack Tests"
-            CONNECTIVITY[Connectivity Tests]
-            WORKFLOW[Workflow Tests]
-            PERFORMANCE[Performance Tests]
+            CONNECTIVITY[Connectivity Tests<br/>Health Checks]
+            WORKFLOW[Workflow Tests<br/>User Journeys]
+            MOBILE[Mobile Tests<br/>Device Simulation]
+            THEME_LANG[Theme & Language<br/>Detection Tests]
         end
 
-        subgraph "Test Tools"
-            JEST[Jest Testing]
-            PLAYWRIGHT[Playwright E2E]
-            PYTEST[Pytest Backend]
-            MOCK[Mock Services]
+        subgraph "Test Infrastructure"
+            VITEST[Vitest + Testing Library]
+            PLAYWRIGHT[Playwright Multi-Device]
+            PYTEST[Pytest + FastAPI TestClient]
+            MOCK[Mock Services & Fixtures]
+            SUPABASE[Supabase Test DB]
+            DOCKER[Docker Test Containers]
         end
     end
 
-    UNIT_FE --> JEST
-    INTEGRATION_FE --> JEST
+    %% Frontend test connections
+    UNIT_FE --> VITEST
+    CONTRACT_FE --> VITEST
+    COMPONENT_FE --> VITEST
     E2E_FE --> PLAYWRIGHT
+
+    %% Backend test connections
     UNIT_BE --> PYTEST
+    CONTRACT_BE --> PYTEST
     INTEGRATION_BE --> PYTEST
-    API_TESTS --> PYTEST
+    PERFORMANCE_BE --> PYTEST
+
+    %% Full stack test connections
     CONNECTIVITY --> MOCK
-    WORKFLOW --> MOCK
-    PERFORMANCE --> MOCK
+    WORKFLOW --> PLAYWRIGHT
+    MOBILE --> PLAYWRIGHT
+    THEME_LANG --> PLAYWRIGHT
+
+    %% Infrastructure connections
+    INTEGRATION_BE --> SUPABASE
+    INTEGRATION_BE --> DOCKER
+    CONTRACT_BE --> MOCK
 ```
 
 ## Local Testing Setup

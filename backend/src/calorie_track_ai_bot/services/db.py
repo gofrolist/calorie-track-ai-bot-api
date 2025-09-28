@@ -1,11 +1,17 @@
 import uuid
+from datetime import UTC
 from typing import Any
 
 import httpx
 from supabase import create_client
 from supabase.lib.client_options import SyncClientOptions
 
-from ..schemas import MealCreateFromEstimateRequest, MealCreateManualRequest
+from ..schemas import (
+    MealCreateFromEstimateRequest,
+    MealCreateManualRequest,
+    UIConfiguration,
+    UIConfigurationUpdate,
+)
 from .config import APP_ENV, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, logger
 
 # Initialize Supabase client only if configuration is available
@@ -349,3 +355,165 @@ async def db_get_today_data(date: str, user_id: str | None = None) -> dict[str, 
     }
 
     return {"meals": meals, "daily_summary": daily_summary}
+
+
+# UI Configuration Database Functions
+async def db_get_ui_configuration(user_id: str) -> dict[str, Any] | None:
+    """Get UI configuration for a user."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    res = sb.table("ui_configurations").select("*").eq("user_id", user_id).execute()
+    return res.data[0] if res.data else None
+
+
+async def db_create_ui_configuration(user_id: str, config: UIConfiguration) -> dict[str, Any]:
+    """Create a new UI configuration for a user."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    config_data = {
+        "id": config.id,
+        "user_id": user_id,
+        "environment": config.environment,
+        "api_base_url": config.api_base_url,
+        "safe_area_top": config.safe_area_top,
+        "safe_area_bottom": config.safe_area_bottom,
+        "safe_area_left": config.safe_area_left,
+        "safe_area_right": config.safe_area_right,
+        "theme": config.theme,
+        "theme_source": config.theme_source,
+        "language": config.language,
+        "language_source": config.language_source,
+        "features": config.features,
+        "created_at": config.created_at.isoformat(),
+        "updated_at": config.updated_at.isoformat(),
+    }
+
+    res = sb.table("ui_configurations").insert(config_data).execute()
+    return res.data[0] if res.data else config_data
+
+
+async def db_update_ui_configuration(
+    user_id: str, config_id: str, updates: UIConfigurationUpdate
+) -> dict[str, Any] | None:
+    """Update an existing UI configuration."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    # Build update data from non-None fields
+    update_data = {}
+
+    if updates.environment is not None:
+        update_data["environment"] = updates.environment
+    if updates.api_base_url is not None:
+        update_data["api_base_url"] = updates.api_base_url
+    if updates.safe_area_top is not None:
+        update_data["safe_area_top"] = updates.safe_area_top
+    if updates.safe_area_bottom is not None:
+        update_data["safe_area_bottom"] = updates.safe_area_bottom
+    if updates.safe_area_left is not None:
+        update_data["safe_area_left"] = updates.safe_area_left
+    if updates.safe_area_right is not None:
+        update_data["safe_area_right"] = updates.safe_area_right
+    if updates.theme is not None:
+        update_data["theme"] = updates.theme
+    if updates.theme_source is not None:
+        update_data["theme_source"] = updates.theme_source
+    if updates.language is not None:
+        update_data["language"] = updates.language
+    if updates.language_source is not None:
+        update_data["language_source"] = updates.language_source
+    if updates.features is not None:
+        update_data["features"] = updates.features
+
+    # Always update the updated_at timestamp
+    from datetime import datetime
+
+    update_data["updated_at"] = datetime.now(UTC).isoformat()
+
+    res = (
+        sb.table("ui_configurations")
+        .update(update_data)
+        .eq("id", config_id)
+        .eq("user_id", user_id)  # Ensure user can only update their own config
+        .execute()
+    )
+
+    return res.data[0] if res.data else None
+
+
+async def db_delete_ui_configuration(user_id: str, config_id: str) -> bool:
+    """Delete a UI configuration."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    res = (
+        sb.table("ui_configurations")
+        .delete()
+        .eq("id", config_id)
+        .eq("user_id", user_id)  # Ensure user can only delete their own config
+        .execute()
+    )
+
+    return len(res.data) > 0 if res.data else False
+
+
+async def db_get_ui_configurations_by_user(user_id: str) -> list[dict[str, Any]]:
+    """Get all UI configurations for a user."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    res = (
+        sb.table("ui_configurations")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("updated_at", desc=True)
+        .execute()
+    )
+    return res.data if res.data else []
+
+
+async def db_cleanup_old_ui_configurations(user_id: str, keep_count: int = 5) -> int:
+    """Clean up old UI configurations, keeping only the most recent ones."""
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    # Get all configurations for the user, ordered by updated_at desc
+    all_configs = await db_get_ui_configurations_by_user(user_id)
+
+    if len(all_configs) <= keep_count:
+        return 0  # Nothing to clean up
+
+    # Get IDs of configurations to delete (all except the most recent keep_count)
+    configs_to_delete = all_configs[keep_count:]
+    delete_ids = [config["id"] for config in configs_to_delete]
+
+    if not delete_ids:
+        return 0
+
+    # Delete old configurations
+    res = (
+        sb.table("ui_configurations")
+        .delete()
+        .in_("id", delete_ids)
+        .eq("user_id", user_id)  # Safety check
+        .execute()
+    )
+
+    deleted_count = len(res.data) if res.data else 0
+    logger.info(f"Cleaned up {deleted_count} old UI configurations for user {user_id}")
+
+    return deleted_count
