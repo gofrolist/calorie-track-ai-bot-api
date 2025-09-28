@@ -228,40 +228,64 @@ const App: React.FC = () => {
       try {
         await loggingApi.logInfo('Application initialization started');
 
-        // Initialize Telegram WebApp
+        // Initialize Telegram WebApp with better detection
         let telegramData: any = {};
         let isConnected = false;
 
-        if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-          const webApp = window.Telegram.WebApp;
+        // Wait for Telegram WebApp to be available
+        const waitForTelegram = async (): Promise<any> => {
+          return new Promise((resolve) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max wait
 
-          // Initialize WebApp
-          webApp.ready();
-          webApp.expand();
+            const checkTelegram = () => {
+              attempts++;
 
-          telegramData = {
-            user: webApp.initDataUnsafe?.user || null,
-            initData: webApp.initData || null,
-            themeParams: webApp.themeParams,
-          };
+              if (window.Telegram?.WebApp) {
+                const webApp = window.Telegram.WebApp;
 
-          // Store user data in localStorage for API calls
-          if (webApp.initDataUnsafe?.user) {
-            localStorage.setItem('telegram_user', JSON.stringify(webApp.initDataUnsafe.user));
-          }
+                // Initialize WebApp
+                webApp.ready();
+                webApp.expand();
 
-          // Update CSS custom properties with Telegram theme colors
-          if (webApp.themeParams) {
-            const root = document.documentElement;
-            root.style.setProperty('--tg-bg-color', webApp.themeParams.bg_color || '#ffffff');
-            root.style.setProperty('--tg-text-color', webApp.themeParams.text_color || '#000000');
-            root.style.setProperty('--tg-hint-color', webApp.themeParams.hint_color || '#999999');
-            root.style.setProperty('--tg-link-color', webApp.themeParams.link_color || '#007aff');
-            root.style.setProperty('--tg-button-color', webApp.themeParams.button_color || '#007aff');
-            root.style.setProperty('--tg-button-text-color', webApp.themeParams.button_text_color || '#ffffff');
-            root.style.setProperty('--tg-secondary-bg-color', webApp.themeParams.secondary_bg_color || '#f0f0f0');
-          }
-        }
+                const data = {
+                  user: webApp.initDataUnsafe?.user || null,
+                  initData: webApp.initData || null,
+                  themeParams: webApp.themeParams,
+                };
+
+                // Store user data in localStorage for API calls
+                if (webApp.initDataUnsafe?.user) {
+                  localStorage.setItem('telegram_user', JSON.stringify(webApp.initDataUnsafe.user));
+                }
+
+                // Update CSS custom properties with Telegram theme colors
+                if (webApp.themeParams) {
+                  const root = document.documentElement;
+                  root.style.setProperty('--tg-bg-color', webApp.themeParams.bg_color || '#ffffff');
+                  root.style.setProperty('--tg-text-color', webApp.themeParams.text_color || '#000000');
+                  root.style.setProperty('--tg-hint-color', webApp.themeParams.hint_color || '#999999');
+                  root.style.setProperty('--tg-link-color', webApp.themeParams.link_color || '#007aff');
+                  root.style.setProperty('--tg-button-color', webApp.themeParams.button_color || '#007aff');
+                  root.style.setProperty('--tg-button-text-color', webApp.themeParams.button_text_color || '#ffffff');
+                  root.style.setProperty('--tg-secondary-bg-color', webApp.themeParams.secondary_bg_color || '#f0f0f0');
+                }
+
+                resolve(data);
+              } else if (attempts < maxAttempts) {
+                setTimeout(checkTelegram, 100);
+              } else {
+                // Telegram WebApp not available after timeout
+                console.log('Telegram WebApp not available after timeout');
+                resolve({});
+              }
+            };
+
+            checkTelegram();
+          });
+        };
+
+        telegramData = await waitForTelegram();
 
         // Check connectivity
         try {

@@ -208,7 +208,19 @@ api.interceptors.request.use((config) => {
   if (!userId) {
     // Check if we're in a Telegram WebApp environment
     const urlParams = new URLSearchParams(window.location.search);
-    userId = urlParams.get('user_id') || urlParams.get('tg_user_id');
+    userId = urlParams.get('user_id') ||
+             urlParams.get('tg_user_id') ||
+             urlParams.get('user') ||
+             urlParams.get('id');
+
+    // Also check hash parameters
+    if (!userId && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      userId = hashParams.get('user_id') ||
+               hashParams.get('tg_user_id') ||
+               hashParams.get('user') ||
+               hashParams.get('id');
+    }
   }
 
   // Additional fallback: check if we have stored user info
