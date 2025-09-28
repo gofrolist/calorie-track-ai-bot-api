@@ -1,0 +1,273 @@
+/**
+ * SafeAreaWrapper CSS Module
+ *
+ * Provides styling for safe area wrapper component with theme support,
+ * responsive design, and accessibility considerations.
+ */
+
+.safeAreaWrapper {
+  /* Base wrapper styles */
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  /* Smooth transitions for safe area changes */
+  transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Ensure content stays within safe boundaries */
+  box-sizing: border-box;
+
+  /* Accessibility: Ensure focus outlines are visible */
+  outline-offset: 2px;
+}
+
+.safeAreaWrapper[data-safe-area-supported="true"] {
+  /* Enhanced styling when CSS env() is supported */
+  --safe-area-transition: padding 0.2s ease-out;
+  transition: var(--safe-area-transition);
+}
+
+.safeAreaWrapper[data-telegram-webapp="true"] {
+  /* Telegram-specific optimizations */
+  /* Use Telegram's color scheme variables when available */
+  background-color: var(--tg-bg-color, transparent);
+  color: var(--tg-text-color, inherit);
+}
+
+/* Debug overlay styles */
+.debugOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+
+  /* Semi-transparent border to show safe areas */
+  border: 2px solid #ff0000;
+
+  /* Accessibility: Ensure debug overlay doesn't interfere with screen readers */
+  aria-hidden: true;
+
+  /* Animations for debug visibility */
+  animation: debugPulse 2s infinite;
+}
+
+@keyframes debugPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 0.3; }
+}
+
+.debugInfo {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  /* High contrast for visibility */
+  background: rgba(0, 0, 0, 0.9);
+  color: #ffffff;
+
+  /* Typography */
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+
+  /* Layout */
+  padding: 8px 12px;
+  border-radius: 6px;
+
+  /* Ensure readability */
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  /* Prevent text selection */
+  user-select: none;
+
+  /* Responsive design */
+  max-width: 200px;
+  word-break: break-word;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .debugInfo {
+    background: rgba(255, 255, 255, 0.95);
+    color: #000000;
+  }
+}
+
+/* Responsive breakpoints */
+@media screen and (max-width: 480px) {
+  .debugInfo {
+    font-size: 10px;
+    padding: 6px 8px;
+    max-width: 150px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .debugOverlay {
+    border-color: #ffffff;
+    border-width: 3px;
+  }
+
+  .debugInfo {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .safeAreaWrapper {
+    transition: none;
+  }
+
+  .debugOverlay {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* Print styles */
+@media print {
+  .debugOverlay,
+  .debugInfo {
+    display: none;
+  }
+
+  .safeAreaWrapper {
+    padding: 0 !important;
+    transition: none;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media screen and (orientation: landscape) {
+  .safeAreaWrapper {
+    /* Adjust for landscape safe areas */
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+}
+
+/* Portrait orientation adjustments */
+@media screen and (orientation: portrait) {
+  .safeAreaWrapper {
+    /* Optimize for portrait mode */
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+/* iOS specific optimizations */
+@supports (-webkit-appearance: none) {
+  .safeAreaWrapper {
+    /* iOS-specific safe area handling */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Android specific optimizations */
+@media screen and (-webkit-min-device-pixel-ratio: 1) {
+  .safeAreaWrapper {
+    /* Android-specific adjustments */
+    /* Account for navigation bar variations */
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+}
+
+/* Tablet specific styles */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  .safeAreaWrapper {
+    /* Tablet optimizations */
+    max-width: 100%;
+  }
+
+  .debugInfo {
+    font-size: 14px;
+    padding: 10px 14px;
+    max-width: 250px;
+  }
+}
+
+/* Desktop styles */
+@media screen and (min-width: 1025px) {
+  .safeAreaWrapper {
+    /* Desktop typically doesn't need safe areas */
+    padding: 0;
+  }
+
+  .debugInfo {
+    font-size: 13px;
+    padding: 8px 12px;
+    max-width: 300px;
+  }
+}
+
+/* Custom utility classes for different safe area configurations */
+.topOnly {
+  padding-bottom: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.bottomOnly {
+  padding-top: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.horizontalOnly {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.verticalOnly {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Focus management for accessibility */
+.safeAreaWrapper:focus-within {
+  /* Ensure focused content is visible within safe areas */
+  outline: 2px solid var(--focus-color, #007aff);
+  outline-offset: 2px;
+}
+
+/* Animation classes for smooth transitions */
+.entering {
+  animation: safeAreaEnter 0.3s ease-out;
+}
+
+.exiting {
+  animation: safeAreaExit 0.3s ease-in;
+}
+
+@keyframes safeAreaEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes safeAreaExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}

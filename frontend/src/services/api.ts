@@ -70,6 +70,73 @@ export interface Goal {
   updated_at: string;
 }
 
+// UI Configuration types
+export interface UIConfiguration {
+  id: string;
+  environment: 'development' | 'production';
+  api_base_url: string;
+  safe_area_top: number;
+  safe_area_bottom: number;
+  safe_area_left: number;
+  safe_area_right: number;
+  theme: 'light' | 'dark' | 'auto';
+  theme_source: 'telegram' | 'system' | 'manual';
+  language: string;
+  language_source: 'telegram' | 'browser' | 'manual';
+  features: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UIConfigurationUpdate {
+  environment?: 'development' | 'production';
+  api_base_url?: string;
+  safe_area_top?: number;
+  safe_area_bottom?: number;
+  safe_area_left?: number;
+  safe_area_right?: number;
+  theme?: 'light' | 'dark' | 'auto';
+  theme_source?: 'telegram' | 'system' | 'manual';
+  language?: string;
+  language_source?: 'telegram' | 'browser' | 'manual';
+  features?: Record<string, any>;
+}
+
+export interface ThemeDetectionResponse {
+  theme: 'light' | 'dark' | 'auto';
+  theme_source: 'telegram' | 'system' | 'manual';
+  telegram_color_scheme?: 'light' | 'dark';
+  system_prefers_dark?: boolean;
+  detected_at: string;
+}
+
+export interface LanguageDetectionResponse {
+  language: string;
+  language_source: 'telegram' | 'browser' | 'manual';
+  telegram_language?: string;
+  browser_language?: string;
+  supported_languages: string[];
+  detected_at: string;
+}
+
+export interface ConnectivityResponse {
+  status: 'connected' | 'disconnected' | 'error';
+  response_time_ms: number;
+  timestamp: string;
+  correlation_id: string;
+  details?: Record<string, any>;
+}
+
+export interface LogEntry {
+  level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
+  service: string;
+  correlation_id: string;
+  message: string;
+  context?: Record<string, any>;
+  user_id?: string;
+  timestamp: string;
+}
+
 import { config } from '../config';
 
 // API Configuration using centralized config
@@ -298,6 +365,144 @@ export const healthApi = {
     const response = await api.get('/health/live');
     return response.data;
   },
+
+  async checkConnectivity(): Promise<ConnectivityResponse> {
+    const response = await api.get('/health/connectivity');
+    return response.data;
+  },
+};
+
+// Configuration API
+export const configApi = {
+  async getUIConfiguration(): Promise<UIConfiguration> {
+    const response = await api.get('/api/v1/config/ui');
+    return response.data;
+  },
+
+  async updateUIConfiguration(updates: UIConfigurationUpdate): Promise<UIConfiguration> {
+    const response = await api.put('/api/v1/config/ui', updates);
+    return response.data;
+  },
+
+  async patchUIConfiguration(updates: UIConfigurationUpdate): Promise<UIConfiguration> {
+    const response = await api.patch('/api/v1/config/ui', updates);
+    return response.data;
+  },
+
+  async detectTheme(): Promise<ThemeDetectionResponse> {
+    // Add theme detection headers if available
+    const headers: Record<string, string> = {};
+
+    if (window.Telegram?.WebApp?.colorScheme) {
+      headers['x-telegram-color-scheme'] = window.Telegram.WebApp.colorScheme;
+    }
+
+    const response = await api.get('/api/v1/config/theme', { headers });
+    return response.data;
+  },
+
+  async detectLanguage(): Promise<LanguageDetectionResponse> {
+    // Add language detection headers if available
+    const headers: Record<string, string> = {};
+
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code) {
+      headers['x-telegram-language-code'] = window.Telegram.WebApp.initDataUnsafe.user.language_code;
+    }
+
+    if (navigator.language) {
+      headers['accept-language'] = navigator.language;
+    }
+
+    const response = await api.get('/api/v1/config/language', { headers });
+    return response.data;
+  },
+};
+
+// Logging API
+export const loggingApi = {
+  async submitLog(logEntry: Omit<LogEntry, 'timestamp'>): Promise<void> {
+    const logWithTimestamp: LogEntry = {
+      ...logEntry,
+      timestamp: new Date().toISOString(),
+    };
+
+    await api.post('/api/v1/logs', logWithTimestamp);
+  },
+
+  async getLogs(params?: {
+    level?: string;
+    service?: string;
+    correlation_id?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<LogEntry[]> {
+    const response = await api.get('/api/v1/logs', { params });
+    return response.data;
+  },
+
+  // Helper methods for different log levels
+  async logDebug(message: string, context?: Record<string, any>, service = 'frontend'): Promise<void> {
+    await this.submitLog({
+      level: 'DEBUG',
+      service,
+      correlation_id: sessionManager.getCorrelationId(),
+      message,
+      context,
+    });
+  },
+
+  async logInfo(message: string, context?: Record<string, any>, service = 'frontend'): Promise<void> {
+    await this.submitLog({
+      level: 'INFO',
+      service,
+      correlation_id: sessionManager.getCorrelationId(),
+      message,
+      context,
+    });
+  },
+
+  async logWarning(message: string, context?: Record<string, any>, service = 'frontend'): Promise<void> {
+    await this.submitLog({
+      level: 'WARNING',
+      service,
+      correlation_id: sessionManager.getCorrelationId(),
+      message,
+      context,
+    });
+  },
+
+  async logError(message: string, context?: Record<string, any>, service = 'frontend'): Promise<void> {
+    await this.submitLog({
+      level: 'ERROR',
+      service,
+      correlation_id: sessionManager.getCorrelationId(),
+      message,
+      context,
+    });
+  },
+
+  async logCritical(message: string, context?: Record<string, any>, service = 'frontend'): Promise<void> {
+    await this.submitLog({
+      level: 'CRITICAL',
+      service,
+      correlation_id: sessionManager.getCorrelationId(),
+      message,
+      context,
+    });
+  },
+};
+
+// Development API (only available in development environment)
+export const devApi = {
+  async getEnvironmentInfo(): Promise<any> {
+    const response = await api.get('/api/v1/dev/environment');
+    return response.data;
+  },
+
+  async getSupabaseStatus(): Promise<any> {
+    const response = await api.get('/api/v1/dev/supabase/status');
+    return response.data;
+  },
 };
 
 // Utility functions
@@ -352,6 +557,146 @@ export const apiUtils = {
   // Get today's date
   getTodayDate(): string {
     return this.formatDate(new Date());
+  },
+
+  // Initialize application with configuration, theme, and language detection
+  async initializeApplication(): Promise<{
+    user: User | null;
+    config: UIConfiguration | null;
+    theme: ThemeDetectionResponse | null;
+    language: LanguageDetectionResponse | null;
+  }> {
+    try {
+      // Initialize Telegram auth first
+      const user = await this.initializeWithTelegram();
+
+      // Log application initialization
+      await loggingApi.logInfo('Application initialization started', {
+        userAuthenticated: !!user,
+        userAgent: navigator.userAgent,
+        telegramAvailable: !!(window.Telegram?.WebApp),
+      });
+
+      // Detect theme and language in parallel
+      const [config, theme, language] = await Promise.allSettled([
+        configApi.getUIConfiguration(),
+        configApi.detectTheme(),
+        configApi.detectLanguage(),
+      ]);
+
+      const configResult = config.status === 'fulfilled' ? config.value : null;
+      const themeResult = theme.status === 'fulfilled' ? theme.value : null;
+      const languageResult = language.status === 'fulfilled' ? language.value : null;
+
+      // Log any errors
+      if (config.status === 'rejected') {
+        await loggingApi.logWarning('Failed to load UI configuration', {
+          error: config.reason?.message,
+        });
+      }
+      if (theme.status === 'rejected') {
+        await loggingApi.logWarning('Failed to detect theme', {
+          error: theme.reason?.message,
+        });
+      }
+      if (language.status === 'rejected') {
+        await loggingApi.logWarning('Failed to detect language', {
+          error: language.reason?.message,
+        });
+      }
+
+      await loggingApi.logInfo('Application initialization completed', {
+        configLoaded: !!configResult,
+        themeDetected: !!themeResult,
+        languageDetected: !!languageResult,
+      });
+
+      return {
+        user,
+        config: configResult,
+        theme: themeResult,
+        language: languageResult,
+      };
+    } catch (error) {
+      await loggingApi.logError('Application initialization failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  },
+
+  // Check application connectivity and health
+  async checkApplicationHealth(): Promise<{
+    health: boolean;
+    connectivity: ConnectivityResponse | null;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    let health = false;
+    let connectivity: ConnectivityResponse | null = null;
+
+    try {
+      // Check basic health
+      await healthApi.checkHealth();
+      health = true;
+    } catch (error) {
+      errors.push(`Health check failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    try {
+      // Check connectivity
+      connectivity = await healthApi.checkConnectivity();
+    } catch (error) {
+      errors.push(`Connectivity check failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return { health, connectivity, errors };
+  },
+
+  // Safe logging function that won't throw errors
+  async safeLog(level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL', message: string, context?: Record<string, any>): Promise<void> {
+    try {
+      switch (level) {
+        case 'DEBUG':
+          await loggingApi.logDebug(message, context);
+          break;
+        case 'INFO':
+          await loggingApi.logInfo(message, context);
+          break;
+        case 'WARNING':
+          await loggingApi.logWarning(message, context);
+          break;
+        case 'ERROR':
+          await loggingApi.logError(message, context);
+          break;
+        case 'CRITICAL':
+          await loggingApi.logCritical(message, context);
+          break;
+      }
+    } catch (error) {
+      // Fallback to console logging if API logging fails
+      console.log(`[${level}] ${message}`, context, error);
+    }
+  },
+
+  // Error boundary logging
+  async logComponentError(componentName: string, error: Error, errorInfo?: any): Promise<void> {
+    await this.safeLog('ERROR', `Component error in ${componentName}`, {
+      error: error.message,
+      stack: error.stack,
+      errorInfo,
+      component: componentName,
+    });
+  },
+
+  // Performance logging
+  async logPerformanceMetric(metric: string, value: number, context?: Record<string, any>): Promise<void> {
+    await this.safeLog('INFO', `Performance metric: ${metric}`, {
+      metric,
+      value,
+      unit: 'ms',
+      ...context,
+    });
   },
 };
 

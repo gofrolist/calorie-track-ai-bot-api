@@ -1,0 +1,24 @@
+# calorie-track-ai-bot-api Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-09-25
+
+## Active Technologies
+- TypeScript 5.x, Python 3.11, React 18, FastAPI + @telegram-apps/sdk, tma.js, Vite, PostgreSQL, Redis, Tigris Storage (002-i-need-to)
+
+## Project Structure
+```
+src/
+tests/
+```
+
+## Commands
+cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+
+## Code Style
+TypeScript 5.x, Python 3.11, React 18, FastAPI: Follow standard conventions
+
+## Recent Changes
+- 002-i-need-to: Added TypeScript 5.x, Python 3.11, React 18, FastAPI + @telegram-apps/sdk, tma.js, Vite, PostgreSQL, Redis, Tigris Storage
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

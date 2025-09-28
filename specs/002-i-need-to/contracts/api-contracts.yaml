@@ -1,0 +1,520 @@
+openapi: 3.1.1
+info:
+  title: Calorie Track AI Bot - Integration & UI Enhancement API
+  description: API contracts for backend-frontend integration, connectivity fixes, and UI enhancements
+  version: 1.0.0
+  contact:
+    name: Calorie Track AI Bot Team
+    email: support@calorietrack.app
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://calorie-track-ai-bot.fly.dev
+    description: Production server
+
+paths:
+  /health/connectivity:
+    get:
+      summary: Check frontend-backend connectivity
+      description: Endpoint to test connectivity between frontend and backend
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Connectivity check successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [connected, disconnected, error]
+                  response_time_ms:
+                    type: number
+                    minimum: 0
+                  timestamp:
+                    type: string
+                    format: date-time
+                  correlation_id:
+                    type: string
+                    format: uuid
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/config/ui:
+    get:
+      summary: Get UI configuration
+      description: Retrieve UI configuration including safe areas and theme settings
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: UI configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UIConfiguration'
+        '404':
+          description: Configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update UI configuration
+      description: Update UI configuration settings
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UIConfigurationUpdate'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UIConfiguration'
+        '400':
+          description: Invalid configuration data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/logs:
+    post:
+      summary: Submit structured log entry
+      description: Submit a structured log entry from frontend
+      tags:
+        - Logging
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogEntry'
+      responses:
+        '201':
+          description: Log entry created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [created]
+        '400':
+          description: Invalid log entry data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/dev/environment:
+    get:
+      summary: Get development environment status
+      description: Get current development environment configuration with Supabase CLI status
+      tags:
+        - Development
+      responses:
+        '200':
+          description: Environment status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevelopmentEnvironment'
+        '404':
+          description: Development environment not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/dev/supabase/status:
+    get:
+      summary: Get Supabase database status
+      description: Check if Supabase local database instance is running
+      tags:
+        - Development
+      responses:
+        '200':
+          description: Supabase database status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [running, stopped, error]
+                  db_url:
+                    type: string
+                    format: uri
+                    description: Database connection URL
+                  db_port:
+                    type: integer
+                    description: Database port (typically 54322)
+                  version:
+                    type: string
+                    description: Supabase CLI version
+                  services:
+                    type: object
+                    properties:
+                      db:
+                        type: boolean
+                        description: Database service status
+        '500':
+          description: Error checking Supabase database status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/config/theme:
+    get:
+      summary: Detect and get theme configuration
+      description: Detect theme from Telegram WebApp API and system preferences
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Theme configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  theme:
+                    type: string
+                    enum: [light, dark, auto]
+                  theme_source:
+                    type: string
+                    enum: [telegram, system, manual]
+                  telegram_color_scheme:
+                    type: string
+                    enum: [light, dark]
+                  system_prefers_dark:
+                    type: boolean
+                  detected_at:
+                    type: string
+                    format: date-time
+        '500':
+          description: Error detecting theme
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/config/language:
+    get:
+      summary: Detect and get language configuration
+      description: Detect language from Telegram user data and browser preferences
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Language configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  language:
+                    type: string
+                    pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+                    description: ISO 639-1 language code
+                  language_source:
+                    type: string
+                    enum: [telegram, browser, manual]
+                  telegram_language:
+                    type: string
+                    description: Language from Telegram user data
+                  browser_language:
+                    type: string
+                    description: Language from browser navigator
+                  supported_languages:
+                    type: array
+                    items:
+                      type: string
+                    description: List of supported language codes
+                  detected_at:
+                    type: string
+                    format: date-time
+        '500':
+          description: Error detecting language
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    UIConfiguration:
+      type: object
+      required:
+        - id
+        - environment
+        - api_base_url
+        - theme
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum: [development, production]
+        api_base_url:
+          type: string
+          format: uri
+        safe_area_top:
+          type: number
+          minimum: 0
+        safe_area_bottom:
+          type: number
+          minimum: 0
+        safe_area_left:
+          type: number
+          minimum: 0
+        safe_area_right:
+          type: number
+          minimum: 0
+        theme:
+          type: string
+          enum: [light, dark, auto]
+        theme_source:
+          type: string
+          enum: [telegram, system, manual]
+        language:
+          type: string
+          pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+          description: ISO 639-1 language code (e.g., 'en', 'ru', 'en-US')
+        language_source:
+          type: string
+          enum: [telegram, browser, manual]
+        features:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UIConfigurationUpdate:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum: [development, production]
+        api_base_url:
+          type: string
+          format: uri
+        safe_area_top:
+          type: number
+          minimum: 0
+        safe_area_bottom:
+          type: number
+          minimum: 0
+        safe_area_left:
+          type: number
+          minimum: 0
+        safe_area_right:
+          type: number
+          minimum: 0
+        theme:
+          type: string
+          enum: [light, dark, auto]
+        theme_source:
+          type: string
+          enum: [telegram, system, manual]
+        language:
+          type: string
+          pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+          description: ISO 639-1 language code (e.g., 'en', 'ru', 'en-US')
+        language_source:
+          type: string
+          enum: [telegram, browser, manual]
+        features:
+          type: object
+          additionalProperties: true
+
+    ConnectionStatus:
+      type: object
+      required:
+        - id
+        - status
+        - last_check
+        - correlation_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [connected, disconnected, error]
+        last_check:
+          type: string
+          format: date-time
+        response_time_ms:
+          type: number
+          minimum: 0
+        error_message:
+          type: string
+          nullable: true
+        retry_count:
+          type: integer
+          minimum: 0
+        correlation_id:
+          type: string
+          format: uuid
+
+    LogEntry:
+      type: object
+      required:
+        - level
+        - service
+        - correlation_id
+        - message
+        - timestamp
+      properties:
+        level:
+          type: string
+          enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+        service:
+          type: string
+          minLength: 1
+        correlation_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+          minLength: 1
+        context:
+          type: object
+          additionalProperties: true
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        request_id:
+          type: string
+          format: uuid
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+
+    DevelopmentEnvironment:
+      type: object
+      required:
+        - id
+        - name
+        - frontend_port
+        - backend_port
+        - supabase_local_url
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+        frontend_port:
+          type: integer
+          minimum: 1024
+          maximum: 65535
+        backend_port:
+          type: integer
+          minimum: 1024
+          maximum: 65535
+        supabase_db_url:
+          type: string
+          format: uri
+          description: Supabase database URL (typically http://localhost:54322)
+        supabase_db_password:
+          type: string
+          description: Database password
+        redis_url:
+          type: string
+          format: uri
+        storage_endpoint:
+          type: string
+          format: uri
+        cors_origins:
+          type: array
+          items:
+            type: string
+            format: uri
+        log_level:
+          type: string
+          enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+        hot_reload:
+          type: boolean
+        supabase_cli_version:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - correlation_id
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        correlation_id:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Health
+    description: Health check and connectivity endpoints
+  - name: Configuration
+    description: UI configuration management
+  - name: Logging
+    description: Structured logging endpoints
+  - name: Development
+    description: Development environment management

@@ -23,6 +23,34 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=cache,target=/root/.cache/pip \
     uv sync --locked --no-editable
 
+FROM python:3.12.11-alpine AS development
+
+WORKDIR /app
+
+# Install development dependencies
+RUN apk add --no-cache tzdata curl
+
+ENV TZ=Etc/UTC
+
+# Copy uv from builder stage
+COPY --from=builder /bin/uv /bin/uvx /bin/
+
+# Copy source code for development
+COPY . /app
+
+# Create virtual environment and install dependencies
+RUN uv venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Install the project in development mode with all dependencies
+RUN uv pip install -e .
+
+# Expose port for development
+EXPOSE 8000
+
+# Default command for development (can be overridden in docker-compose)
+CMD ["python", "-m", "uvicorn", "calorie_track_ai_bot.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
 FROM python:3.12.11-alpine AS runtime
 
 WORKDIR /app

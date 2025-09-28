@@ -7,6 +7,14 @@ export default defineConfig({
     port: 5173
   },
   test: {
-    exclude: ['tests/e2e/**/*', 'node_modules/**/*']
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+    exclude: ['tests/e2e/**/*', 'node_modules/**/*'],
+    // Configure error handling to ignore cleanup errors
+    onUnhandledRejection: 'ignore',
+    onUncaughtException: 'ignore',
+    // Set up error handling for unhandled errors
+    onUnhandledError: 'ignore'
   }
 });

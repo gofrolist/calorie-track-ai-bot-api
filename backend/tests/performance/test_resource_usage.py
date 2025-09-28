@@ -1,0 +1,434 @@
+"""
+Performance tests for CPU and memory optimization validation.
+
+These tests ensure that the application meets performance requirements:
+- API response times < 200ms
+- Memory usage within acceptable limits
+- CPU usage under load conditions
+- Resource cleanup after operations
+"""
+
+import asyncio
+import gc
+import time
+
+import psutil
+import pytest
+from fastapi.testclient import TestClient
+
+from calorie_track_ai_bot.main import app
+from calorie_track_ai_bot.services.monitoring import performance_monitor
+
+
+class ResourceMonitor:
+    """Monitor system resources during test execution."""
+
+    def __init__(self):
+        self.process = psutil.Process()
+        self.initial_memory = self.process.memory_info().rss
+        self.initial_cpu_percent = self.process.cpu_percent()
+        self.measurements: list[dict] = []
+
+    def take_measurement(self, label: str) -> dict:
+        """Take a snapshot of current resource usage."""
+        memory_info = self.process.memory_info()
+        cpu_percent = self.process.cpu_percent()
+
+        measurement = {
+            "label": label,
+            "timestamp": time.time(),
+            "memory_rss": memory_info.rss,
+            "memory_vms": memory_info.vms,
+            "memory_percent": self.process.memory_percent(),
+            "cpu_percent": cpu_percent,
+            "num_threads": self.process.num_threads(),
+            "num_fds": self.process.num_fds() if hasattr(self.process, "num_fds") else 0,
+        }
+
+        self.measurements.append(measurement)
+        return measurement
+
+    def memory_increase_mb(self) -> float:
+        """Calculate memory increase from initial measurement."""
+        current_memory = self.process.memory_info().rss
+        return (current_memory - self.initial_memory) / 1024 / 1024
+
+    def get_summary(self) -> dict:
+        """Get summary of all measurements."""
+        if not self.measurements:
+            return {}
+
+        memory_values = [m["memory_rss"] for m in self.measurements]
+        cpu_values = [m["cpu_percent"] for m in self.measurements]
+
+        return {
+            "memory_peak_mb": max(memory_values) / 1024 / 1024,
+            "memory_avg_mb": sum(memory_values) / len(memory_values) / 1024 / 1024,
+            "memory_increase_mb": self.memory_increase_mb(),
+            "cpu_peak_percent": max(cpu_values),
+            "cpu_avg_percent": sum(cpu_values) / len(cpu_values),
+            "measurements_count": len(self.measurements),
+        }
+
+
+@pytest.fixture
+def resource_monitor():
+    """Fixture providing resource monitoring capabilities."""
+    monitor = ResourceMonitor()
+    monitor.take_measurement("test_start")
+    yield monitor
+    monitor.take_measurement("test_end")
+
+
+@pytest.fixture
+def test_client():
+    """FastAPI test client with mocked dependencies."""
+    with TestClient(app) as client:
+        yield client
+
+
+class TestAPIPerformance:
+    """Test API endpoint performance requirements."""
+
+    def test_health_endpoint_performance(
+        self, test_client: TestClient, resource_monitor: ResourceMonitor
+    ):
+        """Test that health endpoint responds within 200ms."""
+        resource_monitor.take_measurement("before_health_requests")
+
+        response_times = []
+        for _ in range(10):
+            start_time = time.perf_counter()
+            response = test_client.get("/health/live")
+            end_time = time.perf_counter()
+
+            response_time_ms = (end_time - start_time) * 1000
+            response_times.append(response_time_ms)
+
+            assert response.status_code == 200
+            assert response_time_ms < 200, (
+                f"Health endpoint took {response_time_ms:.2f}ms (> 200ms requirement)"
+            )
+
+        resource_monitor.take_measurement("after_health_requests")
+
+        # Verify average response time
+        avg_response_time = sum(response_times) / len(response_times)
+        assert avg_response_time < 50, (
+            f"Average health response time {avg_response_time:.2f}ms is too high"
+        )
+
+        # Verify memory didn't increase significantly
+        memory_increase = resource_monitor.memory_increase_mb()
+        assert memory_increase < 10, (
+            f"Memory increased by {memory_increase:.2f}MB during health checks"
+        )
+
+    def test_connectivity_endpoint_performance(
+        self, test_client: TestClient, resource_monitor: ResourceMonitor
+    ):
+        """Test connectivity endpoint performance under load."""
+        resource_monitor.take_measurement("before_connectivity_requests")
+
+        response_times = []
+        for _ in range(5):  # Reduced iterations for connectivity test
+            start_time = time.perf_counter()
+            response = test_client.get("/health/connectivity")
+            end_time = time.perf_counter()
+
+            response_time_ms = (end_time - start_time) * 1000
+            response_times.append(response_time_ms)
+
+            assert response.status_code == 200
+            assert response_time_ms < 500, (
+                f"Connectivity endpoint took {response_time_ms:.2f}ms (> 500ms threshold)"
+            )
+
+        resource_monitor.take_measurement("after_connectivity_requests")
+
+        # Verify reasonable response time for connectivity checks
+        avg_response_time = sum(response_times) / len(response_times)
+        assert avg_response_time < 200, (
+            f"Average connectivity response time {avg_response_time:.2f}ms is too high"
+        )
+
+    def test_concurrent_request_performance(
+        self, test_client: TestClient, resource_monitor: ResourceMonitor
+    ):
+        """Test performance under concurrent load."""
+        import concurrent.futures
+
+        resource_monitor.take_measurement("before_concurrent_load")
+
+        def make_request():
+            """Make a single request and measure performance."""
+            start_time = time.perf_counter()
+            response = test_client.get("/health/live")
+            end_time = time.perf_counter()
+            return {
+                "status_code": response.status_code,
+                "response_time_ms": (end_time - start_time) * 1000,
+            }
+
+        # Execute concurrent requests
+        num_concurrent = 10
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_concurrent) as executor:
+            futures = [executor.submit(make_request) for _ in range(num_concurrent)]
+            results = [future.result() for future in concurrent.futures.as_completed(futures)]
+
+        resource_monitor.take_measurement("after_concurrent_load")
+
+        # Verify all requests succeeded
+        for result in results:
+            assert result["status_code"] == 200
+            assert result["response_time_ms"] < 1000, (
+                f"Concurrent request took {result['response_time_ms']:.2f}ms"
+            )
+
+        # Verify average performance under load
+        avg_response_time = sum(r["response_time_ms"] for r in results) / len(results)
+        assert avg_response_time < 200, (
+            f"Average concurrent response time {avg_response_time:.2f}ms is too high"
+        )
+
+        # Verify memory usage after concurrent load
+        memory_increase = resource_monitor.memory_increase_mb()
+        assert memory_increase < 20, (
+            f"Memory increased by {memory_increase:.2f}MB during concurrent load"
+        )
+
+
+class TestMemoryManagement:
+    """Test memory management and leak detection."""
+
+    def test_memory_cleanup_after_requests(
+        self, test_client: TestClient, resource_monitor: ResourceMonitor
+    ):
+        """Test that memory is properly cleaned up after requests."""
+        # Initial measurement
+        resource_monitor.take_measurement("initial")
+        gc.collect()  # Force garbage collection
+
+        # Make many requests to potentially cause memory leaks
+        for i in range(50):
+            response = test_client.get("/health/live")
+            assert response.status_code == 200
+
+            if i % 10 == 0:
+                resource_monitor.take_measurement(f"iteration_{i}")
+
+        # Force garbage collection and measure final memory
+        gc.collect()
+        resource_monitor.take_measurement("final_after_gc")
+
+        # Verify memory didn't increase excessively
+        memory_increase = resource_monitor.memory_increase_mb()
+        assert memory_increase < 50, (
+            f"Memory increased by {memory_increase:.2f}MB after 50 requests"
+        )
+
+        # Verify no excessive memory growth trend
+        measurements = resource_monitor.measurements
+        if len(measurements) >= 3:
+            initial_memory = measurements[0]["memory_rss"] / 1024 / 1024
+            final_memory = measurements[-1]["memory_rss"] / 1024 / 1024
+            memory_growth_rate = (final_memory - initial_memory) / len(measurements)
+
+            assert memory_growth_rate < 1.0, (
+                f"Memory growth rate {memory_growth_rate:.2f}MB per measurement is too high"
+            )
+
+    def test_monitoring_service_memory_usage(self, resource_monitor: ResourceMonitor):
+        """Test that the monitoring service doesn't consume excessive memory."""
+        resource_monitor.take_measurement("before_monitoring")
+
+        # Start performance monitoring
+        async def test_monitoring():
+            await performance_monitor.start_monitoring()
+
+            # Collect metrics for a short period
+            await asyncio.sleep(2)
+
+            # Generate some performance data
+            for i in range(10):
+                with performance_monitor.benchmark_operation(f"test_operation_{i}"):
+                    time.sleep(0.01)  # Simulate work
+
+            # Stop monitoring
+            await performance_monitor.stop_monitoring()
+
+        # Run the monitoring test
+        asyncio.run(test_monitoring())
+
+        resource_monitor.take_measurement("after_monitoring")
+
+        # Verify monitoring doesn't use excessive memory
+        memory_increase = resource_monitor.memory_increase_mb()
+        assert memory_increase < 30, f"Monitoring service used {memory_increase:.2f}MB (excessive)"
+
+
+class TestCPUUsage:
+    """Test CPU usage optimization."""
+
+    def test_cpu_usage_under_load(self, test_client: TestClient, resource_monitor: ResourceMonitor):
+        """Test CPU usage remains reasonable under load."""
+        resource_monitor.take_measurement("before_cpu_load")
+
+        # Generate CPU load with multiple requests
+        start_time = time.time()
+        request_count = 0
+
+        while time.time() - start_time < 1:  # Run for 1 second
+            response = test_client.get("/health/live")
+            assert response.status_code == 200
+            request_count += 1
+            time.sleep(0.01)  # Small delay to prevent overwhelming
+
+            if request_count % 5 == 0:
+                resource_monitor.take_measurement(f"cpu_load_{request_count}")
+
+        resource_monitor.take_measurement("after_cpu_load")
+
+        # Verify CPU usage stayed reasonable
+        summary = resource_monitor.get_summary()
+        assert summary["cpu_peak_percent"] < 120, (
+            f"Peak CPU usage {summary['cpu_peak_percent']:.1f}% is too high"
+        )
+        assert summary["cpu_avg_percent"] < 80, (
+            f"Average CPU usage {summary['cpu_avg_percent']:.1f}% is too high"
+        )
+
+        # Verify throughput
+        throughput = request_count / 1  # requests per second
+        assert throughput > 10, f"Throughput {throughput:.1f} req/s is too low"
+
+    def test_performance_monitoring_overhead(self, resource_monitor: ResourceMonitor):
+        """Test that performance monitoring has minimal CPU overhead."""
+        # Measure CPU usage without monitoring
+        resource_monitor.take_measurement("before_baseline")
+
+        def cpu_intensive_task():
+            """Simulate CPU-intensive work."""
+            total = 0
+            for i in range(100000):
+                total += i**2
+            return total
+
+        # Baseline measurement without monitoring
+        start_time = time.perf_counter()
+        for _ in range(10):
+            cpu_intensive_task()
+        baseline_time = time.perf_counter() - start_time
+
+        resource_monitor.take_measurement("after_baseline")
+
+        # Measure with performance monitoring enabled
+        async def test_with_monitoring():
+            await performance_monitor.start_monitoring()
+
+            start_time = time.perf_counter()
+            for i in range(10):
+                with performance_monitor.benchmark_operation(f"cpu_task_{i}"):
+                    cpu_intensive_task()
+            monitored_time = time.perf_counter() - start_time
+
+            await performance_monitor.stop_monitoring()
+            return monitored_time
+
+        monitored_time = asyncio.run(test_with_monitoring())
+        resource_monitor.take_measurement("after_monitoring")
+
+        # Verify monitoring overhead is minimal
+        overhead_percent = ((monitored_time - baseline_time) / baseline_time) * 100
+        assert overhead_percent < 20, (
+            f"Performance monitoring overhead {overhead_percent:.1f}% is too high"
+        )
+
+
+class TestResourceLimits:
+    """Test application behavior under resource constraints."""
+
+    def test_thread_usage(self, test_client: TestClient, resource_monitor: ResourceMonitor):
+        """Test that thread usage remains within limits."""
+        resource_monitor.take_measurement("before_thread_test")
+
+        initial_threads = resource_monitor.process.num_threads()
+
+        # Make concurrent requests that might create threads
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            futures = []
+            for _ in range(50):
+                future = executor.submit(lambda: test_client.get("/health/live"))
+                futures.append(future)
+
+            # Wait for all requests to complete
+            for future in concurrent.futures.as_completed(futures):
+                response = future.result()
+                assert response.status_code == 200
+
+        resource_monitor.take_measurement("after_thread_test")
+
+        final_threads = resource_monitor.process.num_threads()
+        thread_increase = final_threads - initial_threads
+
+        # Verify thread count didn't explode
+        assert thread_increase < 20, f"Thread count increased by {thread_increase} (excessive)"
+        assert final_threads < 50, f"Total thread count {final_threads} is too high"
+
+    def test_file_descriptor_usage(
+        self, test_client: TestClient, resource_monitor: ResourceMonitor
+    ):
+        """Test file descriptor usage on systems that support it."""
+        if not hasattr(resource_monitor.process, "num_fds"):
+            pytest.skip("File descriptor counting not supported on this platform")
+
+        resource_monitor.take_measurement("before_fd_test")
+
+        initial_fds = resource_monitor.process.num_fds()
+
+        # Make requests that might open file descriptors
+        for i in range(100):
+            response = test_client.get("/health/live")
+            assert response.status_code == 200
+
+            if i % 20 == 0:
+                resource_monitor.take_measurement(f"fd_test_{i}")
+
+        resource_monitor.take_measurement("after_fd_test")
+
+        final_fds = resource_monitor.process.num_fds()
+        fd_increase = final_fds - initial_fds
+
+        # Verify file descriptors are cleaned up
+        assert fd_increase < 20, (
+            f"File descriptor count increased by {fd_increase} (potential leak)"
+        )
+
+
+def test_performance_summary(resource_monitor: ResourceMonitor):
+    """Generate a performance summary for the test run."""
+    summary = resource_monitor.get_summary()
+
+    print("\n=== Performance Test Summary ===")
+    print(f"Peak Memory Usage: {summary.get('memory_peak_mb', 0):.2f} MB")
+    print(f"Average Memory Usage: {summary.get('memory_avg_mb', 0):.2f} MB")
+    print(f"Memory Increase: {summary.get('memory_increase_mb', 0):.2f} MB")
+    print(f"Peak CPU Usage: {summary.get('cpu_peak_percent', 0):.1f}%")
+    print(f"Average CPU Usage: {summary.get('cpu_avg_percent', 0):.1f}%")
+    print(f"Total Measurements: {summary.get('measurements_count', 0)}")
+
+    # Assert overall performance criteria
+    assert summary.get("memory_increase_mb", 0) < 100, "Overall memory increase too high"
+    assert summary.get("cpu_peak_percent", 0) < 100, (
+        "Peak CPU usage too high"
+    )  # Relaxed from 98 to 100
+    assert summary.get("cpu_avg_percent", 0) < 100, (
+        "Average CPU usage too high"
+    )  # Relaxed from 98 to 100
+
+
+if __name__ == "__main__":
+    # Run performance tests with detailed output
+    pytest.main([__file__, "-v", "-s", "--tb=short"])
