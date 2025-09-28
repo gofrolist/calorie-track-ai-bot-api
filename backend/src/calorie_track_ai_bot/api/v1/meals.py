@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from ...schemas import (
     MealCreateFromEstimateRequest,
@@ -28,10 +28,15 @@ async def create_meal(payload: MealCreateManualRequest | MealCreateFromEstimateR
 
 
 @router.get("/meals")
-async def get_meals(date: str = Query(..., description="Date in YYYY-MM-DD format")):
+async def get_meals(
+    request: Request, date: str = Query(..., description="Date in YYYY-MM-DD format")
+):
     """Get meals for a specific date."""
     try:
-        meals = await db_get_meals_by_date(date)
+        # Get user ID from x-user-id header
+        user_id = request.headers.get("x-user-id")
+
+        meals = await db_get_meals_by_date(date, user_id)
         return meals
     except Exception as e:
         raise HTTPException(500, str(e)) from e
