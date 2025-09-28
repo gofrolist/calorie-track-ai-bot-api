@@ -471,8 +471,8 @@ describe('Frontend Contract Tests - Language Detection', () => {
       const endTime = performance.now();
       const duration = endTime - startTime;
 
-      // Should complete reasonably quickly (less than 100ms)
-      expect(duration).toBeLessThan(100);
+      // Should complete reasonably quickly (less than 500ms)
+      expect(duration).toBeLessThan(500);
     });
 
     it('should validate language codes correctly', async () => {

@@ -11,6 +11,7 @@ interface DebugInfo {
 const DebugInfo: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [manualUserId, setManualUserId] = useState('');
 
   useEffect(() => {
     // Check if debug logging is enabled
@@ -35,6 +36,14 @@ const DebugInfo: React.FC = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleManualUserIdSubmit = () => {
+    if (manualUserId.trim()) {
+      localStorage.setItem('telegram_user', JSON.stringify({ id: manualUserId }));
+      // Trigger a page reload to pick up the new user ID
+      window.location.reload();
+    }
+  };
 
   // Only show if debug logging is enabled
   const enableDebugLogging = import.meta.env.VITE_ENABLE_DEBUG_LOGGING === 'true';
@@ -71,6 +80,41 @@ const DebugInfo: React.FC = () => {
           <div style={{ marginTop: '10px', fontSize: '10px', opacity: 0.7 }}>
             <div>Environment: {import.meta.env.VITE_APP_ENV}</div>
             <div>API Base: {import.meta.env.VITE_API_BASE_URL}</div>
+          </div>
+
+          {/* Manual User ID Input */}
+          <div style={{ marginTop: '10px', padding: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
+            <div style={{ fontSize: '10px', marginBottom: '3px' }}>Manual User ID:</div>
+            <input
+              type="text"
+              value={manualUserId}
+              onChange={(e) => setManualUserId(e.target.value)}
+              placeholder="Enter user ID"
+              style={{
+                width: '100%',
+                padding: '2px',
+                fontSize: '10px',
+                background: 'white',
+                color: 'black',
+                border: 'none',
+                borderRadius: '2px'
+              }}
+            />
+            <button
+              onClick={handleManualUserIdSubmit}
+              style={{
+                marginTop: '3px',
+                padding: '2px 5px',
+                fontSize: '10px',
+                background: '#007aff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '2px',
+                cursor: 'pointer'
+              }}
+            >
+              Set User ID
+            </button>
           </div>
         </div>
       )}
