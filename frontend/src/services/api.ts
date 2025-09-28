@@ -196,6 +196,11 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${sessionToken}`;
   }
 
+  // Add Telegram user ID for backend authentication in development
+  if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+    config.headers['x-user-id'] = window.Telegram.WebApp.initDataUnsafe.user.id.toString();
+  }
+
   return config;
 });
 
@@ -395,6 +400,11 @@ export const configApi = {
 
     if (window.Telegram?.WebApp?.colorScheme) {
       headers['x-telegram-color-scheme'] = window.Telegram.WebApp.colorScheme;
+    }
+
+    // Add system preference header
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      headers['sec-ch-prefers-color-scheme'] = 'dark';
     }
 
     const response = await api.get('/api/v1/config/theme', { headers });

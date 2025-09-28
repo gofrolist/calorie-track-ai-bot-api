@@ -222,3 +222,4 @@ frontend/coverage/
 frontend/.nyc_output/
 frontend/dist/
 frontend/.vite/
+.vercel
