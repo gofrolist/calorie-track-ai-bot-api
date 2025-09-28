@@ -168,12 +168,33 @@ async def db_create_meal_from_estimate(data: MealCreateFromEstimateRequest) -> d
     return {"meal_id": mid}
 
 
-async def db_get_meals_by_date(meal_date: str, user_id: str | None = None) -> list[dict[str, Any]]:
+async def resolve_user_id(telegram_user_id: str | None) -> str | None:
+    """Resolve Telegram user ID to database UUID."""
+    if not telegram_user_id:
+        return None
+
+    try:
+        # Convert string to int for telegram_id lookup
+        telegram_id_int = int(telegram_user_id)
+        # Get or create user and return the UUID
+        return await db_get_or_create_user(telegram_id_int)
+    except (ValueError, TypeError):
+        # If conversion fails, return None
+        logger.warning(f"Invalid telegram_user_id format: {telegram_user_id}")
+        return None
+
+
+async def db_get_meals_by_date(
+    meal_date: str, telegram_user_id: str | None = None
+) -> list[dict[str, Any]]:
     """Get meals for a specific date."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
+
+    # Resolve Telegram user ID to database UUID
+    user_id = await resolve_user_id(telegram_user_id)
 
     query = sb.table("meals").select("*").eq("meal_date", meal_date)
     if user_id:
@@ -216,12 +237,17 @@ async def db_delete_meal(meal_id: str) -> bool:
     return len(res.data) > 0 if res.data else False
 
 
-async def db_get_daily_summary(date: str, user_id: str | None = None) -> dict[str, Any] | None:
+async def db_get_daily_summary(
+    date: str, telegram_user_id: str | None = None
+) -> dict[str, Any] | None:
     """Get daily summary for a specific date."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
+
+    # Resolve Telegram user ID to database UUID
+    user_id = await resolve_user_id(telegram_user_id)
 
     query = sb.table("meals").select("kcal_total").eq("meal_date", date)
     if user_id:
@@ -244,26 +270,36 @@ async def db_get_daily_summary(date: str, user_id: str | None = None) -> dict[st
     }
 
 
-def db_get_goal(user_id: str) -> dict[str, Any] | None:
+async def db_get_goal(telegram_user_id: str) -> dict[str, Any] | None:
     """Get user's goal."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
 
+    # Resolve Telegram user ID to database UUID
+    user_id = await resolve_user_id(telegram_user_id)
+    if not user_id:
+        return None
+
     res = sb.table("goals").select("*").eq("user_id", user_id).execute()
     return res.data[0] if res.data else None
 
 
-def db_create_or_update_goal(user_id: str, daily_kcal_target: int) -> dict[str, Any]:
+async def db_create_or_update_goal(telegram_user_id: str, daily_kcal_target: int) -> dict[str, Any]:
     """Create or update user's goal."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
 
+    # Resolve Telegram user ID to database UUID
+    user_id = await resolve_user_id(telegram_user_id)
+    if not user_id:
+        raise ValueError(f"Could not resolve user ID for telegram_user_id: {telegram_user_id}")
+
     # Try to find existing goal
-    existing = db_get_goal(user_id)
+    existing = await db_get_goal(telegram_user_id)
 
     if existing:
         # Update existing goal
@@ -290,13 +326,16 @@ def db_create_or_update_goal(user_id: str, daily_kcal_target: int) -> dict[str, 
 
 
 async def db_get_summaries_by_date_range(
-    start_date: str, end_date: str, user_id: str | None = None
+    start_date: str, end_date: str, telegram_user_id: str | None = None
 ) -> dict[str, dict[str, Any]]:
     """Get summaries for a date range in a single query."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
+
+    # Resolve Telegram user ID to database UUID
+    user_id = await resolve_user_id(telegram_user_id)
 
     query = (
         sb.table("meals")
@@ -327,12 +366,15 @@ async def db_get_summaries_by_date_range(
     return summaries
 
 
-async def db_get_today_data(date: str, user_id: str | None = None) -> dict[str, Any]:
+async def db_get_today_data(date: str, telegram_user_id: str | None = None) -> dict[str, Any]:
     """Get all data needed for the Today page in a single query."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
+
+    # Resolve Telegram user ID to database UUID
+    user_id = await resolve_user_id(telegram_user_id)
 
     # Get all meals for the date
     query = sb.table("meals").select("*").eq("meal_date", date)

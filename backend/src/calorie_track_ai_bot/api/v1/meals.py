@@ -34,9 +34,9 @@ async def get_meals(
     """Get meals for a specific date."""
     try:
         # Get user ID from x-user-id header
-        user_id = request.headers.get("x-user-id")
+        telegram_user_id = request.headers.get("x-user-id")
 
-        meals = await db_get_meals_by_date(date, user_id)
+        meals = await db_get_meals_by_date(date, telegram_user_id)
         return meals
     except Exception as e:
         raise HTTPException(500, str(e)) from e
