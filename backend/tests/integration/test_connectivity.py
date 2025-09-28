@@ -24,6 +24,8 @@ def isolated_client():
         patch("calorie_track_ai_bot.services.monitoring.performance_monitor") as mock_monitor,
         patch("calorie_track_ai_bot.services.db.sb") as mock_db,
         patch("calorie_track_ai_bot.services.queue.r") as mock_redis,
+        patch("calorie_track_ai_bot.services.storage.s3") as mock_s3,
+        patch("calorie_track_ai_bot.services.estimator.client") as mock_openai,
     ):
         # Mock the bot to prevent async operations during lifespan
         mock_bot = Mock()
@@ -39,6 +41,8 @@ def isolated_client():
         # Mock database and queue services
         mock_db.return_value = None
         mock_redis.return_value = None
+        mock_s3.return_value = None
+        mock_openai.return_value = None
 
         with TestClient(app) as client:
             yield client
