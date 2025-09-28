@@ -157,7 +157,7 @@ class TestDatabaseFunctions:
             overrides={"kcal_total": 450},
         )
 
-        result = await db_create_meal_from_estimate(mock_data)
+        result = await db_create_meal_from_estimate(mock_data, "user123")
 
         # Should return a dict with meal_id
         assert isinstance(result, dict)
@@ -177,7 +177,7 @@ class TestDatabaseFunctions:
         assert call_args["kcal_total"] == 450  # From overrides
         assert call_args["source"] == "photo"
         assert call_args["estimate_id"] == "estimate123"
-        assert call_args["user_id"] is None
+        assert call_args["user_id"] == "user123"
 
     @pytest.mark.asyncio
     async def test_db_create_meal_from_estimate_no_overrides(self, mock_supabase):
@@ -194,7 +194,7 @@ class TestDatabaseFunctions:
             overrides=None,
         )
 
-        result = await db_create_meal_from_estimate(mock_data)
+        result = await db_create_meal_from_estimate(mock_data, "user123")
 
         # Should return a dict with meal_id
         assert isinstance(result, dict)
@@ -219,7 +219,7 @@ class TestDatabaseFunctions:
             overrides=None,  # None is valid according to schema
         )
 
-        result = await db_create_meal_from_estimate(mock_data)
+        result = await db_create_meal_from_estimate(mock_data, "user123")
 
         # Should return a dict with meal_id
         assert isinstance(result, dict)

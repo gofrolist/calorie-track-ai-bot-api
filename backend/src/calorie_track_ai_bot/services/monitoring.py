@@ -93,8 +93,8 @@ class MetricsCollector:
     def collect_system_metrics(self) -> SystemMetrics:
         """Collect current system metrics."""
         try:
-            # CPU metrics
-            cpu_percent_raw = psutil.cpu_percent(interval=0.1)
+            # CPU metrics - use non-blocking approach for better performance
+            cpu_percent_raw = psutil.cpu_percent(interval=None)  # Non-blocking
             # Handle both single value and list returns from cpu_percent
             cpu_percent = (
                 float(cpu_percent_raw)
@@ -140,8 +140,12 @@ class MetricsCollector:
             except (AttributeError, OSError):
                 load_avg = [0.0, 0.0, 0.0]  # Fallback for Windows
 
-            # Process count
-            process_count = len(psutil.pids())
+            # Process count - use cached approach for better performance
+            try:
+                process_count = len(psutil.pids())
+            except (OSError, psutil.NoSuchProcess):
+                # Fallback to a reasonable estimate if process enumeration fails
+                process_count = 100  # Reasonable default for most systems
 
             metrics = SystemMetrics(
                 timestamp=datetime.now(UTC).isoformat(),

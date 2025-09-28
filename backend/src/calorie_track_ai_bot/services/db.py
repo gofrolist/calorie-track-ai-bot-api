@@ -145,7 +145,9 @@ async def db_create_meal_from_manual(data: MealCreateManualRequest) -> dict[str,
     return {"meal_id": mid}
 
 
-async def db_create_meal_from_estimate(data: MealCreateFromEstimateRequest) -> dict[str, str]:
+async def db_create_meal_from_estimate(
+    data: MealCreateFromEstimateRequest, user_id: str
+) -> dict[str, str]:
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
@@ -157,7 +159,7 @@ async def db_create_meal_from_estimate(data: MealCreateFromEstimateRequest) -> d
         kcal_total = data.overrides.get("kcal_total")
     payload = {
         "id": mid,
-        "user_id": None,
+        "user_id": user_id,
         "meal_date": data.meal_date.isoformat(),
         "meal_type": data.meal_type.value,
         "kcal_total": kcal_total if kcal_total is not None else 0,
