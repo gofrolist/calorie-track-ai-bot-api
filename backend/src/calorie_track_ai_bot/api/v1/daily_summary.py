@@ -14,13 +14,13 @@ async def get_daily_summary(date: str, request: Request) -> dict[str, Any]:
     """Get daily summary for a specific date."""
     try:
         # Get user ID from x-user-id header
-        user_id = request.headers.get("x-user-id")
+        telegram_user_id = request.headers.get("x-user-id")
 
-        summary = await db_get_daily_summary(date, user_id)
+        summary = await db_get_daily_summary(date, telegram_user_id)
         if summary is None:
             # Return empty summary if no meals found
             return {
-                "user_id": user_id,
+                "user_id": telegram_user_id,
                 "date": date,
                 "kcal_total": 0,
                 "macros_totals": {"protein_g": 0, "fat_g": 0, "carbs_g": 0},
@@ -43,10 +43,12 @@ async def get_weekly_summary(
         start_date_str = start_dt.strftime("%Y-%m-%d")
         end_date_str = end_dt.strftime("%Y-%m-%d")
 
-        user_id = request.headers.get("x-user-id")
+        telegram_user_id = request.headers.get("x-user-id")
 
         # Get all meals for the week in a single query
-        summaries_dict = await db_get_summaries_by_date_range(start_date_str, end_date_str, user_id)
+        summaries_dict = await db_get_summaries_by_date_range(
+            start_date_str, end_date_str, telegram_user_id
+        )
 
         # Build the response array with all 7 days
         summaries = []
@@ -60,7 +62,7 @@ async def get_weekly_summary(
                 # Create empty summary for days with no meals
                 summaries.append(
                     {
-                        "user_id": user_id,
+                        "user_id": telegram_user_id,
                         "date": date_str,
                         "kcal_total": 0,
                         "macros_totals": {"protein_g": 0, "fat_g": 0, "carbs_g": 0},
@@ -86,10 +88,12 @@ async def get_monthly_summary(
         start_date_str = f"{year}-{month:02d}-01"
         end_date_str = f"{year}-{month:02d}-{days_in_month:02d}"
 
-        user_id = request.headers.get("x-user-id")
+        telegram_user_id = request.headers.get("x-user-id")
 
         # Get all meals for the month in a single query
-        summaries_dict = await db_get_summaries_by_date_range(start_date_str, end_date_str, user_id)
+        summaries_dict = await db_get_summaries_by_date_range(
+            start_date_str, end_date_str, telegram_user_id
+        )
 
         # Build the response array with all days of the month
         summaries = []
@@ -102,7 +106,7 @@ async def get_monthly_summary(
                 # Create empty summary for days with no meals
                 summaries.append(
                     {
-                        "user_id": user_id,
+                        "user_id": telegram_user_id,
                         "date": date_str,
                         "kcal_total": 0,
                         "macros_totals": {"protein_g": 0, "fat_g": 0, "carbs_g": 0},
@@ -119,9 +123,9 @@ async def get_today_data(date: str, request: Request):
     """Get all data needed for the Today page (meals + daily summary) in a single request."""
     try:
         # Get user ID from x-user-id header
-        user_id = request.headers.get("x-user-id")
+        telegram_user_id = request.headers.get("x-user-id")
 
-        today_data = await db_get_today_data(date, user_id)
+        today_data = await db_get_today_data(date, telegram_user_id)
         return today_data
     except Exception as e:
         raise HTTPException(500, str(e)) from e
