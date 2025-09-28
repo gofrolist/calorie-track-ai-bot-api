@@ -244,6 +244,11 @@ const App: React.FC = () => {
             themeParams: webApp.themeParams,
           };
 
+          // Store user data in localStorage for API calls
+          if (webApp.initDataUnsafe?.user) {
+            localStorage.setItem('telegram_user', JSON.stringify(webApp.initDataUnsafe.user));
+          }
+
           // Update CSS custom properties with Telegram theme colors
           if (webApp.themeParams) {
             const root = document.documentElement;
