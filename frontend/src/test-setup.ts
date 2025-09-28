@@ -7,19 +7,26 @@ import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
 // Mock window.matchMedia for tests
+const mockMatchMedia = vi.fn().mockImplementation(query => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: vi.fn(), // deprecated
+  removeListener: vi.fn(), // deprecated
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+}));
+
+// Use Object.defineProperty with configurable: true for proper cleanup
 Object.defineProperty(window, 'matchMedia', {
+  value: mockMatchMedia,
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+  configurable: true,
 });
+
+// Make matchMedia mockable for individual tests
+(window.matchMedia as any).mockImplementation = mockMatchMedia;
 
 // Mock window.CSS.supports for safe area tests
 Object.defineProperty(window, 'CSS', {
@@ -43,45 +50,66 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }));
 
-// Mock Telegram WebApp
+// Mock Telegram WebApp with configurable properties
+const mockTelegramWebApp = {
+  ready: vi.fn(),
+  expand: vi.fn(),
+  initDataUnsafe: {
+    user: {
+      id: 123,
+      first_name: 'Test',
+      username: 'test_user',
+      language_code: 'ru'
+    }
+  },
+  initData: 'test_init_data',
+  themeParams: {
+    bg_color: '#ffffff',
+    text_color: '#000000'
+  },
+  colorScheme: 'light'
+};
+
 Object.defineProperty(window, 'Telegram', {
   writable: true,
+  configurable: true,
   value: {
-    WebApp: {
-      ready: vi.fn(),
-      expand: vi.fn(),
-      initDataUnsafe: {
-        user: {
-          id: 123,
-          first_name: 'Test',
-          username: 'test_user'
-        }
-      },
-      initData: 'test_init_data',
-      themeParams: {
-        bg_color: '#ffffff',
-        text_color: '#000000'
-      },
-      colorScheme: 'light'
-    }
+    WebApp: mockTelegramWebApp
   }
 });
 
-// Mock navigator.language
-Object.defineProperty(navigator, 'language', {
+// Mock navigator with configurable properties
+const mockNavigator = {
+  language: 'en-US',
+  languages: ['en-US', 'en'],
+};
+
+// Use Object.defineProperty with configurable: true for proper cleanup
+Object.defineProperty(globalThis, 'navigator', {
+  value: mockNavigator,
   writable: true,
-  value: 'en-US',
+  configurable: true,
+});
+
+// Also define on window for tests that access window.navigator
+Object.defineProperty(window, 'navigator', {
+  value: mockNavigator,
+  writable: true,
+  configurable: true,
 });
 
 // Suppress console.error in tests unless needed
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args: any[]) => {
-    if (
-      typeof args[0] === 'string' &&
-      args[0].includes('Warning:')
-    ) {
-      return;
+    const message = args[0];
+    if (typeof message === 'string' && (
+      message.includes('Warning:') ||
+      message.includes('Theme change listener error') ||
+      message.includes('Failed to detect language') ||
+      message.includes('Error in language change listener')
+    )) {
+      return; // Suppress expected test errors
     }
     originalError.call(console, ...args);
   };

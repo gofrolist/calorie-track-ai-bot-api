@@ -26,9 +26,10 @@ export class ThemeDetectionService {
   private currentSource: ThemeSource = 'system';
   private listeners: ((event: ThemeChangeEvent) => void)[] = [];
   private autoDetection: boolean = true;
+  private baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
   constructor() {
-    this.detectTheme();
+    // Don't auto-detect theme in constructor to avoid async issues
   }
 
   getCurrentTheme(): ThemeType {
@@ -44,6 +45,24 @@ export class ThemeDetectionService {
     const previousTheme = this.currentTheme;
     this.currentTheme = theme;
     this.currentSource = source;
+
+    // Update backend if source is manual
+    if (source === 'manual') {
+      try {
+        await fetch(`${this.baseUrl}/api/v1/config/ui`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            theme: theme,
+            theme_source: source,
+          }),
+        });
+      } catch (error) {
+        console.log('Failed to update theme configuration in backend:', error);
+      }
+    }
 
     // Apply theme to DOM
     this.applyThemeToDOM(theme, source);
@@ -71,7 +90,20 @@ export class ThemeDetectionService {
   }
 
   async detectTheme(): Promise<{ theme: ThemeType; source: ThemeSource }> {
-    // Simple system theme detection
+    try {
+      // Try to get theme from backend API first
+      const response = await fetch(`${this.baseUrl}/api/v1/config/theme`);
+      if (response.ok) {
+        const data = await response.json();
+        this.currentTheme = data.theme;
+        this.currentSource = data.theme_source || 'telegram';
+        return { theme: data.theme, source: this.currentSource };
+      }
+    } catch (error) {
+      console.log('Failed to detect theme from API, falling back to local detection');
+    }
+
+    // Fallback to local detection
     if (typeof window !== 'undefined' && window.matchMedia) {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const theme: ThemeType = prefersDark ? 'dark' : 'light';
@@ -108,7 +140,7 @@ export class ThemeDetectionService {
   getState(): ThemeState {
     return {
       theme: this.currentTheme,
-      source: 'system'
+      source: this.currentSource
     };
   }
 
@@ -171,6 +203,10 @@ export class ThemeDetectionService {
 
   dispose(): void {
     this.destroy();
+    // Reset state for testing
+    this.currentTheme = 'light';
+    this.currentSource = 'system';
+    this.autoDetection = true;
   }
 }
 

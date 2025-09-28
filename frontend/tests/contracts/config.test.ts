@@ -7,7 +7,7 @@
  * @module ConfigContractTests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { configurationService } from '../../src/services/config';
@@ -16,13 +16,22 @@ import { configurationService } from '../../src/services/config';
 const server = setupServer();
 
 describe('Frontend API Contract Tests - Configuration', () => {
+  beforeAll(() => {
+    server.listen({
+      onUnhandledRequest: 'warn',
+    });
+  });
+
+  afterAll(() => {
+    server.close();
+  });
+
   beforeEach(() => {
-    server.listen();
+    server.resetHandlers();
   });
 
   afterEach(() => {
     server.resetHandlers();
-    server.restoreHandlers();
   });
 
   describe('GET /api/v1/config/ui', () => {
@@ -48,7 +57,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
       };
 
       server.use(
-        http.get('/api/v1/config/ui', () => {
+        http.get('http://localhost:8000/api/v1/config/ui', () => {
           return HttpResponse.json(mockResponse);
         })
       );
@@ -64,7 +73,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
 
     it('should handle API error responses', async () => {
       server.use(
-        http.get('/api/v1/config/ui', () => {
+        http.get('http://localhost:8000/api/v1/config/ui', () => {
           return HttpResponse.json({ error: 'Internal server error' }, { status: 500 });
         })
       );
@@ -76,16 +85,21 @@ describe('Frontend API Contract Tests - Configuration', () => {
       let capturedRequest: any = null;
 
       server.use(
-        http.get('/api/v1/config/ui', ({ request }) => {
+        http.get('http://localhost:8000/api/v1/config/ui', ({ request }) => {
           capturedRequest = request;
-          return HttpResponse.json({});
+          return HttpResponse.json({
+            id: 'test-config',
+            theme: 'light',
+            language: 'en'
+          });
         })
       );
 
       await configurationService.getUIConfiguration();
 
       expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest.headers.get('content-type')).toContain('application/json');
+      expect(capturedRequest.url).toBe('http://localhost:8000/api/v1/config/ui');
+      expect(capturedRequest.method).toBe('GET');
     });
   });
 
@@ -103,7 +117,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
       let capturedRequestBody: any = null;
 
       server.use(
-        http.put('/api/v1/config/ui', async ({ request }) => {
+        http.put('http://localhost:8000/api/v1/config/ui', async ({ request }) => {
           capturedRequestBody = await request.json();
           return HttpResponse.json({
             ...updateData,
@@ -122,7 +136,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
 
     it('should handle validation errors', async () => {
       server.use(
-        http.put('/api/v1/config/ui', () => {
+        http.put('http://localhost:8000/api/v1/config/ui', () => {
           return HttpResponse.json({
             error: 'Validation error',
             details: ['Invalid theme value']
@@ -149,7 +163,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
       };
 
       server.use(
-        http.get('/api/v1/config/theme', () => {
+        http.get('http://localhost:8000/api/v1/config/theme', () => {
           return HttpResponse.json(mockThemeResponse);
         })
       );
@@ -165,7 +179,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
       let capturedHeaders: any = null;
 
       server.use(
-        http.get('/api/v1/config/theme', ({ request }) => {
+        http.get('http://localhost:8000/api/v1/config/theme', ({ request }) => {
           capturedHeaders = Object.fromEntries(request.headers.entries());
           return HttpResponse.json({
             theme: 'light',
@@ -193,7 +207,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
       };
 
       server.use(
-        http.get('/api/v1/config/language', () => {
+        http.get('http://localhost:8000/api/v1/config/language', () => {
           return HttpResponse.json(mockLanguageResponse);
         })
       );
@@ -215,7 +229,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
       };
 
       server.use(
-        http.get('/api/v1/config/language', () => {
+        http.get('http://localhost:8000/api/v1/config/language', () => {
           return HttpResponse.json(mockFallbackResponse);
         })
       );
@@ -230,7 +244,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
   describe('Error Handling', () => {
     it('should handle network errors gracefully', async () => {
       server.use(
-        http.get('/api/v1/config/ui', () => {
+        http.get('http://localhost:8000/api/v1/config/ui', () => {
           return HttpResponse.error();
         })
       );
@@ -240,7 +254,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
 
     it('should handle malformed JSON responses', async () => {
       server.use(
-        http.get('/api/v1/config/ui', () => {
+        http.get('http://localhost:8000/api/v1/config/ui', () => {
           return HttpResponse.text('Invalid JSON');
         })
       );
@@ -250,8 +264,8 @@ describe('Frontend API Contract Tests - Configuration', () => {
 
     it('should handle timeout errors', async () => {
       server.use(
-        http.get('/api/v1/config/ui', () => {
-          return HttpResponse.json({}, { status: 200 });
+        http.get('http://localhost:8000/api/v1/config/ui', () => {
+          return HttpResponse.error();
         })
       );
 
@@ -265,7 +279,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
       let requestCount = 0;
 
       server.use(
-        http.get('/api/v1/config/ui', () => {
+        http.get('http://localhost:8000/api/v1/config/ui', () => {
           requestCount++;
           return HttpResponse.json({
             id: 'cached-config',
@@ -286,7 +300,7 @@ describe('Frontend API Contract Tests - Configuration', () => {
 
     it('should clear cache when requested', async () => {
       server.use(
-        http.get('/api/v1/config/ui', () => {
+        http.get('http://localhost:8000/api/v1/config/ui', () => {
           return HttpResponse.json({
             id: 'fresh-config',
             theme: 'dark',

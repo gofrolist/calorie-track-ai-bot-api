@@ -1,70 +1,91 @@
 /**
- * Minimal configuration service for build fixes
- * Temporary replacement to resolve circular imports
+ * Configuration service that makes actual HTTP calls
+ * Updated to work with mocked APIs in tests
  */
 
 // Basic types needed for compilation
 export interface UIConfiguration {
+  id?: string;
   api_base_url?: string;
   theme?: 'light' | 'dark' | 'auto';
   language?: 'en' | 'ru';
   language_source?: string;
+  theme_source?: string;
   safe_area_top?: number;
   safe_area_bottom?: number;
   safe_area_left?: number;
   safe_area_right?: number;
   features?: Record<string, boolean>;
+  environment?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface UIConfigurationUpdate extends Partial<UIConfiguration> {}
 
 export interface ThemeDetectionResponse {
   theme: 'light' | 'dark' | 'auto';
-  source: string;
-  automatic: boolean;
-  timestamp: string;
+  theme_source?: string;
+  source?: string;
+  automatic?: boolean;
+  timestamp?: string;
+  detected_at?: string;
+  telegram_color_scheme?: string;
+  system_prefers_dark?: boolean;
 }
 
 export interface LanguageDetectionResponse {
   language: 'en' | 'ru';
-  source: string;
-  timestamp: string;
-  supported_languages: ('en' | 'ru')[];
   language_source?: string;
+  source?: string;
+  timestamp?: string;
+  detected_at?: string;
+  supported_languages: ('en' | 'ru')[];
   telegram_language?: 'en' | 'ru';
+  telegram_language_code?: string;
   browser_language?: 'en' | 'ru';
 }
 
-// Minimal service implementation
+// Configuration service that makes actual HTTP calls
 export class ConfigurationService {
+  private baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
   async getUIConfiguration(): Promise<UIConfiguration> {
-    return {
-      theme: 'light',
-      language: 'en',
-      api_base_url: 'http://localhost:8000',
-    };
+    const response = await fetch(`${this.baseUrl}/api/v1/config/ui`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
   }
 
   async updateUIConfiguration(config: UIConfigurationUpdate): Promise<UIConfiguration> {
-    return config as UIConfiguration;
+    const response = await fetch(`${this.baseUrl}/api/v1/config/ui`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(config),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
   }
 
   async detectTheme(): Promise<ThemeDetectionResponse> {
-    return {
-      theme: 'light',
-      source: 'fallback',
-      automatic: true,
-      timestamp: new Date().toISOString(),
-    };
+    const response = await fetch(`${this.baseUrl}/api/v1/config/theme`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
   }
 
   async detectLanguage(): Promise<LanguageDetectionResponse> {
-    return {
-      language: 'en',
-      source: 'fallback',
-      timestamp: new Date().toISOString(),
-      supported_languages: ['en', 'ru'],
-    };
+    const response = await fetch(`${this.baseUrl}/api/v1/config/language`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
   }
 
   // Additional methods to match expected interface

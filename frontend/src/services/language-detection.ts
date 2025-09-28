@@ -37,7 +37,7 @@ export class LanguageDetectionService {
   private constructor() {
     this.currentState = {
       language: 'en',
-      source: 'manual',
+      source: 'fallback',
       supportedLanguages: this.DEFAULT_SUPPORTED_LANGUAGES,
       isAutoDetectionEnabled: true
     };
@@ -80,8 +80,14 @@ export class LanguageDetectionService {
    * Set language manually
    */
   async setLanguage(language: string, source: LanguageSource = 'manual'): Promise<void> {
-    // Validate language code
+    // Validate language code format
     if (!this.isValidLanguageCode(language)) {
+      console.warn(`Invalid language code format: ${language}`);
+      return;
+    }
+
+    // Check if language is supported
+    if (!this.isLanguageSupported(language)) {
       console.warn(`Invalid language code: ${language}`);
       return;
     }
@@ -255,6 +261,13 @@ export class LanguageDetectionService {
   dispose(): void {
     this.removeAllListeners();
     this.isInitialized = false;
+    // Reset state for testing
+    this.currentState = {
+      language: 'en',
+      source: 'fallback',
+      supportedLanguages: this.DEFAULT_SUPPORTED_LANGUAGES,
+      isAutoDetectionEnabled: true
+    };
   }
 
   // Private methods
