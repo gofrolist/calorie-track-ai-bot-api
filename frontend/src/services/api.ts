@@ -224,15 +224,30 @@ api.interceptors.request.use((config) => {
     }
   }
 
-  // Debug logging in development
-  if (config.baseURL?.includes('localhost') || process.env.NODE_ENV === 'development') {
+  // Debug logging - enable with VITE_ENABLE_DEBUG_LOGGING=true
+  const enableDebugLogging = import.meta.env.VITE_ENABLE_DEBUG_LOGGING === 'true' ||
+                            config.baseURL?.includes('localhost') ||
+                            process.env.NODE_ENV === 'development';
+
+  if (enableDebugLogging) {
     console.log('API Request Debug:', {
       telegramAvailable: !!window.Telegram?.WebApp,
       userId,
       initDataUnsafe: window.Telegram?.WebApp?.initDataUnsafe,
       url: config.url,
-      storedUser: localStorage.getItem('telegram_user')
+      storedUser: localStorage.getItem('telegram_user'),
+      headers: config.headers
     });
+
+    // Store debug info in localStorage for UI display
+    const debugInfo = {
+      timestamp: new Date().toISOString(),
+      telegramAvailable: !!window.Telegram?.WebApp,
+      userId,
+      url: config.url,
+      hasStoredUser: !!localStorage.getItem('telegram_user')
+    };
+    localStorage.setItem('api_debug_info', JSON.stringify(debugInfo));
   }
 
   if (userId) {
@@ -762,14 +777,34 @@ export const debugTelegramWebApp = () => {
     userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
     storedUser: localStorage.getItem('telegram_user'),
     url: window.location.href,
-    userAgent: navigator.userAgent
+    userAgent: navigator.userAgent,
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      VITE_ENABLE_DEBUG_LOGGING: import.meta.env.VITE_ENABLE_DEBUG_LOGGING,
+      VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL
+    }
   };
 
-  console.log('Telegram WebApp Debug Info:', debug);
+  console.log('🔍 Telegram WebApp Debug Info:', debug);
+
+  // Also test API call to see if headers are being sent
+  console.log('🧪 Testing API call...');
+  fetch('/api/v1/goals')
+    .then(response => {
+      console.log('✅ API call successful:', response.status);
+      return response.text();
+    })
+    .then(data => {
+      console.log('📦 API response:', data);
+    })
+    .catch(error => {
+      console.log('❌ API call failed:', error);
+    });
+
   return debug;
 };
 
 // Make debug function available globally in development
-if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost')) {
+if (typeof window !== 'undefined') {
   (window as any).debugTelegramWebApp = debugTelegramWebApp;
 }

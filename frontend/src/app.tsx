@@ -11,6 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ThemeDetector, { ThemeDetectionData } from './components/ThemeDetector';
 import LanguageDetector, { LanguageDetectionData } from './components/LanguageDetector';
 import SafeAreaWrapper from './components/SafeAreaWrapper';
+import DebugInfo from './components/DebugInfo';
 import { apiUtils, configApi, loggingApi } from './services/api';
 import { config } from './config';
 
@@ -377,6 +378,7 @@ const App: React.FC = () => {
         </div>
         </SafeAreaWrapper>
       </ErrorBoundary>
+      <DebugInfo />
       <SpeedInsights />
       <Analytics />
     </TelegramWebAppContext.Provider>
