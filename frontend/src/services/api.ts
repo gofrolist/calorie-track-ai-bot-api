@@ -197,8 +197,46 @@ api.interceptors.request.use((config) => {
   }
 
   // Add Telegram user ID for backend authentication in development
+  let userId = null;
+
+  // Try to get user ID from Telegram WebApp
   if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-    config.headers['x-user-id'] = window.Telegram.WebApp.initDataUnsafe.user.id.toString();
+    userId = window.Telegram.WebApp.initDataUnsafe.user.id.toString();
+  }
+
+  // Fallback: try to get from URL parameters or other sources
+  if (!userId) {
+    // Check if we're in a Telegram WebApp environment
+    const urlParams = new URLSearchParams(window.location.search);
+    userId = urlParams.get('user_id') || urlParams.get('tg_user_id');
+  }
+
+  // Additional fallback: check if we have stored user info
+  if (!userId) {
+    try {
+      const storedUser = localStorage.getItem('telegram_user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        userId = userData.id?.toString();
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+  }
+
+  // Debug logging in development
+  if (config.baseURL?.includes('localhost') || process.env.NODE_ENV === 'development') {
+    console.log('API Request Debug:', {
+      telegramAvailable: !!window.Telegram?.WebApp,
+      userId,
+      initDataUnsafe: window.Telegram?.WebApp?.initDataUnsafe,
+      url: config.url,
+      storedUser: localStorage.getItem('telegram_user')
+    });
+  }
+
+  if (userId) {
+    config.headers['x-user-id'] = userId;
   }
 
   return config;
@@ -712,3 +750,26 @@ export const apiUtils = {
 
 // Export session manager for use in components
 export { sessionManager };
+
+// Debug function to check Telegram WebApp status
+export const debugTelegramWebApp = () => {
+  const debug = {
+    telegramAvailable: !!window.Telegram,
+    webAppAvailable: !!window.Telegram?.WebApp,
+    initData: window.Telegram?.WebApp?.initData,
+    initDataUnsafe: window.Telegram?.WebApp?.initDataUnsafe,
+    user: window.Telegram?.WebApp?.initDataUnsafe?.user,
+    userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+    storedUser: localStorage.getItem('telegram_user'),
+    url: window.location.href,
+    userAgent: navigator.userAgent
+  };
+
+  console.log('Telegram WebApp Debug Info:', debug);
+  return debug;
+};
+
+// Make debug function available globally in development
+if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost')) {
+  (window as any).debugTelegramWebApp = debugTelegramWebApp;
+}
