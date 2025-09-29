@@ -149,35 +149,39 @@ class TestDatabaseFunctions:
 
         from calorie_track_ai_bot.schemas import MealCreateFromEstimateRequest, MealType
 
-        # Create a proper data object
-        mock_data = MealCreateFromEstimateRequest(
-            meal_date=date(2024, 1, 1),
-            meal_type=MealType.lunch,
-            estimate_id="estimate123",
-            overrides={"kcal_total": 450},
-        )
+        # Mock the estimate data for db_get_estimate
+        mock_estimate = {"kcal_mean": 400, "kcal_min": 350, "kcal_max": 450}
 
-        result = await db_create_meal_from_estimate(mock_data, "user123")
+        with patch("calorie_track_ai_bot.services.db.db_get_estimate", return_value=mock_estimate):
+            # Create a proper data object
+            mock_data = MealCreateFromEstimateRequest(
+                meal_date=date(2024, 1, 1),
+                meal_type=MealType.lunch,
+                estimate_id="estimate123",
+                overrides={"kcal_total": 450},
+            )
 
-        # Should return a dict with meal_id
-        assert isinstance(result, dict)
-        assert "meal_id" in result
-        assert isinstance(result["meal_id"], str)
-        assert len(result["meal_id"]) == 36  # UUID length
+            result = await db_create_meal_from_estimate(mock_data, "user123")
 
-        # Should call insert with correct data
-        mock_supabase.table.assert_called_with("meals")
-        mock_table = mock_supabase.table.return_value
-        mock_table.insert.assert_called_once()
+            # Should return a dict with meal_id
+            assert isinstance(result, dict)
+            assert "meal_id" in result
+            assert isinstance(result["meal_id"], str)
+            assert len(result["meal_id"]) == 36  # UUID length
 
-        # Check the insert call arguments
-        call_args = mock_table.insert.call_args[0][0]
-        assert call_args["meal_date"] == "2024-01-01"
-        assert call_args["meal_type"] == "lunch"
-        assert call_args["kcal_total"] == 450  # From overrides
-        assert call_args["source"] == "photo"
-        assert call_args["estimate_id"] == "estimate123"
-        assert call_args["user_id"] == "user123"
+            # Should call insert with correct data
+            mock_supabase.table.assert_called_with("meals")
+            mock_table = mock_supabase.table.return_value
+            mock_table.insert.assert_called_once()
+
+            # Check the insert call arguments
+            call_args = mock_table.insert.call_args[0][0]
+            assert call_args["meal_date"] == "2024-01-01"
+            assert call_args["meal_type"] == "lunch"
+            assert call_args["kcal_total"] == 450  # From overrides
+            assert call_args["source"] == "photo"
+            assert call_args["estimate_id"] == "estimate123"
+            assert call_args["user_id"] == "user123"
 
     @pytest.mark.asyncio
     async def test_db_create_meal_from_estimate_no_overrides(self, mock_supabase):
@@ -186,23 +190,27 @@ class TestDatabaseFunctions:
 
         from calorie_track_ai_bot.schemas import MealCreateFromEstimateRequest, MealType
 
-        # Create a proper data object without overrides
-        mock_data = MealCreateFromEstimateRequest(
-            meal_date=date(2024, 1, 1),
-            meal_type=MealType.dinner,
-            estimate_id="estimate456",
-            overrides=None,
-        )
+        # Mock the estimate data for db_get_estimate
+        mock_estimate = {"kcal_mean": 600, "kcal_min": 550, "kcal_max": 650}
 
-        result = await db_create_meal_from_estimate(mock_data, "user123")
+        with patch("calorie_track_ai_bot.services.db.db_get_estimate", return_value=mock_estimate):
+            # Create a proper data object without overrides
+            mock_data = MealCreateFromEstimateRequest(
+                meal_date=date(2024, 1, 1),
+                meal_type=MealType.dinner,
+                estimate_id="estimate456",
+                overrides=None,
+            )
 
-        # Should return a dict with meal_id
-        assert isinstance(result, dict)
-        assert "meal_id" in result
+            result = await db_create_meal_from_estimate(mock_data, "user123")
 
-        # Check the insert call arguments
-        call_args = mock_supabase.table.return_value.insert.call_args[0][0]
-        assert call_args["kcal_total"] == 0  # Default when no overrides
+            # Should return a dict with meal_id
+            assert isinstance(result, dict)
+            assert "meal_id" in result
+
+            # Check the insert call arguments
+            call_args = mock_supabase.table.return_value.insert.call_args[0][0]
+            assert call_args["kcal_total"] == 600  # From estimate kcal_mean
 
     @pytest.mark.asyncio
     async def test_db_create_meal_from_estimate_invalid_overrides(self, mock_supabase):
@@ -211,20 +219,24 @@ class TestDatabaseFunctions:
 
         from calorie_track_ai_bot.schemas import MealCreateFromEstimateRequest, MealType
 
-        # Create a proper data object with None overrides (which is valid)
-        mock_data = MealCreateFromEstimateRequest(
-            meal_date=date(2024, 1, 1),
-            meal_type=MealType.snack,
-            estimate_id="estimate789",
-            overrides=None,  # None is valid according to schema
-        )
+        # Mock the estimate data for db_get_estimate
+        mock_estimate = {"kcal_mean": 200, "kcal_min": 180, "kcal_max": 220}
 
-        result = await db_create_meal_from_estimate(mock_data, "user123")
+        with patch("calorie_track_ai_bot.services.db.db_get_estimate", return_value=mock_estimate):
+            # Create a proper data object with None overrides (which is valid)
+            mock_data = MealCreateFromEstimateRequest(
+                meal_date=date(2024, 1, 1),
+                meal_type=MealType.snack,
+                estimate_id="estimate789",
+                overrides=None,  # None is valid according to schema
+            )
 
-        # Should return a dict with meal_id
-        assert isinstance(result, dict)
-        assert "meal_id" in result
+            result = await db_create_meal_from_estimate(mock_data, "user123")
 
-        # Check the insert call arguments
-        call_args = mock_supabase.table.return_value.insert.call_args[0][0]
-        assert call_args["kcal_total"] == 0  # Default when overrides is None
+            # Should return a dict with meal_id
+            assert isinstance(result, dict)
+            assert "meal_id" in result
+
+            # Check the insert call arguments
+            call_args = mock_supabase.table.return_value.insert.call_args[0][0]
+            assert call_args["kcal_total"] == 200  # From estimate kcal_mean

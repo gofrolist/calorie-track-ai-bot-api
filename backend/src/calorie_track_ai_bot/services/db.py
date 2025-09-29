@@ -13,6 +13,7 @@ from ..schemas import (
     UIConfigurationUpdate,
 )
 from .config import APP_ENV, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, logger
+from .storage import BUCKET_NAME, s3
 
 # Initialize Supabase client only if configuration is available
 sb: Any | None = None
@@ -154,20 +155,108 @@ async def db_create_meal_from_estimate(
         )
 
     mid = str(uuid.uuid4())
-    kcal_total = None
+
+    # Get the estimate data to retrieve kcal_mean
+    estimate = await db_get_estimate(data.estimate_id)
+    if not estimate:
+        raise ValueError(f"Estimate not found: {data.estimate_id}")
+
+    # Set kcal_total from estimate unless overridden
+    kcal_total = estimate.get("kcal_mean", 0)
     if data.overrides and isinstance(data.overrides, dict):
-        kcal_total = data.overrides.get("kcal_total")
+        kcal_total = data.overrides.get("kcal_total", kcal_total)
+
     payload = {
         "id": mid,
         "user_id": user_id,
         "meal_date": data.meal_date.isoformat(),
         "meal_type": data.meal_type.value,
-        "kcal_total": kcal_total if kcal_total is not None else 0,
+        "kcal_total": kcal_total,
         "source": "photo",
         "estimate_id": data.estimate_id,
     }
     sb.table("meals").insert(payload).execute()
     return {"meal_id": mid}
+
+
+async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
+    """Enhance meal data with related estimate and photo information."""
+    if not meal.get("estimate_id"):
+        # No estimate to fetch - this is a manual meal
+
+        # Add default macros if not present
+        if "macros" not in meal:
+            meal["macros"] = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
+
+        # Add default corrected status
+        if "corrected" not in meal:
+            meal["corrected"] = False
+
+        # Ensure updated_at exists for manual meals
+        if "updated_at" not in meal and "created_at" in meal:
+            meal["updated_at"] = meal["created_at"]
+        elif "updated_at" not in meal:
+            # If no timestamps exist, create them from current time
+            from datetime import datetime
+
+            now = datetime.now(UTC).isoformat()
+            meal["created_at"] = now
+            meal["updated_at"] = now
+
+        return
+
+    # Fetch related estimate and photo data
+    estimate = await db_get_estimate(meal["estimate_id"])
+    if not estimate:
+        logger.warning(f"Estimate {meal['estimate_id']} not found for meal {meal['id']}")
+        meal["photo_url"] = None
+        meal["macros"] = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
+        meal["corrected"] = False
+        if "updated_at" not in meal and "created_at" in meal:
+            meal["updated_at"] = meal["created_at"]
+        elif "updated_at" not in meal:
+            # If no timestamps exist, create them from current time
+            from datetime import datetime
+
+            now = datetime.now(UTC).isoformat()
+            meal["created_at"] = now
+            meal["updated_at"] = now
+        return
+
+    # Get photo data from estimate
+    photo = await db_get_photo(estimate["photo_id"])
+    if photo and s3:
+        try:
+            # Generate presigned URL for the photo
+            photo_url = s3.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": BUCKET_NAME, "Key": photo["tigris_key"]},
+                ExpiresIn=3600,  # 1 hour
+            )
+            meal["photo_url"] = photo_url
+        except Exception as e:
+            logger.warning(f"Failed to generate photo URL for meal {meal['id']}: {e}")
+            meal["photo_url"] = None
+    else:
+        meal["photo_url"] = None
+
+    # Add macros from estimate (placeholder for now)
+    # TODO: Add macronutrient estimation to AI analysis
+    meal["macros"] = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
+
+    # Add corrected status
+    meal["corrected"] = False  # Meals from estimates are not corrected by user
+
+    # Ensure updated_at exists
+    if "updated_at" not in meal and "created_at" in meal:
+        meal["updated_at"] = meal["created_at"]
+    elif "updated_at" not in meal:
+        # If no timestamps exist, create them from current time
+        from datetime import datetime
+
+        now = datetime.now(UTC).isoformat()
+        meal["created_at"] = now
+        meal["updated_at"] = now
 
 
 async def resolve_user_id(telegram_user_id: str | None) -> str | None:
@@ -189,7 +278,7 @@ async def resolve_user_id(telegram_user_id: str | None) -> str | None:
 async def db_get_meals_by_date(
     meal_date: str, telegram_user_id: str | None = None
 ) -> list[dict[str, Any]]:
-    """Get meals for a specific date."""
+    """Get meals for a specific date with related data."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
@@ -203,18 +292,32 @@ async def db_get_meals_by_date(
         query = query.eq("user_id", user_id)
 
     res = query.execute()
-    return res.data if res.data else []
+    meals = res.data if res.data else []
+
+    # Enhance each meal with related data
+    for meal in meals:
+        await _enhance_meal_with_related_data(meal)
+
+    return meals
 
 
 async def db_get_meal(meal_id: str) -> dict[str, Any] | None:
-    """Get a specific meal by ID."""
+    """Get a specific meal by ID with related data."""
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
 
     res = sb.table("meals").select("*").eq("id", meal_id).execute()
-    return res.data[0] if res.data else None
+    if not res.data:
+        return None
+
+    meal = res.data[0]
+
+    # Enhance meal data with related information
+    await _enhance_meal_with_related_data(meal)
+
+    return meal
 
 
 async def db_update_meal(meal_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
