@@ -126,9 +126,6 @@ async def send_estimate_to_user(
                 item_confidence = item.get("confidence", 0)
                 message += f"• {label}: {kcal:.0f} kcal ({item_confidence:.0%})\n"
 
-        message += f"\n💡 <i>Estimate ID: {estimate_id[:8]}...</i>"
-        message += "\n🔗 <i>View in app: /app</i>"
-
         # Send message via Telegram
         bot = get_bot()
         await bot.send_message(chat_id=telegram_id, text=message, parse_mode="HTML")
