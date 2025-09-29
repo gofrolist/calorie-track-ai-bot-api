@@ -1,6 +1,6 @@
 """Tests for estimates API endpoints."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,7 +23,6 @@ class TestEstimatesEndpoints:
     @patch("calorie_track_ai_bot.api.v1.estimates.enqueue_estimate_job")
     def test_estimate_photo_success(self, mock_enqueue, client):
         """Test successful photo estimation request."""
-        mock_enqueue.return_value = AsyncMock()
         mock_enqueue.return_value = "photo123"
 
         response = client.post("/photos/photo123/estimate")
@@ -93,7 +92,6 @@ class TestEstimatesEndpoints:
             "breakdown": [{"label": "pizza", "kcal": 500, "confidence": 0.8}],
             "status": "done",
         }
-        mock_db_get.return_value = AsyncMock()
         mock_db_get.return_value = estimate_data
 
         response = client.get("/estimates/estimate123")
@@ -105,7 +103,6 @@ class TestEstimatesEndpoints:
     @patch("calorie_track_ai_bot.api.v1.estimates.db_get_estimate")
     def test_get_estimate_not_found(self, mock_db_get, client):
         """Test estimate retrieval when estimate doesn't exist."""
-        mock_db_get.return_value = AsyncMock()
         mock_db_get.return_value = None
 
         response = client.get("/estimates/nonexistent")
@@ -156,7 +153,6 @@ class TestEstimatesEndpoints:
                 "breakdown": [],
                 "status": "done",
             }
-            mock_db_get.return_value = AsyncMock()
             mock_db_get.return_value = estimate_data
 
             response = client.get(f"/estimates/{estimate_id}")
@@ -171,10 +167,8 @@ class TestEstimatesEndpoints:
             patch("calorie_track_ai_bot.api.v1.estimates.enqueue_estimate_job") as mock_enqueue,
             patch("calorie_track_ai_bot.api.v1.estimates.db_get_estimate") as mock_db_get,
         ):
-            mock_enqueue.return_value = AsyncMock()
             mock_enqueue.return_value = "photo123"
 
-            mock_db_get.return_value = AsyncMock()
             mock_db_get.return_value = {
                 "id": "estimate123",
                 "photo_id": "photo123",
@@ -197,7 +191,6 @@ class TestEstimatesEndpoints:
     @patch("calorie_track_ai_bot.api.v1.estimates.enqueue_estimate_job")
     def test_estimate_photo_response_structure(self, mock_enqueue, client):
         """Test that estimate photo returns consistent response structure."""
-        mock_enqueue.return_value = AsyncMock()
         mock_enqueue.return_value = "photo123"
 
         response = client.post("/photos/photo123/estimate")

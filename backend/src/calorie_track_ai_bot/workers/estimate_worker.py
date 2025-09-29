@@ -13,6 +13,10 @@ async def handle_job(job: dict[str, Any]) -> None:
     photo_id = job["photo_id"]
     logger.info(f"Processing estimation job for photo_id: {photo_id}")
 
+    # Validate photo_id
+    if photo_id is None:
+        raise ValueError("photo_id cannot be None")
+
     try:
         # Get photo record to retrieve the storage key
         photo_record = await db_get_photo(photo_id)

@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -96,15 +96,26 @@ class TestBotWebhook:
         ):
             # Mock bot methods
             mock_bot = mock_get_bot.return_value
-            mock_bot.get_file = AsyncMock(return_value={"file_path": "photos/file_123.jpg"})
-            mock_bot.download_file = AsyncMock(return_value=b"fake_image_data")
+
+            async def mock_get_file(file_id):
+                return {"file_path": "photos/file_123.jpg"}
+
+            async def mock_download_file(file_path):
+                return b"fake_image_data"
+
+            mock_bot.get_file = Mock(side_effect=mock_get_file)
+            mock_bot.download_file = Mock(side_effect=mock_download_file)
 
             # Mock httpx client
-            mock_client = AsyncMock()
+            mock_client = Mock()
             mock_httpx.return_value.__aenter__.return_value = mock_client
-            mock_response = Mock()
-            mock_response.raise_for_status.return_value = None
-            mock_client.put.return_value = mock_response
+
+            async def mock_put(url, **kwargs):
+                mock_response = Mock()
+                mock_response.raise_for_status.return_value = None
+                return mock_response
+
+            mock_client.put = Mock(side_effect=mock_put)
 
             # Mock other services
             mock_get_user.return_value = "user-uuid-123"
@@ -208,15 +219,26 @@ class TestBotWebhook:
         ):
             # Mock bot methods
             mock_bot = mock_get_bot.return_value
-            mock_bot.get_file = AsyncMock(return_value={"file_path": "photos/file_123.jpg"})
-            mock_bot.download_file = AsyncMock(return_value=b"fake_image_data")
+
+            async def mock_get_file(file_id):
+                return {"file_path": "photos/file_123.jpg"}
+
+            async def mock_download_file(file_path):
+                return b"fake_image_data"
+
+            mock_bot.get_file = Mock(side_effect=mock_get_file)
+            mock_bot.download_file = Mock(side_effect=mock_download_file)
 
             # Mock httpx client
-            mock_client = AsyncMock()
+            mock_client = Mock()
             mock_httpx.return_value.__aenter__.return_value = mock_client
-            mock_response = Mock()
-            mock_response.raise_for_status.return_value = None
-            mock_client.put.return_value = mock_response
+
+            async def mock_put(url, **kwargs):
+                mock_response = Mock()
+                mock_response.raise_for_status.return_value = None
+                return mock_response
+
+            mock_client.put = Mock(side_effect=mock_put)
 
             # Mock other services
             mock_get_user.return_value = "user-uuid-123"

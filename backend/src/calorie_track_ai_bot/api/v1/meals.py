@@ -18,11 +18,26 @@ router = APIRouter()
 
 
 @router.post("/meals", response_model=MealCreateResponse)
-async def create_meal(payload: MealCreateManualRequest | MealCreateFromEstimateRequest):
+async def create_meal(
+    request: Request, payload: MealCreateManualRequest | MealCreateFromEstimateRequest
+):
     try:
         if isinstance(payload, MealCreateManualRequest):
             return await db_create_meal_from_manual(payload)
-        return await db_create_meal_from_estimate(payload)
+
+        # For estimate-based meals, we need to get the user_id from headers
+        telegram_user_id = request.headers.get("x-user-id")
+        if not telegram_user_id:
+            raise HTTPException(400, "User ID required for estimate-based meals")
+
+        # Resolve telegram_user_id to database user_id
+        from ...services.db import resolve_user_id
+
+        user_id = await resolve_user_id(telegram_user_id)
+        if not user_id:
+            raise HTTPException(400, "User not found")
+
+        return await db_create_meal_from_estimate(payload, user_id)
     except Exception as e:
         raise HTTPException(500, str(e)) from e
 

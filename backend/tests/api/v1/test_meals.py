@@ -1,6 +1,6 @@
 """Tests for meals API endpoints."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,7 +23,6 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_manual_success(self, mock_db_create, client):
         """Test successful manual meal creation."""
-        mock_db_create.return_value = AsyncMock()
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         payload = {
@@ -42,10 +41,11 @@ class TestMealsEndpoints:
         assert "meal_id" in data
         assert data["meal_id"] == "meal123"
 
+    @patch("calorie_track_ai_bot.services.db.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
-    def test_create_meal_from_estimate_success(self, mock_db_create, client):
+    def test_create_meal_from_estimate_success(self, mock_db_create, mock_resolve_user_id, client):
         """Test successful meal creation from estimate."""
-        mock_db_create.return_value = AsyncMock()
+        mock_resolve_user_id.return_value = "user-uuid-123"
         mock_db_create.return_value = {"meal_id": "meal456"}
 
         payload = {
@@ -55,7 +55,7 @@ class TestMealsEndpoints:
             "overrides": {"kcal_total": 450},
         }
 
-        response = client.post("/meals", json=payload)
+        response = client.post("/meals", json=payload, headers={"x-user-id": "123456789"})
 
         assert response.status_code == 200
         data = response.json()
@@ -67,7 +67,6 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_manual_without_macros(self, mock_db_create, client):
         """Test manual meal creation without macros."""
-        mock_db_create.return_value = AsyncMock()
         mock_db_create.return_value = {"meal_id": "meal789"}
 
         payload = {
@@ -83,10 +82,14 @@ class TestMealsEndpoints:
         data = response.json()
         assert data["meal_id"] == "meal789"
 
+    @patch("calorie_track_ai_bot.services.db.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
-    def test_create_meal_from_estimate_without_overrides(self, mock_db_create, client):
+    def test_create_meal_from_estimate_without_overrides(
+        self, mock_db_create, mock_resolve_user_id, client
+    ):
         """Test meal creation from estimate without overrides."""
-        mock_db_create.return_value = AsyncMock()
+        mock_resolve_user_id.return_value = "user-uuid-123"
+        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal999"}
 
         payload = {
@@ -96,7 +99,7 @@ class TestMealsEndpoints:
             # No overrides field
         }
 
-        response = client.post("/meals", json=payload)
+        response = client.post("/meals", json=payload, headers={"x-user-id": "123456789"})
 
         assert response.status_code == 200
         data = response.json()
@@ -143,14 +146,16 @@ class TestMealsEndpoints:
         response = client.post("/meals", json=payload)
         assert response.status_code == 500
 
+    @patch("calorie_track_ai_bot.services.db.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
-    def test_create_meal_from_estimate_db_error(self, mock_db_create, client):
+    def test_create_meal_from_estimate_db_error(self, mock_db_create, mock_resolve_user_id, client):
         """Test meal creation from estimate when database operation fails."""
+        mock_resolve_user_id.return_value = "user-uuid-123"
         mock_db_create.side_effect = Exception("Database Error")
 
         payload = {"meal_date": "2024-01-01", "meal_type": "lunch", "estimate_id": "estimate123"}
 
-        response = client.post("/meals", json=payload)
+        response = client.post("/meals", json=payload, headers={"x-user-id": "123456789"})
         assert response.status_code == 500
 
     def test_meals_endpoint_methods(self, client):
@@ -172,7 +177,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_content_type(self, mock_db_create, client):
         """Test that create meal returns JSON content type."""
-        mock_db_create.return_value = AsyncMock()
+        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         payload = {"meal_date": "2024-01-01", "meal_type": "breakfast", "kcal_total": 300.5}
@@ -183,7 +188,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_response_structure(self, mock_db_create, client):
         """Test that create meal returns consistent response structure."""
-        mock_db_create.return_value = AsyncMock()
+        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         payload = {"meal_date": "2024-01-01", "meal_type": "breakfast", "kcal_total": 300.5}
@@ -203,7 +208,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_meal_types(self, mock_db_create, client):
         """Test meal creation with different meal types."""
-        mock_db_create.return_value = AsyncMock()
+        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         meal_types = ["breakfast", "lunch", "dinner", "snack"]
@@ -217,7 +222,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_date_formats(self, mock_db_create, client):
         """Test meal creation with different date formats."""
-        mock_db_create.return_value = AsyncMock()
+        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         date_formats = ["2024-01-01", "2024-12-31", "2023-06-15"]
