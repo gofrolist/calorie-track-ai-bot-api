@@ -48,6 +48,7 @@ export interface Meal {
   };
   estimate_id?: string;
   corrected: boolean;
+  photo_url?: string;
   created_at: string;
   updated_at: string;
 }

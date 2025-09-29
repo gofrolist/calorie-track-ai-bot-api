@@ -107,10 +107,16 @@ async def send_estimate_to_user(
         items = est.get("items", [])
 
         # Create message
-        message = "🍎 <b>Calorie Estimate Complete!</b>\n\n"
+        message = "🍎 <b>Nutrition Estimate Complete!</b>\n\n"
         message += f"📊 <b>Total Calories:</b> {kcal_mean:.0f} kcal\n"
         message += f"📈 <b>Range:</b> {kcal_min:.0f} - {kcal_max:.0f} kcal\n"
         message += f"🎯 <b>Confidence:</b> {confidence:.0%}\n\n"
+
+        # Add macronutrients section (placeholder data for now)
+        message += "<b>🏋️ Macronutrients:</b>\n"
+        message += f"• Protein: ~{kcal_mean * 0.15:.1f}g\n"  # ~15% protein
+        message += f"• Fat: ~{kcal_mean * 0.25 / 9:.1f}g\n"  # ~25% fat (~9 cal/g)
+        message += f"• Carbs: ~{kcal_mean * 0.6 / 4:.1f}g\n\n"  # ~60% carbs (~4 cal/g)
 
         if items:
             message += "<b>📋 Food Items:</b>\n"
@@ -121,6 +127,7 @@ async def send_estimate_to_user(
                 message += f"• {label}: {kcal:.0f} kcal ({item_confidence:.0%})\n"
 
         message += f"\n💡 <i>Estimate ID: {estimate_id[:8]}...</i>"
+        message += "\n🔗 <i>View in app: /app</i>"
 
         # Send message via Telegram
         bot = get_bot()
