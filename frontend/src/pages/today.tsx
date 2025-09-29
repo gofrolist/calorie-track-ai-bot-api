@@ -193,7 +193,7 @@ export const Today: React.FC = () => {
               <div key={i} className="tg-card" style={{ marginBottom: 12, padding: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <Skeleton width="24px" height="24px" style={{ borderRadius: '50%' }} />
+                    <Skeleton width="40px" height="40px" style={{ borderRadius: '8px' }} />
                     <div>
                       <Skeleton width="80px" height="16px" style={{ marginBottom: '4px' }} />
                       <Skeleton width="120px" height="14px" />
@@ -364,9 +364,23 @@ export const Today: React.FC = () => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ fontSize: '1.5em' }}>
-                      {getMealTypeIcon(meal.meal_type)}
-                    </div>
+                    {meal.photo_url ? (
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          backgroundImage: `url(${meal.photo_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          flexShrink: 0
+                        }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '1.5em' }}>
+                        {getMealTypeIcon(meal.meal_type)}
+                      </div>
+                    )}
                     <div>
                       <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
                         {getMealTypeLabel(meal.meal_type)}

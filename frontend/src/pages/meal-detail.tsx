@@ -254,12 +254,42 @@ export const MealDetail: React.FC = () => {
         </div>
       )}
 
+      {/* Meal Photo */}
+      {meal.photo_url && (
+        <div className="tg-card" style={{ marginBottom: 24, padding: 0, overflow: 'hidden' }}>
+          <img
+            src={meal.photo_url}
+            alt={`Photo of ${getMealTypeLabel(meal.meal_type)}`}
+            style={{
+              width: '100%',
+              height: 250,
+              objectFit: 'cover',
+              display: 'block'
+            }}
+          />
+        </div>
+      )}
+
       {/* Meal Info Card */}
       <div className="tg-card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <div style={{ fontSize: '2em' }}>
-            {getMealTypeIcon(meal.meal_type)}
-          </div>
+          {meal.photo_url ? (
+            <div
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: 10,
+                backgroundImage: `url(${meal.photo_url})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                flexShrink: 0
+              }}
+            />
+          ) : (
+            <div style={{ fontSize: '2em' }}>
+              {getMealTypeIcon(meal.meal_type)}
+            </div>
+          )}
           <div>
             <h2 style={{ margin: 0 }}>{getMealTypeLabel(meal.meal_type)}</h2>
             <div style={{ color: 'var(--tg-hint-color)', fontSize: '0.9em' }}>
