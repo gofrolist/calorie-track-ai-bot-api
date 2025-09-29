@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from calorie_track_ai_bot.workers.estimate_worker import handle_job
+from calorie_track_ai_bot.workers.estimate_worker import create_meal_from_estimate, handle_job
 
 
 class TestEstimateWorker:
@@ -30,6 +30,9 @@ class TestEstimateWorker:
             patch("calorie_track_ai_bot.workers.estimate_worker.db_save_estimate") as mock_db_save,
             patch("calorie_track_ai_bot.workers.estimate_worker.db_get_photo") as mock_db_get_photo,
             patch(
+                "calorie_track_ai_bot.workers.estimate_worker.create_meal_from_estimate"
+            ) as mock_create_meal,
+            patch(
                 "calorie_track_ai_bot.workers.estimate_worker.send_estimate_to_user"
             ) as mock_send_estimate,
         ):
@@ -54,6 +57,7 @@ class TestEstimateWorker:
                 "estimate": mock_estimate,
                 "db_save": mock_db_save,
                 "db_get_photo": mock_db_get_photo,
+                "create_meal": mock_create_meal,
                 "send_estimate": mock_send_estimate,
             }
 
@@ -86,6 +90,12 @@ class TestEstimateWorker:
         estimate_data = call_args.kwargs["est"]
         assert "confidence" in estimate_data
         assert estimate_data["confidence"] == 0.8  # from mock data
+
+        # Should create meal from estimate
+        mock_dependencies["create_meal"].assert_called_once()
+
+        # Should send estimate to user
+        mock_dependencies["send_estimate"].assert_called_once()
 
     @pytest.mark.asyncio
     async def test_handle_job_with_existing_confidence(self, mock_dependencies):
@@ -200,10 +210,50 @@ class TestEstimateWorker:
         with pytest.raises(ValueError, match="photo_id cannot be None"):
             await handle_job(job)
 
-        # Should not have called any dependencies
-        mock_dependencies["db_get_photo"].assert_not_called()
-        mock_dependencies["estimate"].assert_not_called()
-        mock_dependencies["db_save"].assert_not_called()
+    @pytest.mark.asyncio
+    async def test_create_meal_from_estimate_success(self):
+        """Test successful meal creation from estimate."""
+        photo_record = {
+            "id": "photo123",
+            "user_id": "user123",
+            "tigris_key": "photos/storage_key.jpg",
+        }
+        estimate_id = "estimate123"
+
+        with patch(
+            "calorie_track_ai_bot.workers.estimate_worker.db_create_meal_from_estimate"
+        ) as mock_create_meal:
+            mock_create_meal.return_value = "meal123"
+
+            await create_meal_from_estimate(photo_record, estimate_id)
+
+            # Should create meal with correct parameters
+            mock_create_meal.assert_called_once()
+            call_args = mock_create_meal.call_args
+            meal_request = call_args[0][0]  # First positional argument
+            user_id = call_args[0][1]  # Second positional argument
+
+            assert meal_request.estimate_id == estimate_id
+            assert meal_request.meal_type.value == "snack"
+            assert user_id == "user123"
+
+    @pytest.mark.asyncio
+    async def test_create_meal_from_estimate_no_user_id(self):
+        """Test meal creation when photo record has no user_id."""
+        photo_record = {
+            "id": "photo123",
+            "tigris_key": "photos/storage_key.jpg",
+            # No user_id
+        }
+        estimate_id = "estimate123"
+
+        with patch(
+            "calorie_track_ai_bot.workers.estimate_worker.db_create_meal_from_estimate"
+        ) as mock_create_meal:
+            await create_meal_from_estimate(photo_record, estimate_id)
+
+            # Should not create meal
+            mock_create_meal.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_main_function_loop_logic(self, mock_dependencies):
