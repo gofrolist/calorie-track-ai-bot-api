@@ -1,8 +1,10 @@
 import asyncio
+from datetime import date
 from typing import Any
 
+from ..schemas import MealCreateFromEstimateRequest, MealType
 from ..services.config import logger
-from ..services.db import db_get_photo, db_get_user, db_save_estimate
+from ..services.db import db_create_meal_from_estimate, db_get_photo, db_get_user, db_save_estimate
 from ..services.estimator import estimate_from_image_url
 from ..services.queue import dequeue_estimate_job
 from ..services.storage import BUCKET_NAME, s3
@@ -42,12 +44,38 @@ async def handle_job(job: dict[str, Any]) -> None:
         estimate_id = await db_save_estimate(photo_id=photo_id, est=est)
         logger.info(f"Estimate saved with ID: {estimate_id} for photo: {photo_id}")
 
+        # Create meal record from estimate
+        await create_meal_from_estimate(photo_record, estimate_id)
+
         # Send estimate results back to user via Telegram
         await send_estimate_to_user(photo_record, est, estimate_id)
 
     except Exception as e:
         logger.error(f"Error processing job for photo {photo_id}: {e}", exc_info=True)
         raise
+
+
+async def create_meal_from_estimate(photo_record: dict[str, Any], estimate_id: str) -> None:
+    """Create a meal record from the completed estimate."""
+    try:
+        user_id = photo_record.get("user_id")
+        if not user_id:
+            logger.warning("No user_id found in photo record, cannot create meal")
+            return
+
+        # Create meal from estimate with default values
+        meal_request = MealCreateFromEstimateRequest(
+            estimate_id=estimate_id,
+            meal_date=date.today(),
+            meal_type=MealType.snack,  # Default to snack, user can change in UI
+        )
+
+        meal_id = await db_create_meal_from_estimate(meal_request, user_id)
+        logger.info(f"Meal created with ID: {meal_id} from estimate: {estimate_id}")
+
+    except Exception as e:
+        logger.error(f"Error creating meal from estimate {estimate_id}: {e}", exc_info=True)
+        # Don't raise - meal creation failure shouldn't break the estimate workflow
 
 
 async def send_estimate_to_user(
