@@ -26,12 +26,14 @@ def isolated_client():
         patch("calorie_track_ai_bot.services.queue.r") as mock_redis,
         patch("calorie_track_ai_bot.services.storage.s3") as mock_s3,
         patch("calorie_track_ai_bot.services.estimator.client") as mock_openai,
+        patch("calorie_track_ai_bot.main.get_bot") as mock_main_bot,
     ):
         # Mock the bot to prevent async operations during lifespan
         mock_bot = Mock()
         mock_bot.set_webhook = Mock(return_value=True)
         mock_bot.close = Mock()
         mock_get_bot.return_value = mock_bot
+        mock_main_bot.return_value = mock_bot
 
         # Mock monitoring service to prevent async operations
         mock_monitor.start_monitoring = Mock()
