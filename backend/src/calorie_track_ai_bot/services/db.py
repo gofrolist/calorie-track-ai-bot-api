@@ -143,11 +143,23 @@ async def db_save_estimate(
     estimate_data = {"id": eid, "photo_id": photo_id, **est}
 
     # Add photo_ids array if provided (for multi-photo estimates)
+    # Try to include photo_ids, but handle gracefully if column doesn't exist
     if photo_ids:
         estimate_data["photo_ids"] = photo_ids
 
-    sb.table("estimates").insert(estimate_data).execute()
-    return eid
+    try:
+        sb.table("estimates").insert(estimate_data).execute()
+        return eid
+    except Exception as e:
+        # If photo_ids column doesn't exist, retry without it
+        if "photo_ids" in str(e) and "column" in str(e).lower():
+            logger.warning(f"photo_ids column not available, saving estimate without it: {e}")
+            estimate_data.pop("photo_ids", None)
+            sb.table("estimates").insert(estimate_data).execute()
+            return eid
+        else:
+            # Re-raise if it's a different error
+            raise
 
 
 async def db_get_estimate(estimate_id: str) -> dict[str, Any] | None:
