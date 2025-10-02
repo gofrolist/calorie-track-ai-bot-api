@@ -129,7 +129,9 @@ async def db_get_or_create_user(
     return user_id
 
 
-async def db_save_estimate(photo_id: str, est: dict[str, Any]) -> str:
+async def db_save_estimate(
+    photo_id: str, est: dict[str, Any], photo_ids: list[str] | None = None
+) -> str:
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
@@ -139,6 +141,10 @@ async def db_save_estimate(photo_id: str, est: dict[str, Any]) -> str:
 
     # Insert estimate data directly - database now has 'items' column
     estimate_data = {"id": eid, "photo_id": photo_id, **est}
+
+    # Add photo_ids array if provided (for multi-photo estimates)
+    if photo_ids:
+        estimate_data["photo_ids"] = photo_ids
 
     sb.table("estimates").insert(estimate_data).execute()
     return eid
@@ -240,6 +246,26 @@ async def db_create_meal_from_estimate(
         "estimate_id": data.estimate_id,
     }
     sb.table("meals").insert(payload).execute()
+
+    # Link photos to the meal by updating their meal_id
+    # The estimate should contain photo_ids array for multi-photo estimates
+    photo_ids = estimate.get("photo_ids", [])
+    if not photo_ids:
+        # Fallback: use single photo_id if photo_ids array is not available
+        single_photo_id = estimate.get("photo_id")
+        if single_photo_id:
+            photo_ids = [single_photo_id]
+
+    if photo_ids:
+        # Update photos with meal_id and display_order
+        for i, photo_id in enumerate(photo_ids[:5]):  # Max 5 photos
+            sb.table("photos").update({"meal_id": mid, "display_order": i}).eq(
+                "id", photo_id
+            ).execute()
+        logger.info(f"Linked {len(photo_ids)} photos to meal {mid}")
+    else:
+        logger.warning(f"No photo_ids found in estimate {data.estimate_id}")
+
     return {"meal_id": mid}
 
 
@@ -842,20 +868,32 @@ async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
         # Build photo list with presigned URLs
         photos = []
         for photo in photos_res.data if photos_res.data else []:
-            # Generate presigned URLs (1 hour expiry)
-            from .storage import generate_presigned_url
+            try:
+                # Generate presigned URLs (1 hour expiry)
+                from .storage import generate_presigned_url
 
-            thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-            full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
+                thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
+                full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
 
-            photos.append(
-                MealPhotoInfo(
-                    id=photo["id"],
-                    thumbnailUrl=thumbnail_url,
-                    fullUrl=full_url,
-                    displayOrder=photo["display_order"],
+                photos.append(
+                    MealPhotoInfo(
+                        id=photo["id"],
+                        thumbnailUrl=thumbnail_url,
+                        fullUrl=full_url,
+                        displayOrder=photo["display_order"],
+                    )
                 )
-            )
+            except Exception as e:
+                logger.warning(f"Failed to generate photo URLs for meal {meal_id}: {e}")
+                # Still add the photo info but with placeholder URLs
+                photos.append(
+                    MealPhotoInfo(
+                        id=photo["id"],
+                        thumbnailUrl="",
+                        fullUrl="",
+                        displayOrder=photo["display_order"],
+                    )
+                )
 
         # Build meal object
         macros = Macronutrients(
@@ -955,6 +993,18 @@ async def db_get_meals_with_photos(
                 photos_by_meal[meal_id] = []
             photos_by_meal[meal_id].append(photo)
 
+        # Batch fetch all estimates for meals that need descriptions
+        estimate_ids = [
+            meal["estimate_id"]
+            for meal in meals_res.data
+            if meal.get("estimate_id") and not meal.get("description")
+        ]
+
+        estimates_by_id = {}
+        if estimate_ids:
+            estimates_res = sb.table("estimates").select("*").in_("id", estimate_ids).execute()
+            estimates_by_id = {est["id"]: est for est in estimates_res.data if estimates_res.data}
+
         # Build result meals
         result_meals = []
         for meal_data in meals_res.data:
@@ -964,19 +1014,31 @@ async def db_get_meals_with_photos(
             # Build photo list
             photos = []
             for photo in meal_photos:
-                from .storage import generate_presigned_url
+                try:
+                    from .storage import generate_presigned_url
 
-                thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-                full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
+                    thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
+                    full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
 
-                photos.append(
-                    MealPhotoInfo(
-                        id=photo["id"],
-                        thumbnailUrl=thumbnail_url,
-                        fullUrl=full_url,
-                        displayOrder=photo["display_order"],
+                    photos.append(
+                        MealPhotoInfo(
+                            id=photo["id"],
+                            thumbnailUrl=thumbnail_url,
+                            fullUrl=full_url,
+                            displayOrder=photo["display_order"],
+                        )
                     )
-                )
+                except Exception as e:
+                    logger.warning(f"Failed to generate photo URLs for meal {meal_id}: {e}")
+                    # Still add the photo info but with placeholder URLs
+                    photos.append(
+                        MealPhotoInfo(
+                            id=photo["id"],
+                            thumbnailUrl="",
+                            fullUrl="",
+                            displayOrder=photo["display_order"],
+                        )
+                    )
 
             # Build macronutrients
             macros = Macronutrients(
@@ -985,18 +1047,13 @@ async def db_get_meals_with_photos(
                 fats=meal_data.get("fats_grams", 0) or 0,
             )
 
-            # Generate description if not present
+            # Generate description from batched estimates
             description = meal_data.get("description")
             if not description and meal_data.get("estimate_id"):
-                # Try to generate description from estimate
-                try:
-                    estimate = await db_get_estimate(meal_data["estimate_id"])
-                    if estimate:
-                        description = _generate_meal_description(estimate)
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to generate description for meal {meal_data['id']}: {e}"
-                    )
+                estimate = estimates_by_id.get(meal_data["estimate_id"])
+                if estimate:
+                    description = _generate_meal_description(estimate)
+                else:
                     description = "No description available"
             elif not description:
                 description = "Manual entry"

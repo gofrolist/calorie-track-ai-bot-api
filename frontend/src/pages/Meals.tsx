@@ -10,12 +10,9 @@
  * - Meal editing and deletion
  */
 
-import React, { useState, useContext, useMemo } from 'react';
+import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import {
-  goalsApi,
-  type Goal,
   type DailySummary
 } from '../services/api';
 import { TelegramWebAppContext } from '../app';
@@ -25,43 +22,19 @@ import { MealCard } from '../components/MealCard';
 import { CalendarPicker } from '../components/CalendarPicker';
 import { MealEditor } from '../components/MealEditor';
 import { Navigation } from '../components/Navigation';
-import { useMeals, useMealsCalendar, type Meal } from '../hooks/useMeals';
+import { useMealsPage, type Meal } from '../hooks/useMealsPage';
 
 export const Meals: React.FC = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const telegramContext = useContext(TelegramWebAppContext);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
-  const [goal, setGoal] = useState<Goal | null>(null);
 
-  // Fetch meals for selected date
-  const { meals, loading, error, updateMeal, deleteMeal, refetch } = useMeals(selectedDate);
-
-  // Fetch calendar data for last month - memoize dates to prevent infinite loop
-  const calendarDates = useMemo(() => {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 1);
-    return { startDate, endDate };
-  }, []);
-  const { calendarData } = useMealsCalendar(calendarDates.startDate, calendarDates.endDate);
-
-  // Fetch goal on mount
-  React.useEffect(() => {
-    const fetchGoal = async () => {
-      try {
-        const fetchedGoal = await goalsApi.getGoal();
-        setGoal(fetchedGoal);
-      } catch (err) {
-        console.error('Failed to fetch goal:', err);
-      }
-    };
-    fetchGoal();
-  }, []);
+  // Fetch all data in parallel using optimized hook
+  const { meals, calendarData, goal, loading, error, updateMeal, deleteMeal, refetch } = useMealsPage(selectedDate);
 
   const formatCalories = (calories: number): string => {
     return calories.toLocaleString();

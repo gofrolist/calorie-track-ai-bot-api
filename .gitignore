@@ -222,4 +222,6 @@ frontend/coverage/
 frontend/.nyc_output/
 frontend/dist/
 frontend/.vite/
+frontend/tsconfig.tsbuildinfo
+frontend/*.tsbuildinfo
 .vercel
