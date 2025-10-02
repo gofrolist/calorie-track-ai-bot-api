@@ -22,26 +22,23 @@ async def test_get_meal_by_id_success(
     # Mock the database function
     mock_meal = MealWithPhotos(
         id=meal_id,
-        user_id=user_uuid,
+        userId=user_uuid,
         calories=650.0,
-        protein_grams=45.5,
-        carbs_grams=75.0,
-        fats_grams=18.2,
         description="Chicken pasta dinner",
-        created_at=datetime.now(UTC),
+        createdAt=datetime.now(UTC),
         macronutrients=Macronutrients(protein=45.5, carbs=75.0, fats=18.2),
         photos=[
             MealPhotoInfo(
                 id=uuid4(),
-                display_order=0,
-                thumbnail_url="https://example.com/thumb1.jpg",
-                full_url="https://example.com/full1.jpg",
+                displayOrder=0,
+                thumbnailUrl="https://example.com/thumb1.jpg",
+                fullUrl="https://example.com/full1.jpg",
             ),
             MealPhotoInfo(
                 id=uuid4(),
-                display_order=1,
-                thumbnail_url="https://example.com/thumb2.jpg",
-                full_url="https://example.com/full2.jpg",
+                displayOrder=1,
+                thumbnailUrl="https://example.com/thumb2.jpg",
+                fullUrl="https://example.com/full2.jpg",
             ),
         ],
     )
@@ -56,7 +53,7 @@ async def test_get_meal_by_id_success(
     data = response.json()
 
     assert data["id"] == str(meal_id)
-    assert data["user_id"] == user_uuid
+    assert data["userId"] == user_uuid
     assert data["calories"] == 650.0
     assert data["description"] == "Chicken pasta dinner"
 
@@ -69,8 +66,8 @@ async def test_get_meal_by_id_success(
     # Check photos
     assert "photos" in data
     assert len(data["photos"]) == 2
-    assert data["photos"][0]["display_order"] == 0
-    assert data["photos"][1]["display_order"] == 1
+    assert data["photos"][0]["displayOrder"] == 0
+    assert data["photos"][1]["displayOrder"] == 1
 
 
 @pytest.mark.asyncio
@@ -88,16 +85,16 @@ async def test_get_meal_includes_presigned_urls(
     # Mock the database function
     mock_meal = MealWithPhotos(
         id=meal_id,
-        user_id=user_uuid,
+        userId=user_uuid,
         calories=500.0,
-        created_at=datetime.now(UTC),
+        createdAt=datetime.now(UTC),
         macronutrients=Macronutrients(protein=0.0, carbs=0.0, fats=0.0),
         photos=[
             MealPhotoInfo(
                 id=uuid4(),
-                display_order=0,
-                thumbnail_url="https://example.com/thumb.jpg",
-                full_url="https://example.com/full.jpg",
+                displayOrder=0,
+                thumbnailUrl="https://example.com/thumb.jpg",
+                fullUrl="https://example.com/full.jpg",
             )
         ],
     )
@@ -114,10 +111,10 @@ async def test_get_meal_includes_presigned_urls(
     assert len(data["photos"]) == 1
     photo_data = data["photos"][0]
 
-    assert "thumbnail_url" in photo_data
-    assert "full_url" in photo_data
-    assert isinstance(photo_data["thumbnail_url"], str)
-    assert isinstance(photo_data["full_url"], str)
+    assert "thumbnailUrl" in photo_data
+    assert "fullUrl" in photo_data
+    assert isinstance(photo_data["thumbnailUrl"], str)
+    assert isinstance(photo_data["fullUrl"], str)
 
 
 @pytest.mark.asyncio
@@ -147,9 +144,9 @@ async def test_get_meal_forbidden_other_user(
 
     mock_meal = MealWithPhotos(
         id=meal_id,
-        user_id=other_user_id,  # Different user
+        userId=other_user_id,  # Different user
         calories=500.0,
-        created_at=datetime.now(UTC),
+        createdAt=datetime.now(UTC),
         macronutrients=Macronutrients(protein=0.0, carbs=0.0, fats=0.0),
         photos=[],
     )
@@ -199,10 +196,10 @@ async def test_get_meal_with_no_photos(
     # Mock the database function
     mock_meal = MealWithPhotos(
         id=meal_id,
-        user_id=user_uuid,
+        userId=user_uuid,
         calories=300.0,
         description="Text-only meal",
-        created_at=datetime.now(UTC),
+        createdAt=datetime.now(UTC),
         macronutrients=Macronutrients(protein=0.0, carbs=0.0, fats=0.0),
         photos=[],
     )

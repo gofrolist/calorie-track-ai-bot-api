@@ -225,9 +225,9 @@ class TestAPIContracts:
 
         mock_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=400.0,
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=20.0, carbs=50.0, fats=10.0),
             photos=[],
         )
@@ -256,22 +256,22 @@ class TestAPIContracts:
                 # Verify required fields for new schema
                 required_fields = [
                     "id",
-                    "user_id",
+                    "userId",
                     "calories",
                     "macronutrients",
                     "photos",
-                    "created_at",
+                    "createdAt",
                 ]
                 for field in required_fields:
                     assert field in meal, f"Missing required field: {field}"
 
                 # Verify field types
                 assert isinstance(meal["id"], str)
-                assert isinstance(meal["user_id"], str)
+                assert isinstance(meal["userId"], str)
                 assert isinstance(meal["calories"], int | float)
                 assert isinstance(meal["macronutrients"], dict)
                 assert isinstance(meal["photos"], list)
-                assert isinstance(meal["created_at"], str)
+                assert isinstance(meal["createdAt"], str)
 
     def test_daily_summary_contract(self, client):
         """Test daily summary API contract."""

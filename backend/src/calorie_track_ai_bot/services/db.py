@@ -756,9 +756,9 @@ async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
             photos.append(
                 MealPhotoInfo(
                     id=photo["id"],
-                    thumbnail_url=thumbnail_url,
-                    full_url=full_url,
-                    display_order=photo["display_order"],
+                    thumbnailUrl=thumbnail_url,
+                    fullUrl=full_url,
+                    displayOrder=photo["display_order"],
                 )
             )
 
@@ -771,13 +771,13 @@ async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
 
         return MealWithPhotos(
             id=meal_data["id"],
-            user_id=meal_data["user_id"],
-            created_at=meal_data["created_at"],
+            userId=meal_data["user_id"],
+            createdAt=meal_data["created_at"],
             description=meal_data.get("description"),
             calories=meal_data.get("kcal_total", 0),
             macronutrients=macros,
             photos=photos,
-            confidence_score=meal_data.get("confidence_score"),
+            confidenceScore=meal_data.get("confidence_score"),
         )
 
     except Exception as e:
@@ -840,20 +840,35 @@ async def db_get_meals_with_photos(
         if not meals_res.data:
             return []
 
-        # For each meal, get photos
+        # Get all meal IDs for batch photo query
+        meal_ids = [meal["id"] for meal in meals_res.data]
+
+        # Single query to get all photos for all meals
+        photos_res = (
+            sb.table("photos")
+            .select("id, tigris_key, display_order, meal_id")
+            .in_("meal_id", meal_ids)
+            .order("display_order")
+            .execute()
+        )
+
+        # Group photos by meal_id
+        photos_by_meal = {}
+        for photo in photos_res.data if photos_res.data else []:
+            meal_id = photo["meal_id"]
+            if meal_id not in photos_by_meal:
+                photos_by_meal[meal_id] = []
+            photos_by_meal[meal_id].append(photo)
+
+        # Build result meals
         result_meals = []
         for meal_data in meals_res.data:
-            photos_res = (
-                sb.table("photos")
-                .select("id, tigris_key, display_order")
-                .eq("meal_id", meal_data["id"])
-                .order("display_order")
-                .execute()
-            )
+            meal_id = meal_data["id"]
+            meal_photos = photos_by_meal.get(meal_id, [])
 
             # Build photo list
             photos = []
-            for photo in photos_res.data if photos_res.data else []:
+            for photo in meal_photos:
                 from .storage import generate_presigned_url
 
                 thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
@@ -862,9 +877,9 @@ async def db_get_meals_with_photos(
                 photos.append(
                     MealPhotoInfo(
                         id=photo["id"],
-                        thumbnail_url=thumbnail_url,
-                        full_url=full_url,
-                        display_order=photo["display_order"],
+                        thumbnailUrl=thumbnail_url,
+                        fullUrl=full_url,
+                        displayOrder=photo["display_order"],
                     )
                 )
 
@@ -878,13 +893,13 @@ async def db_get_meals_with_photos(
             result_meals.append(
                 MealWithPhotos(
                     id=meal_data["id"],
-                    user_id=meal_data["user_id"],
-                    created_at=meal_data["created_at"],
+                    userId=meal_data["user_id"],
+                    createdAt=meal_data["created_at"],
                     description=meal_data.get("description"),
                     calories=meal_data.get("kcal_total", 0),
                     macronutrients=macros,
                     photos=photos,
-                    confidence_score=meal_data.get("confidence_score"),
+                    confidenceScore=meal_data.get("confidence_score"),
                 )
             )
 
