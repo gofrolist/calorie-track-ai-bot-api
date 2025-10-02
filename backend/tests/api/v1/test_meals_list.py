@@ -137,23 +137,23 @@ async def test_get_meals_returns_photos(
 
     mock_meal = MealWithPhotos(
         id=meal_id,
-        user_id=test_user_uuid,
+        userId=test_user_uuid,
         description="Test meal with photos",
         calories=500.0,
         macronutrients=Macronutrients(protein=30.0, carbs=50.0, fats=15.0),
-        created_at=datetime.now(UTC),
+        createdAt=datetime.now(UTC),
         photos=[
             MealPhotoInfo(
                 id=photo1_id,
-                thumbnail_url="https://test.com/thumb1.jpg",
-                full_url="https://test.com/full1.jpg",
-                display_order=0,
+                thumbnailUrl="https://test.com/thumb1.jpg",
+                fullUrl="https://test.com/full1.jpg",
+                displayOrder=0,
             ),
             MealPhotoInfo(
                 id=photo2_id,
-                thumbnail_url="https://test.com/thumb2.jpg",
-                full_url="https://test.com/full2.jpg",
-                display_order=1,
+                thumbnailUrl="https://test.com/thumb2.jpg",
+                fullUrl="https://test.com/full2.jpg",
+                displayOrder=1,
             ),
         ],
     )
@@ -172,8 +172,8 @@ async def test_get_meals_returns_photos(
 
         assert "photos" in test_meal
         assert len(test_meal["photos"]) == 2
-        assert test_meal["photos"][0]["display_order"] == 0
-        assert test_meal["photos"][1]["display_order"] == 1
+        assert test_meal["photos"][0]["displayOrder"] == 0
+        assert test_meal["photos"][1]["displayOrder"] == 1
 
 
 @pytest.mark.asyncio
@@ -195,11 +195,11 @@ async def test_get_meals_returns_macronutrients(
 
     mock_meal = MealWithPhotos(
         id=meal_id,
-        user_id=test_user_uuid,
+        userId=test_user_uuid,
         description="Test meal with macros",
         calories=500.0,
         macronutrients=Macronutrients(protein=30.0, carbs=50.0, fats=15.0),
-        created_at=datetime.now(UTC),
+        createdAt=datetime.now(UTC),
         photos=[],
     )
 

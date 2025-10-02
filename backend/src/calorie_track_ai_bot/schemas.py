@@ -385,22 +385,30 @@ class MealPhotoInfo(BaseModel):
     """Photo information for meal display."""
 
     id: UUID = Field(..., description="Photo ID")
-    thumbnail_url: str = Field(..., description="Presigned URL for thumbnail")
-    full_url: str = Field(..., description="Presigned URL for full-size image")
-    display_order: int = Field(..., ge=0, le=4, description="Position in carousel (0-4)")
+    thumbnail_url: str = Field(..., alias="thumbnailUrl", description="Presigned URL for thumbnail")
+    full_url: str = Field(..., alias="fullUrl", description="Presigned URL for full-size image")
+    display_order: int = Field(
+        ..., alias="displayOrder", ge=0, le=4, description="Position in carousel (0-4)"
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class MealWithPhotos(BaseModel):
     """Meal with associated photos and macronutrients."""
 
     id: UUID = Field(..., description="Meal ID")
-    user_id: UUID = Field(..., description="User ID")
-    created_at: AwareDatetime = Field(..., description="Meal creation timestamp")
+    user_id: UUID = Field(..., alias="userId", description="User ID")
+    created_at: AwareDatetime = Field(..., alias="createdAt", description="Meal creation timestamp")
     description: str | None = Field(None, max_length=1000, description="Meal description")
     calories: float = Field(..., ge=0, description="Total calories")
     macronutrients: Macronutrients = Field(..., description="Macronutrient breakdown")
     photos: list[MealPhotoInfo] = Field(default=[], description="Associated photos (max 5)")
-    confidence_score: float | None = Field(None, ge=0, le=1, description="AI confidence (0-1)")
+    confidence_score: float | None = Field(
+        None, alias="confidenceScore", ge=0, le=1, description="AI confidence (0-1)"
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class MealUpdate(BaseModel):
