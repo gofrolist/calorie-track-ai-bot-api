@@ -84,6 +84,40 @@ class TelegramBot:
             logger.error(f"Error sending photo: {e}")
             raise
 
+    async def send_chat_action(self, chat_id: int, action: str) -> bool:
+        """Send a chat action (typing, uploading photo, etc.) to a chat.
+
+        Args:
+            chat_id: Target chat ID
+            action: Action type ('typing', 'upload_photo', 'record_video', etc.)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        url = f"{self.base_url}/sendChatAction"
+        data = {"chat_id": chat_id, "action": action}
+
+        logger.debug(f"Sending chat action '{action}' to chat {chat_id}")
+
+        try:
+            response = await self.client.post(url, json=data)
+            response.raise_for_status()
+            result = response.json()
+
+            if result.get("ok"):
+                logger.debug(f"Chat action sent successfully to chat {chat_id}")
+                return True
+            else:
+                logger.error(f"Failed to send chat action: {result.get('description')}")
+                return False
+
+        except httpx.HTTPError as e:
+            logger.error(f"HTTP error sending chat action: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error sending chat action: {e}")
+            return False
+
     async def set_webhook(self, webhook_url: str) -> bool:
         """Set the webhook URL for the bot."""
         url = f"{self.base_url}/setWebhook"
