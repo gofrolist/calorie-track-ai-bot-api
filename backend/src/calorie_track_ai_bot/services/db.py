@@ -63,15 +63,37 @@ async def db_create_photo(
         f"display_order={display_order}, media_group_id={media_group_id}"
     )
     pid = str(uuid.uuid4())
-    photo_data = {"id": pid, "tigris_key": tigris_key, "display_order": display_order}
-    if user_id:
-        photo_data["user_id"] = user_id
-    if media_group_id:
-        photo_data["media_group_id"] = media_group_id
 
-    sb.table("photos").insert(photo_data).execute()
-    logger.info(f"Photo record created with ID: {pid}")
-    return pid
+    # Build photo data with fallback for missing columns
+    photo_data: dict[str, Any] = {"id": pid, "tigris_key": tigris_key}
+
+    # Only include columns that exist in the current schema
+    try:
+        # Try with display_order first (new schema)
+        photo_data["display_order"] = display_order
+        if user_id:
+            photo_data["user_id"] = user_id
+        if media_group_id:
+            photo_data["media_group_id"] = media_group_id
+
+        sb.table("photos").insert(photo_data).execute()
+        logger.info(f"Photo record created with ID: {pid}")
+        return pid
+
+    except Exception as e:
+        # If display_order column doesn't exist, retry without it
+        if "display_order" in str(e) or "PGRST204" in str(e):
+            logger.warning("display_order column not found, falling back to legacy schema")
+            photo_data = {"id": pid, "tigris_key": tigris_key}
+            if user_id:
+                photo_data["user_id"] = user_id
+
+            sb.table("photos").insert(photo_data).execute()
+            logger.info(f"Photo record created with ID: {pid} (legacy schema)")
+            return pid
+        else:
+            # Re-raise other errors
+            raise
 
 
 async def db_get_or_create_user(
