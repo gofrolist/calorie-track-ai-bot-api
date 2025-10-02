@@ -123,7 +123,7 @@ async def handle_multiphotos_job(
             "confidence": result["confidence"],
             "macronutrients": result["macronutrients"],
             "photo_count": result["photo_count"],
-            "items": [],  # Items not provided in multi-photo response yet
+            "items": result.get("items", []),  # Include food items breakdown
         }
 
         # Save estimate (use first photo as primary)
@@ -251,6 +251,7 @@ async def send_multiphotos_estimate_to_user(
         kcal_max = result["calories"]["max"]
         confidence = result["confidence"]
         macros = result["macronutrients"]
+        items = result.get("items", [])
 
         # Create enhanced message with actual macronutrients
         message = "🍎 <b>Nutrition Estimate Complete!</b>\n"
@@ -263,7 +264,16 @@ async def send_multiphotos_estimate_to_user(
         message += "<b>🏋️ Macronutrients:</b>\n"
         message += f"• Protein: {macros['protein']:.1f}g\n"
         message += f"• Carbs: {macros['carbs']:.1f}g\n"
-        message += f"• Fats: {macros['fats']:.1f}g\n"
+        message += f"• Fats: {macros['fats']:.1f}g\n\n"
+
+        # Add food items breakdown
+        if items:
+            message += "<b>📋 Food Items:</b>\n"
+            for item in items:
+                label = item.get("label", "Unknown")
+                kcal = item.get("kcal", 0)
+                item_confidence = item.get("confidence", 0)
+                message += f"• {label}: {kcal:.0f} kcal ({item_confidence:.0%})\n"
 
         # Send message
         bot = get_bot()

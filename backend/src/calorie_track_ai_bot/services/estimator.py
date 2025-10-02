@@ -217,4 +217,5 @@ class CalorieEstimator:
             "macronutrients": result["macronutrients"],
             "confidence": result["confidence"],
             "photo_count": len(valid_urls),
+            "items": result.get("items", []),  # Include food items breakdown
         }
