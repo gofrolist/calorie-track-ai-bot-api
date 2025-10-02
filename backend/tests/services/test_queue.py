@@ -45,7 +45,7 @@ class TestQueueFunctions:
 
         assert call_args[0][0] == QUEUE
         job_data = json.loads(call_args[0][1])
-        assert job_data["photo_id"] == photo_id
+        assert job_data["photo_ids"] == [photo_id]
 
     @pytest.mark.asyncio
     async def test_enqueue_estimate_job_with_uuid(self, mock_redis):
@@ -65,12 +65,12 @@ class TestQueueFunctions:
         # Should call lpush with correct parameters
         call_args = mock_redis.lpush.call_args
         job_data = json.loads(call_args[0][1])
-        assert job_data["photo_id"] == photo_id
+        assert job_data["photo_ids"] == [photo_id]
 
     @pytest.mark.asyncio
     async def test_dequeue_estimate_job_with_data(self, mock_redis):
         """Test dequeuing an estimate job when data is available."""
-        job_data = {"photo_id": "photo456"}
+        job_data = {"photo_ids": ["photo456"]}
 
         async def mock_brpop(queue, timeout):
             return ("estimate_jobs", json.dumps(job_data))
@@ -167,13 +167,13 @@ class TestQueueFunctions:
         call_args = mock_redis.lpush.call_args
         job_data = json.loads(call_args[0][1])
 
-        # Should have photo_id field
-        assert "photo_id" in job_data
-        assert job_data["photo_id"] == photo_id
+        # Should have photo_ids field
+        assert "photo_ids" in job_data
+        assert job_data["photo_ids"] == [photo_id]
 
         # Should be a valid JSON structure
         assert isinstance(job_data, dict)
-        assert len(job_data) == 1  # Only photo_id field
+        assert len(job_data) == 2  # photo_ids and description fields
 
     @pytest.mark.asyncio
     async def test_round_trip_job_processing(self, mock_redis):
@@ -203,4 +203,4 @@ class TestQueueFunctions:
 
         # Should get back the same data
         assert result == job_data
-        assert result["photo_id"] == photo_id
+        assert result["photo_ids"] == [photo_id]

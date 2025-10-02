@@ -36,6 +36,22 @@ class PhotoCreateRequest(BaseModel):
     content_type: str = Field(..., description="MIME type of the image (e.g., image/jpeg)")
 
 
+class MultiPhotoCreateRequest(BaseModel):
+    photos: list[PhotoCreateRequest] = Field(
+        ..., min_length=1, max_length=5, description="List of photos to upload (1-5 photos)"
+    )
+
+
+class PhotoInfo(BaseModel):
+    id: str
+    upload_url: str
+    file_key: str
+
+
+class MultiPhotoResponse(BaseModel):
+    photos: list[PhotoInfo]
+
+
 class MealCreateManualRequest(BaseModel):
     meal_date: date
     meal_type: MealType
@@ -352,3 +368,71 @@ class DevelopmentEnvironment(BaseModel):
     supabase_cli_version: str = Field(..., description="Supabase CLI version")
     created_at: AwareDatetime = Field(..., description="Creation timestamp")
     updated_at: AwareDatetime = Field(..., description="Last update timestamp")
+
+
+# Multi-Photo Meal Schemas (Feature: 003-update-logic-for)
+
+
+class Macronutrients(BaseModel):
+    """Macronutrient breakdown in grams."""
+
+    protein: float = Field(..., ge=0, description="Protein in grams")
+    carbs: float = Field(..., ge=0, description="Carbohydrates in grams")
+    fats: float = Field(..., ge=0, description="Fats in grams")
+
+
+class MealPhotoInfo(BaseModel):
+    """Photo information for meal display."""
+
+    id: UUID = Field(..., description="Photo ID")
+    thumbnail_url: str = Field(..., description="Presigned URL for thumbnail")
+    full_url: str = Field(..., description="Presigned URL for full-size image")
+    display_order: int = Field(..., ge=0, le=4, description="Position in carousel (0-4)")
+
+
+class MealWithPhotos(BaseModel):
+    """Meal with associated photos and macronutrients."""
+
+    id: UUID = Field(..., description="Meal ID")
+    user_id: UUID = Field(..., description="User ID")
+    created_at: AwareDatetime = Field(..., description="Meal creation timestamp")
+    description: str | None = Field(None, max_length=1000, description="Meal description")
+    calories: float = Field(..., ge=0, description="Total calories")
+    macronutrients: Macronutrients = Field(..., description="Macronutrient breakdown")
+    photos: list[MealPhotoInfo] = Field(default=[], description="Associated photos (max 5)")
+    confidence_score: float | None = Field(None, ge=0, le=1, description="AI confidence (0-1)")
+
+
+class MealUpdate(BaseModel):
+    """Update request for meal details."""
+
+    model_config = {"extra": "forbid"}
+
+    description: str | None = Field(None, max_length=1000, description="Updated description")
+    protein_grams: float | None = Field(None, ge=0, description="Updated protein in grams")
+    carbs_grams: float | None = Field(None, ge=0, description="Updated carbs in grams")
+    fats_grams: float | None = Field(None, ge=0, description="Updated fats in grams")
+
+
+class MealCalendarDay(BaseModel):
+    """Daily meal summary for calendar view."""
+
+    meal_date: date = Field(..., description="Date")
+    meal_count: int = Field(..., ge=0, description="Number of meals")
+    total_calories: float = Field(..., ge=0, description="Total calories for the day")
+    total_protein: float = Field(..., ge=0, description="Total protein in grams")
+    total_carbs: float = Field(..., ge=0, description="Total carbs in grams")
+    total_fats: float = Field(..., ge=0, description="Total fats in grams")
+
+
+class MealsListResponse(BaseModel):
+    """Response for GET /api/v1/meals."""
+
+    meals: list[MealWithPhotos] = Field(..., description="List of meals")
+    total: int = Field(..., ge=0, description="Total count in range")
+
+
+class MealsCalendarResponse(BaseModel):
+    """Response for GET /api/v1/meals/calendar."""
+
+    dates: list[MealCalendarDay] = Field(..., description="Daily summaries")

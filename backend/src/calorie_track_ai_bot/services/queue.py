@@ -20,13 +20,28 @@ else:
     raise ValueError("REDIS_URL must be set")
 
 
-async def enqueue_estimate_job(photo_id: str) -> str:
+async def enqueue_estimate_job(photo_ids: str | list[str], description: str | None = None) -> str:
+    """Enqueue an estimation job for one or more photos.
+
+    Args:
+        photo_ids: Single photo ID or list of photo IDs
+        description: Optional user-provided meal description
+
+    Returns:
+        Job ID (first photo ID if single, or joined IDs if multiple)
+    """
     if r is None:
         raise RuntimeError("Redis configuration not available. Queue functionality is disabled.")
 
-    job = {"photo_id": photo_id}
+    # Normalize to list
+    if isinstance(photo_ids, str):
+        photo_ids = [photo_ids]
+
+    job = {"photo_ids": photo_ids, "description": description}
     await r.lpush(QUEUE, json.dumps(job))  # type: ignore
-    return photo_id
+
+    # Return first photo ID as job identifier
+    return photo_ids[0]
 
 
 async def dequeue_estimate_job() -> dict[str, Any] | None:

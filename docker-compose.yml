@@ -51,14 +51,15 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # Docker-specific overrides - these MUST override any values from .env file
+      # Redis Configuration - ALWAYS use local Redis container in Docker
+      REDIS_URL: redis://redis:6379/0
+
       # Database Configuration (Supabase CLI managed)
       # Start database with: supabase db start
       SUPABASE_URL: http://host.docker.internal:54321
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOuoJeoDQa2DEOh5NJVr5Y9Y1yG_iJjGwBhU}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
-
-      # Redis Configuration
-      REDIS_URL: redis://redis:6379/0
 
       # Storage Configuration
       AWS_ENDPOINT_URL_S3: http://minio:9000
@@ -112,11 +113,14 @@ services:
       target: development
     restart: unless-stopped
     environment:
-      # Use same environment as backend (Supabase CLI managed)
+      # Docker-specific overrides - these MUST override any values from .env file
+      # Redis Configuration - ALWAYS use local Redis container in Docker
+      REDIS_URL: redis://redis:6379/0
+
+      # Database Configuration (Supabase CLI managed)
       SUPABASE_URL: http://host.docker.internal:54321
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOuoJeoDQa2DEOh5NJVr5Y9Y1yG_iJjGwBhU}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
-      REDIS_URL: redis://redis:6379/0
       APP_ENV: development
       LOG_LEVEL: DEBUG
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -172,11 +176,11 @@ services:
       VITE_TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME:-calorie_track_dev_bot}
       VITE_TELEGRAM_APP_URL: http://localhost:3000
     volumes:
-      - ./frontend/src:/app/src:ro
-      - ./frontend/public:/app/public:ro
-      - ./frontend/package.json:/app/package.json:ro
-      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
-      - ./frontend/tsconfig.json:/app/tsconfig.json:ro
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
       - frontend_node_modules:/app/node_modules
     depends_on:
       - backend

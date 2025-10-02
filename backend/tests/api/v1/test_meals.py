@@ -160,11 +160,9 @@ class TestMealsEndpoints:
 
     def test_meals_endpoint_methods(self, client):
         """Test that meals endpoint handles different HTTP methods correctly."""
-        # GET /meals without date parameter should return 422 (validation error)
+        # GET /meals without auth should return 401 (auth is checked before validation)
         get_response = client.get("/meals")
-        assert (
-            get_response.status_code == 422
-        )  # Unprocessable Entity (missing required query param)
+        assert get_response.status_code == 401  # Unauthorized
 
         # PUT /meals should return 405 (Method Not Allowed)
         put_response = client.put("/meals")

@@ -9,6 +9,7 @@ import {
   type Goal
 } from '../services/api';
 import { TelegramWebAppContext } from '../app';
+import { Navigation } from '../components/Navigation';
 
 interface SimpleChart {
   data: Array<{ date: string; value: number; label?: string }>;
@@ -153,20 +154,24 @@ export const Stats: React.FC = () => {
     }
 
     const chartHeight = 160;
-    const chartWidth = chart.data.length * 40;
+    // Calculate max container width (900px max-width - padding)
+    const maxContainerWidth = Math.min(window.innerWidth, 900) - 100; // Account for padding and margins
+    // Always fit to container width by dividing available space by number of data points
+    const pointSpacing = Math.max(20, Math.floor(maxContainerWidth / chart.data.length));
 
     return (
       <div style={{
-        overflowX: 'auto',
+        overflowX: 'hidden', // Never show scrollbar, always fit to container
         padding: '16px 0',
         background: 'var(--tg-secondary-bg-color)',
         borderRadius: 8,
-        margin: '16px 0'
+        margin: '16px 0',
+        width: '100%',
       }}>
         <div style={{
           position: 'relative',
           height: chartHeight + 40,
-          minWidth: chartWidth,
+          width: '100%',
           padding: '0 20px'
         }}>
           {/* Goal line */}
@@ -182,13 +187,14 @@ export const Stats: React.FC = () => {
             }}>
               <div style={{
                 position: 'absolute',
-                right: 0,
+                left: 0,
                 top: -10,
-                fontSize: '0.8em',
+                fontSize: '0.7em',
                 color: 'var(--tg-link-color)',
                 background: 'var(--tg-bg-color)',
                 padding: '2px 4px',
                 borderRadius: 4,
+                whiteSpace: 'nowrap',
               }}>
                 Goal: {formatCalories(goal.daily_kcal_target)}
               </div>
@@ -198,7 +204,8 @@ export const Stats: React.FC = () => {
           {/* Data bars/points */}
           {chart.data.map((point, index) => {
             const height = (point.value / chart.maxValue) * chartHeight;
-            const left = index * 40;
+            const left = index * pointSpacing;
+            const barWidth = Math.min(24, pointSpacing - 8);
 
             if (chart.type === 'bar') {
               return (
@@ -206,9 +213,9 @@ export const Stats: React.FC = () => {
                   <div
                     style={{
                       position: 'absolute',
-                      left: left + 8,
+                      left: left + (pointSpacing - barWidth) / 2,
                       bottom: 20,
-                      width: 24,
+                      width: barWidth,
                       height,
                       backgroundColor: point.value >= (goal?.daily_kcal_target || 0) ?
                         'var(--tg-button-color)' : 'var(--tg-hint-color)',
@@ -219,8 +226,8 @@ export const Stats: React.FC = () => {
                     position: 'absolute',
                     left: left,
                     bottom: 0,
-                    width: 40,
-                    fontSize: '0.8em',
+                    width: pointSpacing,
+                    fontSize: '0.7em',
                     textAlign: 'center',
                     color: 'var(--tg-hint-color)',
                   }}>
@@ -231,8 +238,8 @@ export const Stats: React.FC = () => {
                       position: 'absolute',
                       left: left,
                       bottom: height + 22,
-                      width: 40,
-                      fontSize: '0.7em',
+                      width: pointSpacing,
+                      fontSize: '0.65em',
                       textAlign: 'center',
                       color: 'var(--tg-text-color)',
                     }}>
@@ -244,12 +251,13 @@ export const Stats: React.FC = () => {
             } else {
               // Line chart points
               const nextPoint = chart.data[index + 1];
+              const nextLeft = (index + 1) * pointSpacing;
               return (
                 <div key={point.date}>
                   <div
                     style={{
                       position: 'absolute',
-                      left: left + 16,
+                      left: left + pointSpacing / 2 - 3,
                       bottom: 20 + height - 3,
                       width: 6,
                       height: 6,
@@ -261,13 +269,13 @@ export const Stats: React.FC = () => {
                     <div
                       style={{
                         position: 'absolute',
-                        left: left + 19,
+                        left: left + pointSpacing / 2,
                         bottom: 20 + height,
-                        width: Math.sqrt(Math.pow(40, 2) + Math.pow((nextPoint.value - point.value) / chart.maxValue * chartHeight, 2)),
+                        width: Math.sqrt(Math.pow(pointSpacing, 2) + Math.pow((nextPoint.value - point.value) / chart.maxValue * chartHeight, 2)),
                         height: 1,
                         backgroundColor: 'var(--tg-button-color)',
                         transformOrigin: '0 0',
-                        transform: `rotate(${Math.atan2((nextPoint.value - point.value) / chart.maxValue * chartHeight, 40) * 180 / Math.PI}deg)`,
+                        transform: `rotate(${Math.atan2((nextPoint.value - point.value) / chart.maxValue * chartHeight, pointSpacing) * 180 / Math.PI}deg)`,
                       }}
                     />
                   )}
@@ -275,8 +283,8 @@ export const Stats: React.FC = () => {
                     position: 'absolute',
                     left: left,
                     bottom: 0,
-                    width: 40,
-                    fontSize: '0.7em',
+                    width: pointSpacing,
+                    fontSize: '0.65em',
                     textAlign: 'center',
                     color: 'var(--tg-hint-color)',
                   }}>
@@ -350,9 +358,10 @@ export const Stats: React.FC = () => {
 
   return (
     <div className="main-content" style={{ padding: 16 }}>
-      <header style={{ marginBottom: 24 }}>
-        <h1>Week/Month Stats</h1>
-      </header>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <header style={{ marginBottom: 24 }}>
+          <h1>Week/Month Stats</h1>
+        </header>
 
       {/* View Toggle */}
       <div className="tg-card" style={{ marginBottom: 24 }}>
@@ -469,21 +478,8 @@ export const Stats: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="navigation">
-        <div className="navigation-item" onClick={() => navigate('/')}>
-          <div>📊</div>
-          <div>Today</div>
-        </div>
-        <div className="navigation-item active">
-          <div>📈</div>
-          <div>Stats</div>
-        </div>
-        <div className="navigation-item" onClick={() => navigate('/goals')}>
-          <div>🎯</div>
-          <div>Goals</div>
-        </div>
-      </nav>
+      </div>
+      <Navigation />
     </div>
   );
 };

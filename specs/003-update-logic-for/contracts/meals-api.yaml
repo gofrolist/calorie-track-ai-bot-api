@@ -1,0 +1,406 @@
+openapi: 3.1.0
+info:
+  title: Meals Management API
+  description: API contracts for multi-photo meal tracking and meal management
+  version: 1.0.0
+
+paths:
+  /api/v1/meals:
+    get:
+      summary: Get user meals for a specific date or date range
+      operationId: getMeals
+      tags:
+        - meals
+      parameters:
+        - name: date
+          in: query
+          description: Specific date to fetch meals (ISO 8601 format YYYY-MM-DD)
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2025-09-30"
+        - name: start_date
+          in: query
+          description: Start date for range query (inclusive)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: End date for range query (inclusive)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          description: Maximum number of meals to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: List of meals with photos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meals:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MealWithPhotos'
+                  total:
+                    type: integer
+                    description: Total count of meals in range
+              example:
+                meals:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    user_id: "user123"
+                    created_at: "2025-09-30T12:30:00Z"
+                    description: "Chicken pasta dinner"
+                    calories: 650.0
+                    macronutrients:
+                      protein: 45.5
+                      carbs: 75.0
+                      fats: 18.2
+                    photos:
+                      - id: "photo1"
+                        thumbnail_url: "https://..."
+                        full_url: "https://..."
+                        display_order: 0
+                      - id: "photo2"
+                        thumbnail_url: "https://..."
+                        full_url: "https://..."
+                        display_order: 1
+                    confidence_score: 0.85
+                total: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/meals/{meal_id}:
+    get:
+      summary: Get specific meal details
+      operationId: getMeal
+      tags:
+        - meals
+      parameters:
+        - name: meal_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Meal details with photos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealWithPhotos'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      summary: Update meal details
+      operationId: updateMeal
+      tags:
+        - meals
+      parameters:
+        - name: meal_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealUpdate'
+            example:
+              description: "Updated: Grilled chicken pasta"
+              protein_grams: 50.0
+              carbs_grams: 70.0
+              fats_grams: 20.0
+      responses:
+        '200':
+          description: Updated meal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealWithPhotos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete a meal
+      operationId: deleteMeal
+      tags:
+        - meals
+      parameters:
+        - name: meal_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Meal successfully deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/meals/calendar:
+    get:
+      summary: Get meal summary by date (for calendar view)
+      operationId: getMealsCalendar
+      tags:
+        - meals
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Start of calendar range
+        - name: end_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: End of calendar range (max 1 year from start)
+      responses:
+        '200':
+          description: Daily meal summaries for calendar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        meal_count:
+                          type: integer
+                        total_calories:
+                          type: number
+                          format: float
+                        total_protein:
+                          type: number
+                          format: float
+                        total_carbs:
+                          type: number
+                          format: float
+                        total_fats:
+                          type: number
+                          format: float
+              example:
+                dates:
+                  - date: "2025-09-30"
+                    meal_count: 3
+                    total_calories: 1850.0
+                    total_protein: 95.5
+                    total_carbs: 210.0
+                    total_fats: 55.0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    MealWithPhotos:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        calories:
+          type: number
+          format: float
+          minimum: 0
+        macronutrients:
+          type: object
+          properties:
+            protein:
+              type: number
+              format: float
+              minimum: 0
+              description: Protein in grams
+            carbs:
+              type: number
+              format: float
+              minimum: 0
+              description: Carbohydrates in grams
+            fats:
+              type: number
+              format: float
+              minimum: 0
+              description: Fats in grams
+          required:
+            - protein
+            - carbs
+            - fats
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhotoInfo'
+          minItems: 0
+          maxItems: 5
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          nullable: true
+      required:
+        - id
+        - user_id
+        - created_at
+        - calories
+        - macronutrients
+        - photos
+
+    PhotoInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        thumbnail_url:
+          type: string
+          format: uri
+          description: Presigned URL for thumbnail (optimized for list view)
+        full_url:
+          type: string
+          format: uri
+          description: Presigned URL for full-size image (for carousel)
+        display_order:
+          type: integer
+          minimum: 0
+          maximum: 4
+          description: Position in carousel (0-indexed)
+      required:
+        - id
+        - thumbnail_url
+        - full_url
+        - display_order
+
+    MealUpdate:
+      type: object
+      properties:
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        protein_grams:
+          type: number
+          format: float
+          minimum: 0
+        carbs_grams:
+          type: number
+          format: float
+          minimum: 0
+        fats_grams:
+          type: number
+          format: float
+          minimum: 0
+      minProperties: 1
+      description: At least one field must be provided for update
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+          example:
+            detail: "Invalid date format. Use YYYY-MM-DD"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+          example:
+            detail: "Not authenticated"
+
+    Forbidden:
+      description: User does not have permission to access this resource
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+          example:
+            detail: "You do not own this meal"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+          example:
+            detail: "Meal not found"
+
+  securitySchemes:
+    telegramAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Telegram WebApp authentication token
+
+security:
+  - telegramAuth: []

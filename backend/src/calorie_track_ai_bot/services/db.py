@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -9,6 +9,7 @@ from supabase.lib.client_options import SyncClientOptions
 from ..schemas import (
     MealCreateFromEstimateRequest,
     MealCreateManualRequest,
+    MealPhotoInfo,
     UIConfiguration,
     UIConfigurationUpdate,
 )
@@ -35,17 +36,38 @@ else:
     raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
 
 
-async def db_create_photo(tigris_key: str, user_id: str | None = None) -> str:
+async def db_create_photo(
+    tigris_key: str,
+    user_id: str | None = None,
+    display_order: int = 0,
+    media_group_id: str | None = None,
+) -> str:
+    """Create a photo record in the database.
+
+    Args:
+        tigris_key: Storage key for the photo
+        user_id: UUID of the user who owns the photo
+        display_order: Position in carousel (0-4)
+        media_group_id: Telegram media group ID for grouped photos
+
+    Returns:
+        Photo ID (UUID)
+    """
     if sb is None:
         raise RuntimeError(
             "Supabase configuration not available. Database functionality is disabled."
         )
 
-    logger.debug(f"Creating photo record with tigris_key: {tigris_key}, user_id: {user_id}")
+    logger.debug(
+        f"Creating photo record: tigris_key={tigris_key}, user_id={user_id}, "
+        f"display_order={display_order}, media_group_id={media_group_id}"
+    )
     pid = str(uuid.uuid4())
-    photo_data = {"id": pid, "tigris_key": tigris_key}
+    photo_data = {"id": pid, "tigris_key": tigris_key, "display_order": display_order}
     if user_id:
         photo_data["user_id"] = user_id
+    if media_group_id:
+        photo_data["media_group_id"] = media_group_id
 
     sb.table("photos").insert(photo_data).execute()
     logger.info(f"Photo record created with ID: {pid}")
@@ -664,3 +686,322 @@ async def db_cleanup_old_ui_configurations(user_id: str, keep_count: int = 5) ->
     logger.info(f"Cleaned up {deleted_count} old UI configurations for user {user_id}")
 
     return deleted_count
+
+
+# Multi-Photo Meals Support (Feature: 003-update-logic-for)
+
+
+async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
+    """Get meal with associated photos and macronutrients.
+
+    Args:
+        meal_id: Meal UUID
+
+    Returns:
+        MealWithPhotos object or None if not found
+    """
+    if sb is None:
+        raise RuntimeError("Supabase configuration not available")
+
+    from ..schemas import Macronutrients, MealWithPhotos
+
+    try:
+        # Get meal
+        meal_res = sb.table("meals").select("*").eq("id", str(meal_id)).execute()
+        if not meal_res.data:
+            return None
+
+        meal_data = meal_res.data[0]
+
+        # Get associated photos
+        photos_res = (
+            sb.table("photos")
+            .select("id, file_key, display_order")
+            .eq("meal_id", str(meal_id))
+            .order("display_order")
+            .execute()
+        )
+
+        # Build photo list with presigned URLs
+        photos = []
+        for photo in photos_res.data if photos_res.data else []:
+            # Generate presigned URLs (1 hour expiry)
+            from .storage import generate_presigned_url
+
+            thumbnail_url = generate_presigned_url(photo["file_key"], expiry=3600)
+            full_url = generate_presigned_url(photo["file_key"], expiry=3600)
+
+            photos.append(
+                MealPhotoInfo(
+                    id=photo["id"],
+                    thumbnail_url=thumbnail_url,
+                    full_url=full_url,
+                    display_order=photo["display_order"],
+                )
+            )
+
+        # Build meal object
+        macros = Macronutrients(
+            protein=meal_data.get("protein_grams", 0) or 0,
+            carbs=meal_data.get("carbs_grams", 0) or 0,
+            fats=meal_data.get("fats_grams", 0) or 0,
+        )
+
+        return MealWithPhotos(
+            id=meal_data["id"],
+            user_id=meal_data["user_id"],
+            created_at=meal_data["created_at"],
+            description=meal_data.get("description"),
+            calories=meal_data.get("kcal_total", 0),
+            macronutrients=macros,
+            photos=photos,
+            confidence_score=meal_data.get("confidence_score"),
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting meal with photos: {e}")
+        raise
+
+
+async def db_get_meals_with_photos(
+    user_id: uuid.UUID,
+    query_date: Any | None = None,
+    start_date: Any | None = None,
+    end_date: Any | None = None,
+    limit: int = 50,
+) -> list[Any]:
+    """Get meals with photos for date/range (filters meals older than 1 year).
+
+    Args:
+        user_id: User UUID
+        query_date: Specific date to query
+        start_date: Start of date range
+        end_date: End of date range
+        limit: Maximum number of meals
+
+    Returns:
+        List of MealWithPhotos objects
+    """
+    if sb is None:
+        raise RuntimeError("Supabase configuration not available")
+
+    from datetime import date as date_type
+
+    from ..schemas import Macronutrients, MealWithPhotos
+
+    try:
+        # Build query with 1-year retention filter
+        one_year_ago = (date_type.today() - timedelta(days=365)).isoformat()
+
+        query = (
+            sb.table("meals")
+            .select("*")
+            .eq("user_id", str(user_id))
+            .gte("created_at", one_year_ago)
+        )
+
+        # Apply date filters
+        if query_date:
+            query = query.gte("created_at", f"{query_date}T00:00:00").lt(
+                "created_at", f"{query_date}T23:59:59.999999"
+            )
+        elif start_date and end_date:
+            query = query.gte("created_at", f"{start_date}T00:00:00").lte(
+                "created_at", f"{end_date}T23:59:59.999999"
+            )
+
+        # Order and limit
+        query = query.order("created_at", desc=True).limit(limit)
+
+        meals_res = query.execute()
+
+        if not meals_res.data:
+            return []
+
+        # For each meal, get photos
+        result_meals = []
+        for meal_data in meals_res.data:
+            photos_res = (
+                sb.table("photos")
+                .select("id, file_key, display_order")
+                .eq("meal_id", meal_data["id"])
+                .order("display_order")
+                .execute()
+            )
+
+            # Build photo list
+            photos = []
+            for photo in photos_res.data if photos_res.data else []:
+                from .storage import generate_presigned_url
+
+                thumbnail_url = generate_presigned_url(photo["file_key"], expiry=3600)
+                full_url = generate_presigned_url(photo["file_key"], expiry=3600)
+
+                photos.append(
+                    MealPhotoInfo(
+                        id=photo["id"],
+                        thumbnail_url=thumbnail_url,
+                        full_url=full_url,
+                        display_order=photo["display_order"],
+                    )
+                )
+
+            # Build macronutrients
+            macros = Macronutrients(
+                protein=meal_data.get("protein_grams", 0) or 0,
+                carbs=meal_data.get("carbs_grams", 0) or 0,
+                fats=meal_data.get("fats_grams", 0) or 0,
+            )
+
+            result_meals.append(
+                MealWithPhotos(
+                    id=meal_data["id"],
+                    user_id=meal_data["user_id"],
+                    created_at=meal_data["created_at"],
+                    description=meal_data.get("description"),
+                    calories=meal_data.get("kcal_total", 0),
+                    macronutrients=macros,
+                    photos=photos,
+                    confidence_score=meal_data.get("confidence_score"),
+                )
+            )
+
+        return result_meals
+
+    except Exception as e:
+        logger.error(f"Error getting meals with photos: {e}")
+        raise
+
+
+async def db_update_meal_with_macros(meal_id: uuid.UUID, updates: Any) -> Any | None:
+    """Update meal and recalculate calories from macronutrients.
+
+    Args:
+        meal_id: Meal UUID
+        updates: MealUpdate object
+
+    Returns:
+        Updated MealWithPhotos or None
+    """
+    if sb is None:
+        raise RuntimeError("Supabase configuration not available")
+
+    try:
+        # Build update dict
+        update_data: dict[str, Any] = {}
+
+        if updates.description is not None:
+            update_data["description"] = updates.description
+
+        if updates.protein_grams is not None:
+            update_data["protein_grams"] = updates.protein_grams
+
+        if updates.carbs_grams is not None:
+            update_data["carbs_grams"] = updates.carbs_grams
+
+        if updates.fats_grams is not None:
+            update_data["fats_grams"] = updates.fats_grams
+
+        # Recalculate calories if macros updated (4-4-9 formula)
+        if any(k in update_data for k in ["protein_grams", "carbs_grams", "fats_grams"]):
+            # Get current meal to fill missing macros
+            current_meal_res = sb.table("meals").select("*").eq("id", str(meal_id)).execute()
+            if current_meal_res.data:
+                current = current_meal_res.data[0]
+                protein = update_data.get("protein_grams", current.get("protein_grams", 0) or 0)
+                carbs = update_data.get("carbs_grams", current.get("carbs_grams", 0) or 0)
+                fats = update_data.get("fats_grams", current.get("fats_grams", 0) or 0)
+
+                # Calculate: 4 kcal/g protein, 4 kcal/g carbs, 9 kcal/g fats
+                update_data["kcal_total"] = protein * 4 + carbs * 4 + fats * 9
+
+        # Update meal
+        res = sb.table("meals").update(update_data).eq("id", str(meal_id)).execute()
+
+        if not res.data:
+            return None
+
+        # Return updated meal with photos
+        return await db_get_meal_with_photos(meal_id)
+
+    except Exception as e:
+        logger.error(f"Error updating meal with macros: {e}")
+        raise
+
+
+async def db_get_meals_calendar_summary(
+    user_id: uuid.UUID, start_date: Any, end_date: Any
+) -> list[Any]:
+    """Get daily meal summaries for calendar view.
+
+    Args:
+        user_id: User UUID
+        start_date: Start date
+        end_date: End date
+
+    Returns:
+        List of MealCalendarDay objects
+    """
+    if sb is None:
+        raise RuntimeError("Supabase configuration not available")
+
+    from ..schemas import MealCalendarDay
+
+    try:
+        # Get all meals in range
+        one_year_ago = (date.today() - timedelta(days=365)).isoformat()
+
+        meals_res = (
+            sb.table("meals")
+            .select("created_at, kcal_total, protein_grams, carbs_grams, fats_grams")
+            .eq("user_id", str(user_id))
+            .gte("created_at", one_year_ago)
+            .gte("created_at", f"{start_date}T00:00:00")
+            .lte("created_at", f"{end_date}T23:59:59.999999")
+            .execute()
+        )
+
+        if not meals_res.data:
+            return []
+
+        # Aggregate by date
+        daily_data: dict[str, dict[str, float]] = {}
+
+        for meal in meals_res.data:
+            # Extract date from timestamp
+            meal_date = meal["created_at"].split("T")[0]
+
+            if meal_date not in daily_data:
+                daily_data[meal_date] = {
+                    "count": 0,
+                    "calories": 0,
+                    "protein": 0,
+                    "carbs": 0,
+                    "fats": 0,
+                }
+
+            daily_data[meal_date]["count"] += 1
+            daily_data[meal_date]["calories"] += meal.get("kcal_total", 0) or 0
+            daily_data[meal_date]["protein"] += meal.get("protein_grams", 0) or 0
+            daily_data[meal_date]["carbs"] += meal.get("carbs_grams", 0) or 0
+            daily_data[meal_date]["fats"] += meal.get("fats_grams", 0) or 0
+
+        # Build response
+        calendar_days = []
+        for date_str, data in sorted(daily_data.items(), reverse=True):
+            calendar_days.append(
+                MealCalendarDay(
+                    meal_date=datetime.fromisoformat(date_str).date(),
+                    meal_count=int(data["count"]),
+                    total_calories=data["calories"],
+                    total_protein=data["protein"],
+                    total_carbs=data["carbs"],
+                    total_fats=data["fats"],
+                )
+            )
+
+        return calendar_days
+
+    except Exception as e:
+        logger.error(f"Error getting calendar summary: {e}")
+        raise

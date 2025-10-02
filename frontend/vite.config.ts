@@ -6,6 +6,23 @@ export default defineConfig({
   server: {
     port: 5173
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core libraries
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Swiper carousel library
+          'swiper-vendor': ['swiper'],
+          // i18next internationalization libraries
+          'i18n-vendor': ['i18next', 'react-i18next'],
+          // Note: Analytics libraries are small and kept in main bundle for optimal loading
+        },
+      },
+    },
+    // Increase chunk size warning limit to 600kb (since we're splitting properly now)
+    chunkSizeWarningLimit: 600,
+  },
   test: {
     globals: true,
     environment: 'jsdom',

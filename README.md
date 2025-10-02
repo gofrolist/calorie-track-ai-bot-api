@@ -3,14 +3,36 @@
 [![Backend CI](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml)
 [![Backend Build](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-build.yml/badge.svg)](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-build.yml)
 
-A full-stack application for tracking calories using AI-powered photo analysis.
+A full-stack application for tracking calories using AI-powered photo analysis with multi-photo support and enhanced meal history features.
+
+## Features
+
+### Multi-Photo Meal Tracking
+- Upload up to 5 photos per meal for better calorie estimation
+- AI-powered analysis using OpenAI GPT-4 Vision
+- Automatic macronutrient breakdown (protein, carbs, fats)
+- Telegram bot integration with media group support
+
+### Enhanced Meal History
+- Calendar-based meal navigation
+- Inline meal card expansion
+- Instagram-style photo carousel
+- Meal editing and deletion with confirmation
+- Responsive design for mobile devices
+
+### Technical Features
+- FastAPI backend with automatic OpenAPI documentation
+- React frontend with TypeScript
+- Supabase PostgreSQL database
+- Tigris S3-compatible storage
+- Upstash Redis for background job queuing
 
 ## Repository Structure
 
 This repository is organized into backend and frontend components:
 
 - `backend/` - FastAPI application with Telegram bot functionality
-- `frontend/` - Frontend application (to be added)
+- `frontend/` - React-based Telegram Mini App with meal tracking interface
 
 ## Quick Start
 
@@ -28,7 +50,35 @@ cd backend && uv run uvicorn src.calorie_track_ai_bot.main:app --reload --host 0
 
 ### Frontend Development
 
-Frontend components will be added to the `frontend/` folder in future iterations.
+See [frontend/README.md](frontend/README.md) for detailed frontend setup instructions.
+
+```bash
+# Install dependencies
+cd frontend && npm install
+
+# Start development server
+cd frontend && npm run dev
+```
+
+## Features
+
+### Multi-Photo Meal Tracking
+- Upload up to 5 photos per meal
+- AI-powered calorie and macronutrient estimation
+- Instagram-style photo carousel
+- Thumbnail optimization for fast loading
+
+### Enhanced Meal History
+- Calendar-based meal browsing
+- Date range filtering
+- Meal editing and deletion
+- Responsive design for mobile devices
+
+### Telegram Integration
+- Telegram Bot for photo submission
+- Telegram Mini App for meal management
+- Media group support for multi-photo uploads
+- Real-time AI estimation processing
 
 ## Available Commands
 

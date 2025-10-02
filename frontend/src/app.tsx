@@ -1,12 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Analytics } from '@vercel/analytics/react';
 // Use window.Telegram for simpler, more reliable access
-import { Today } from './pages/today';
-import { MealDetail } from './pages/meal-detail';
-import { Stats } from './pages/stats';
-import { Goals } from './pages/goals';
 import ErrorBoundary from './components/ErrorBoundary';
 import ThemeDetector, { ThemeDetectionData } from './components/ThemeDetector';
 import LanguageDetector, { LanguageDetectionData } from './components/LanguageDetector';
@@ -14,6 +10,36 @@ import SafeAreaWrapper from './components/SafeAreaWrapper';
 import DebugInfo from './components/DebugInfo';
 import { apiUtils, configApi, loggingApi } from './services/api';
 import { config } from './config';
+
+// Lazy load route components for code splitting
+const Meals = lazy(() => import('./pages/Meals').then(module => ({ default: module.Meals })));
+const Stats = lazy(() => import('./pages/stats').then(module => ({ default: module.Stats })));
+const Goals = lazy(() => import('./pages/goals').then(module => ({ default: module.Goals })));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    backgroundColor: 'var(--tg-theme-bg-color, #ffffff)',
+    color: 'var(--tg-theme-text-color, #000000)',
+  }}>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{
+        width: '48px',
+        height: '48px',
+        border: '4px solid var(--tg-theme-hint-color, #999)',
+        borderTopColor: 'var(--tg-theme-button-color, #3390ec)',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        margin: '0 auto 16px',
+      }} />
+      <div>Loading...</div>
+    </div>
+  </div>
+);
 
 // Telegram WebApp Context
 export interface TelegramWebAppContextType {
@@ -53,10 +79,30 @@ export const TelegramWebAppContext = React.createContext<TelegramWebAppContextTy
 });
 
 const router = createBrowserRouter([
-  { path: '/', element: <Today /> },
-  { path: '/meal/:id', element: <MealDetail /> },
-  { path: '/stats', element: <Stats /> },
-  { path: '/goals', element: <Goals /> },
+  {
+    path: '/',
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <Meals />
+      </Suspense>
+    )
+  },
+  {
+    path: '/stats',
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <Stats />
+      </Suspense>
+    )
+  },
+  {
+    path: '/goals',
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <Goals />
+      </Suspense>
+    )
+  },
 ]);
 
 const App: React.FC = () => {

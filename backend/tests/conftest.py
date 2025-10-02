@@ -310,7 +310,7 @@ def authenticated_headers():
     """Headers for authenticated requests."""
     return {
         "authorization": "Bearer test-token",
-        "x-user-id": "test-user-123",
+        "x-user-id": "123456789",
         "x-correlation-id": "test-correlation-123",
         "content-type": "application/json",
     }
