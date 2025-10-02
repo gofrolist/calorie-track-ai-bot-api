@@ -1,6 +1,9 @@
+import asyncio
+from datetime import datetime
 from typing import Any
 
 import httpx
+from fastapi import HTTPException
 
 from .config import TELEGRAM_BOT_TOKEN, logger
 
@@ -215,3 +218,167 @@ def get_bot() -> TelegramBot:
     if bot is None:
         bot = TelegramBot()
     return bot
+
+
+# Multi-Photo Support Functions (Feature: 003-update-logic-for)
+
+
+def validate_photo_count(count: int) -> None:
+    """Validate photo count is within acceptable range (1-5).
+
+    Args:
+        count: Number of photos
+
+    Raises:
+        HTTPException: If count is invalid
+    """
+    if count < 1:
+        raise HTTPException(status_code=400, detail="At least one photo is required")
+    if count > 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum 5 photos allowed per meal. You can upload up to 5 photos in one message for better calorie estimation.",
+        )
+
+
+def get_photo_limit_message() -> str:
+    """Get informational message about photo upload limits.
+
+    Returns:
+        User-friendly message explaining the 5-photo limit
+    """
+    return (
+        "⚠️ Maximum 5 photos allowed per meal. "
+        "You can upload up to 5 photos in one message for better calorie estimation."
+    )
+
+
+def validate_display_order(order: int) -> None:
+    """Validate photo display order is within range (0-4).
+
+    Args:
+        order: Display order index
+
+    Raises:
+        ValueError: If order is out of range
+    """
+    if order < 0 or order > 4:
+        raise ValueError(f"Display order must be between 0 and 4, got {order}")
+
+
+def validate_photo_mime_type(mime_type: str) -> None:
+    """Validate photo has valid image MIME type.
+
+    Args:
+        mime_type: MIME type to validate
+
+    Raises:
+        ValueError: If MIME type is not a valid image type
+    """
+    valid_prefixes = ["image/"]
+    if not any(mime_type.startswith(prefix) for prefix in valid_prefixes):
+        raise ValueError(f"Invalid MIME type: {mime_type}. Must be an image type.")
+
+
+def validate_photo_file_size(size_bytes: int) -> None:
+    """Validate photo file size doesn't exceed Telegram's 20MB limit.
+
+    Args:
+        size_bytes: File size in bytes
+
+    Raises:
+        ValueError: If file size exceeds limit
+    """
+    max_size = 20 * 1024 * 1024  # 20MB in bytes
+    if size_bytes > max_size:
+        raise ValueError(f"Photo size {size_bytes} exceeds 20MB limit")
+
+
+class TelegramService:
+    """Service for handling Telegram message processing including media groups."""
+
+    def __init__(self):
+        self._media_group_buffer: dict[str, list[Any]] = {}
+        self._media_group_timers: dict[str, datetime] = {}
+
+    async def get_media_group_id(self, update: Any) -> str | None:
+        """Extract media_group_id from Telegram update.
+
+        Args:
+            update: Telegram update object
+
+        Returns:
+            Media group ID if present, None otherwise
+        """
+        if hasattr(update, "message") and hasattr(update.message, "media_group_id"):
+            return update.message.media_group_id
+        return None
+
+    async def aggregate_media_group_photos(
+        self, media_group_id: str, photo_updates: list[Any], wait_ms: int = 200
+    ) -> list[Any]:
+        """Aggregate photos from same media group.
+
+        Args:
+            media_group_id: Telegram media group identifier
+            photo_updates: List of photo update messages
+            wait_ms: Maximum wait time in milliseconds
+
+        Returns:
+            List of aggregated photos
+        """
+        # Buffer photos by media_group_id
+        if media_group_id not in self._media_group_buffer:
+            self._media_group_buffer[media_group_id] = []
+
+        self._media_group_buffer[media_group_id].extend(photo_updates)
+
+        # Wait for completion or timeout
+        await asyncio.sleep(wait_ms / 1000.0)
+
+        # Return aggregated photos
+        photos = self._media_group_buffer.pop(media_group_id, [])
+        self._media_group_timers.pop(media_group_id, None)
+
+        return photos
+
+    async def extract_media_group_caption(self, updates: list[Any]) -> str | None:
+        """Extract caption from first photo in media group.
+
+        Args:
+            updates: List of photo updates from same media group
+
+        Returns:
+            Caption text if present, None otherwise
+        """
+        for update in updates:
+            if hasattr(update, "caption") and update.caption:
+                return update.caption
+        return None
+
+    async def wait_for_media_group_complete(
+        self, media_group_id: str, expected_count: int, timeout_ms: int = 200
+    ) -> bool | None:
+        """Wait for media group to complete receiving all photos.
+
+        Args:
+            media_group_id: Media group identifier
+            expected_count: Expected number of photos
+            timeout_ms: Maximum wait time in milliseconds
+
+        Returns:
+            True if complete, None if timeout
+        """
+        start_time = datetime.now()
+
+        while True:
+            elapsed_ms = (datetime.now() - start_time).total_seconds() * 1000
+            if elapsed_ms >= timeout_ms:
+                return None
+
+            # Check if we have all photos
+            if media_group_id in self._media_group_buffer:
+                if len(self._media_group_buffer[media_group_id]) >= expected_count:
+                    return True
+
+            await asyncio.sleep(0.01)  # 10ms polling interval

@@ -37,20 +37,22 @@ export interface Estimate {
 
 export interface Meal {
   id: string;
-  user_id: string;
-  meal_date: string;
-  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  kcal_total: number;
-  macros?: {
-    protein_g?: number;
-    fat_g?: number;
-    carbs_g?: number;
+  userId: string;
+  createdAt: string;
+  description: string | null;
+  calories: number;
+  macronutrients: {
+    protein: number;
+    carbs: number;
+    fats: number;
   };
-  estimate_id?: string;
-  corrected: boolean;
-  photo_url?: string;
-  created_at: string;
-  updated_at: string;
+  photos: Array<{
+    id: string;
+    thumbnailUrl: string;
+    fullUrl: string;
+    displayOrder: number;
+  }>;
+  confidenceScore: number | null;
 }
 
 export interface DailySummary {
@@ -359,15 +361,73 @@ export const mealsApi = {
     await api.delete(`/api/v1/meals/${mealId}`);
   },
 
-  async getMealsByDate(date: string): Promise<Meal[]> {
+  async getMealsByDate(date: string): Promise<{ meals: Meal[]; total: number }> {
     const response = await api.get('/api/v1/meals', {
       params: { date },
     });
-    return response.data;
+
+    // Transform snake_case to camelCase for frontend components
+    const transformedMeals = response.data.meals.map((meal: any) => ({
+      id: meal.id,
+      userId: meal.user_id,
+      createdAt: meal.created_at,
+      description: meal.description,
+      calories: meal.calories,
+      macronutrients: meal.macronutrients,
+      photos: meal.photos?.map((photo: any) => ({
+        id: photo.id,
+        thumbnailUrl: photo.thumbnail_url,
+        fullUrl: photo.full_url,
+        displayOrder: photo.display_order,
+      })) || [],
+      confidenceScore: meal.confidence_score,
+    }));
+
+    return {
+      meals: transformedMeals,
+      total: response.data.total,
+    };
   },
 
-  async getMealsByDateRange(startDate: string, endDate: string): Promise<Meal[]> {
+  async getMealsByDateRange(startDate: string, endDate: string, limit?: number): Promise<{ meals: Meal[]; total: number }> {
     const response = await api.get('/api/v1/meals', {
+      params: { start_date: startDate, end_date: endDate, limit },
+    });
+
+    // Transform snake_case to camelCase for frontend components
+    const transformedMeals = response.data.meals.map((meal: any) => ({
+      id: meal.id,
+      userId: meal.user_id,
+      createdAt: meal.created_at,
+      description: meal.description,
+      calories: meal.calories,
+      macronutrients: meal.macronutrients,
+      photos: meal.photos?.map((photo: any) => ({
+        id: photo.id,
+        thumbnailUrl: photo.thumbnail_url,
+        fullUrl: photo.full_url,
+        displayOrder: photo.display_order,
+      })) || [],
+      confidenceScore: meal.confidence_score,
+    }));
+
+    return {
+      meals: transformedMeals,
+      total: response.data.total,
+    };
+  },
+
+  async getMealsCalendar(startDate: string, endDate: string): Promise<{
+    dates: Array<{
+      meal_date: string;
+      meal_count: number;
+      total_calories: number;
+      total_protein: number;
+      total_carbs: number;
+      total_fats: number;
+    }>;
+  }> {
+    const response = await api.get('/api/v1/meals/calendar', {
       params: { start_date: startDate, end_date: endDate },
     });
     return response.data;

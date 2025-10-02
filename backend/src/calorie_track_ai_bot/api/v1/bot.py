@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 import httpx
@@ -8,9 +9,15 @@ from ...services.config import TELEGRAM_BOT_TOKEN, USE_WEBHOOK, WEBHOOK_URL, log
 from ...services.db import db_create_photo, db_get_or_create_user
 from ...services.queue import enqueue_estimate_job
 from ...services.storage import tigris_presign_put
-from ...services.telegram import get_bot
+from ...services.telegram import (
+    get_bot,
+    get_photo_limit_message,
+)
 
 router = APIRouter()
+
+# Media group aggregation: {media_group_id: {photos: [], caption: str, task: Task}}
+media_groups: dict[str, dict[str, Any]] = {}
 
 
 class TelegramUpdate(BaseModel):
@@ -25,6 +32,8 @@ class TelegramMessage(BaseModel):
     date: int
     text: str | None = None
     photo: list[dict[str, Any]] | None = None
+    caption: str | None = None
+    media_group_id: str | None = None
 
 
 @router.post("/bot")
@@ -119,10 +128,11 @@ async def handle_start_command(message: TelegramMessage) -> None:
 
 
 async def handle_photo_message(message: TelegramMessage) -> None:
-    """Handle photo messages from user."""
+    """Handle photo messages from user, supporting multi-photo media groups."""
     user_id = message.from_user.get("id") if message.from_user else None
-    chat_id = message.chat.get("id") if message.chat else None
-    logger.info(f"Handling photo message from user {user_id}")
+    media_group_id = message.media_group_id
+
+    logger.info(f"Handling photo message from user {user_id}, media_group_id: {media_group_id}")
 
     if not message.photo:
         logger.warning("Photo message received but no photo data found")
@@ -136,7 +146,101 @@ async def handle_photo_message(message: TelegramMessage) -> None:
         logger.error("No file_id found in photo message")
         return
 
-    logger.info(f"Processing photo with file_id: {file_id}")
+    # If this is part of a media group, aggregate photos
+    if media_group_id:
+        await handle_media_group_photo(message, media_group_id, file_id)
+    else:
+        # Single photo - process immediately
+        await process_single_photo(message, file_id)
+
+
+async def handle_media_group_photo(
+    message: TelegramMessage, media_group_id: str, file_id: str
+) -> None:
+    """Aggregate photos from media group before processing."""
+    user_id = message.from_user.get("id") if message.from_user else None
+    chat_id = message.chat.get("id") if message.chat else None
+
+    # Initialize or update media group
+    if media_group_id not in media_groups:
+        media_groups[media_group_id] = {
+            "photos": [],
+            "caption": message.caption,
+            "message": message,
+            "processing_task": None,
+        }
+        logger.info(f"Created new media group: {media_group_id}")
+
+    # Add photo to group
+    media_groups[media_group_id]["photos"].append(file_id)
+    photo_count = len(media_groups[media_group_id]["photos"])
+    logger.info(f"Added photo to media group {media_group_id}, count: {photo_count}")
+
+    # Check 5-photo limit
+    if photo_count > 5:
+        logger.warning(f"Media group {media_group_id} exceeds 5-photo limit")
+
+        # Send limit message to user (only once)
+        if photo_count == 6 and chat_id:
+            try:
+                bot = get_bot()
+                limit_message = get_photo_limit_message()
+                await bot.send_message(
+                    chat_id,
+                    limit_message,
+                    reply_to_message_id=message.message_id,
+                )
+                logger.info(f"Photo limit message sent to user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to send limit message: {e}")
+
+        # Truncate to 5 photos
+        media_groups[media_group_id]["photos"] = media_groups[media_group_id]["photos"][:5]
+        return
+
+    # Cancel previous processing task if exists
+    if media_groups[media_group_id]["processing_task"]:
+        media_groups[media_group_id]["processing_task"].cancel()
+
+    # Schedule processing after 200ms wait (Telegram typically sends photos within this window)
+    async def process_after_wait():
+        await asyncio.sleep(0.2)  # 200ms wait
+
+        if media_group_id in media_groups:
+            group_data = media_groups.pop(media_group_id)
+            photo_ids_list = group_data["photos"]
+            caption = group_data["caption"]
+            original_message = group_data["message"]
+
+            logger.info(
+                f"Processing media group {media_group_id} with {len(photo_ids_list)} photos"
+            )
+
+            await process_photo_group(
+                original_message,
+                photo_ids_list,
+                caption,
+            )
+
+    # Create and store the processing task
+    task = asyncio.create_task(process_after_wait())
+    media_groups[media_group_id]["processing_task"] = task
+
+
+async def process_single_photo(message: TelegramMessage, file_id: str) -> None:
+    """Process a single photo (no media group)."""
+    await process_photo_group(message, [file_id], message.caption)
+
+
+async def process_photo_group(
+    message: TelegramMessage,
+    file_ids: list[str],
+    description: str | None,
+) -> None:
+    """Process one or more photos as a single meal."""
+    user_id = message.from_user.get("id") if message.from_user else None
+    chat_id = message.chat.get("id") if message.chat else None
+    logger.info(f"Processing {len(file_ids)} photo(s) from user {user_id}")
 
     try:
         # Get or create user to get proper UUID
@@ -150,37 +254,72 @@ async def handle_photo_message(message: TelegramMessage) -> None:
             )
             logger.info(f"User {user_id} created/retrieved with UUID: {user_uuid}")
 
-        # Download photo from Telegram and upload to Tigris
+        # Download and upload all photos
         bot = get_bot()
-        file_info = await bot.get_file(file_id)
-        file_path = file_info["file_path"]
-        logger.info(f"Downloading photo from Telegram: {file_path}")
+        photo_ids = []
 
-        # Download the photo content
-        photo_content = await bot.download_file(file_path)
+        for idx, file_id in enumerate(file_ids):
+            try:
+                # Download photo from Telegram
+                file_info = await bot.get_file(file_id)
+                file_path = file_info["file_path"]
+                logger.info(f"Downloading photo {idx + 1}/{len(file_ids)}: {file_path}")
 
-        # Get presigned URL for upload
-        storage_key, upload_url = await tigris_presign_put(content_type="image/jpeg")
-        logger.info(f"Generated presigned URL for storage key: {storage_key}")
+                photo_content = await bot.download_file(file_path)
 
-        # Upload photo to Tigris
-        async with httpx.AsyncClient() as client:
-            upload_response = await client.put(
-                upload_url, content=photo_content, headers={"Content-Type": "image/jpeg"}
-            )
-            upload_response.raise_for_status()
-        logger.info(f"Photo uploaded to Tigris with key: {storage_key}")
+                # Get presigned URL for upload
+                storage_key, upload_url = await tigris_presign_put(content_type="image/jpeg")
+                logger.info(f"Generated presigned URL for storage key: {storage_key}")
 
-        # Create photo record in database with actual storage key
-        photo_id = await db_create_photo(tigris_key=storage_key, user_id=user_uuid)
-        logger.info(f"Photo record created with ID: {photo_id}")
+                # Upload photo to Tigris
+                async with httpx.AsyncClient() as client:
+                    upload_response = await client.put(
+                        upload_url,
+                        content=photo_content,
+                        headers={"Content-Type": "image/jpeg"},
+                    )
+                    upload_response.raise_for_status()
+                logger.info(f"Photo {idx + 1} uploaded to Tigris")
 
-        # Enqueue estimation job
-        job_id = await enqueue_estimate_job(photo_id)
-        logger.info(f"Estimation job enqueued with ID: {job_id}")
+                # Create photo record in database with display_order
+                photo_id = await db_create_photo(
+                    tigris_key=storage_key,
+                    user_id=user_uuid,
+                    display_order=idx,
+                    media_group_id=message.media_group_id,
+                )
+                photo_ids.append(photo_id)
+                logger.info(f"Photo record created with ID: {photo_id}")
+
+            except Exception as e:
+                logger.error(f"Error processing photo {idx + 1}: {e}", exc_info=True)
+                # Continue with other photos
+
+        if not photo_ids:
+            raise ValueError("No photos were successfully processed")
+
+        # Enqueue estimation job for all photos
+        job_id = await enqueue_estimate_job(photo_ids, description=description)
+        logger.info(f"Estimation job enqueued for {len(photo_ids)} photo(s), job ID: {job_id}")
+
+        # Send acknowledgment to user
+        if chat_id:
+            try:
+                bot = get_bot()
+                ack_message = (
+                    f"📸 Processing {len(photo_ids)} photo{'s' if len(photo_ids) > 1 else ''} "
+                    f"for your meal... I'll send you the calorie estimate shortly!"
+                )
+                await bot.send_message(
+                    chat_id,
+                    ack_message,
+                    reply_to_message_id=message.message_id,
+                )
+            except Exception as e:
+                logger.error(f"Failed to send acknowledgment: {e}")
 
     except Exception as e:
-        logger.error(f"Error processing photo message: {e}", exc_info=True)
+        logger.error(f"Error processing photo group: {e}", exc_info=True)
 
         # Send error message to user
         if chat_id and TELEGRAM_BOT_TOKEN:
@@ -188,7 +327,7 @@ async def handle_photo_message(message: TelegramMessage) -> None:
                 bot = get_bot()
                 await bot.send_message(
                     chat_id,
-                    "❌ Sorry, I encountered an error processing your photo. Please try again later.",
+                    "❌ Sorry, I encountered an error processing your photo(s). Please try again later.",
                     reply_to_message_id=message.message_id,
                 )
                 logger.info(f"Error message sent to user {user_id}")

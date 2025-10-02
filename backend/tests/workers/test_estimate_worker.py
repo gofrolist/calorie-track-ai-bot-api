@@ -191,10 +191,10 @@ class TestEstimateWorker:
     @pytest.mark.asyncio
     async def test_handle_job_invalid_job_data(self, mock_dependencies):
         """Test job handling with invalid job data."""
-        # Test with missing photo_id
+        # Test with missing photo_id and photo_ids
         job = {}
 
-        with pytest.raises(KeyError):
+        with pytest.raises(ValueError, match="Job must contain either photo_id or photo_ids"):
             await handle_job(job)
 
         # Should not have called any dependencies
@@ -207,7 +207,7 @@ class TestEstimateWorker:
         """Test job handling with None photo_id."""
         job = {"photo_id": None}
 
-        with pytest.raises(ValueError, match="photo_id cannot be None"):
+        with pytest.raises(ValueError, match="Job must contain either photo_id or photo_ids"):
             await handle_job(job)
 
     @pytest.mark.asyncio

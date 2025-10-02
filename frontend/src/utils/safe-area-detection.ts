@@ -156,7 +156,7 @@ export const getFallbackSafeAreaValues = (): SafeAreaValues => {
   const isNotch = window.screen.height > window.screen.width ? window.screen.height >= 812 : window.screen.width >= 812;
 
   // Basic fallback values based on device detection
-  let fallbackValues: SafeAreaValues = { top: 0, bottom: 0, left: 0, right: 0 };
+  const fallbackValues: SafeAreaValues = { top: 0, bottom: 0, left: 0, right: 0 };
 
   if (isIOS) {
     // iOS devices with notch/dynamic island

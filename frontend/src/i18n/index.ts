@@ -33,6 +33,25 @@ const resources = {
           snack: 'Snack',
         },
       },
+      meals: {
+        title: 'Meals',
+        list: {
+          title: 'Meals',
+          empty: 'No meals logged for this date',
+          sendPhotoHint: 'Send a photo to the bot to log a meal',
+        },
+        confirmDelete: 'Are you sure you want to delete this meal?',
+        backToToday: 'Back to Today',
+        summary: {
+          title: 'Daily Summary',
+          remaining: 'left',
+        },
+        macros: {
+          protein: 'Protein',
+          fat: 'Fat',
+          carbs: 'Carbs',
+        },
+      },
       mealDetail: {
         title: 'Meal Detail',
         id: 'ID',
@@ -130,6 +149,7 @@ const resources = {
         empty: 'No goals set yet.',
       },
       navigation: {
+        meals: 'Meals',
         today: 'Today',
         stats: 'Stats',
         goals: 'Goals',
@@ -187,6 +207,25 @@ const resources = {
           lunch: 'Обед',
           dinner: 'Ужин',
           snack: 'Перекус',
+        },
+      },
+      meals: {
+        title: 'Приёмы пищи',
+        list: {
+          title: 'Приёмы пищи',
+          empty: 'Нет приёмов пищи для этой даты',
+          sendPhotoHint: 'Отправьте фото боту, чтобы записать приём пищи',
+        },
+        confirmDelete: 'Вы уверены, что хотите удалить этот приём пищи?',
+        backToToday: 'Вернуться к сегодня',
+        summary: {
+          title: 'Сводка за день',
+          remaining: 'осталось',
+        },
+        macros: {
+          protein: 'Белки',
+          fat: 'Жиры',
+          carbs: 'Углеводы',
         },
       },
       mealDetail: {
@@ -286,6 +325,7 @@ const resources = {
         empty: 'Цели не заданы.',
       },
       navigation: {
+        meals: 'Приёмы пищи',
         today: 'Сегодня',
         stats: 'Статистика',
         goals: 'Цели',

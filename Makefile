@@ -40,6 +40,25 @@ dev: ## Start both backend and frontend in development mode
 	@echo "Press Ctrl+C to stop both servers"
 	@$(MAKE) -j2 dev-backend dev-frontend
 
+.PHONY: dev-hybrid
+dev-hybrid: ## Start backend services in Docker, frontend locally (best for frontend development)
+	@echo "Starting hybrid development environment..."
+	@echo "Backend services (Redis, MinIO, Backend, Worker) in Docker"
+	@echo "Frontend running locally for better IDE integration"
+	@echo "Backend: http://localhost:8000"
+	@echo "Frontend: http://localhost:5173"
+	@echo "Supabase API: http://localhost:54321"
+	@echo ""
+	@echo "Starting Supabase database..."
+	@supabase start
+	@echo ""
+	@echo "Starting backend services in Docker..."
+	@docker compose up -d redis minio backend worker
+	@echo "Waiting for backend to be ready..."
+	@sleep 10
+	@echo "Starting frontend locally..."
+	@$(MAKE) dev-frontend
+
 .PHONY: dev-backend
 dev-backend: ## Start backend development server
 	@cd backend && make run
@@ -133,13 +152,95 @@ logs: ## Show logs from both backend and frontend (if running)
 	@echo "Backend logs (if running with make dev-backend)"
 	@echo "Frontend logs (if running with make dev-frontend)"
 
+# Docker Commands (uses root docker-compose.yml)
+# Note: This uses LOCAL containers (Redis, MinIO, Supabase CLI)
+# Not production services (Upstash, Tigris, Supabase cloud)
+
 .PHONY: docker-dev
-docker-dev: ## Start development environment with Docker
-	@cd backend && docker compose up --build
+docker-dev: ## Start development environment with Docker (all services)
+	@echo "Starting Docker development environment..."
+	@echo "Services: Redis, MinIO, Backend, Worker, Frontend"
+	@echo "Frontend: http://localhost:3000"
+	@echo "Backend: http://localhost:8000"
+	@echo "MinIO Console: http://localhost:9001"
+	@echo "Supabase API: http://localhost:54321"
+	@echo ""
+	@echo "Starting Supabase database..."
+	@supabase start
+	@echo ""
+	@echo "Starting Docker services..."
+	@docker compose up --build
+
+.PHONY: docker-dev-services
+docker-dev-services: ## Start only backend services (Redis, MinIO, Backend, Worker) - run frontend locally
+	@echo "Starting backend services in Docker..."
+	@echo "Services: Redis, MinIO, Backend, Worker"
+	@echo "Backend: http://localhost:8000"
+	@echo "MinIO Console: http://localhost:9001"
+	@echo "Supabase API: http://localhost:54321"
+	@echo "Run 'make dev-frontend' in another terminal to start frontend locally"
+	@echo ""
+	@echo "Starting Supabase database..."
+	@supabase start
+	@echo ""
+	@echo "Starting Docker services..."
+	@docker compose up --build redis minio backend worker
+
+.PHONY: docker-dev-backend-only
+docker-dev-backend-only: ## Start only backend API in Docker - run frontend and other services locally
+	@echo "Starting only backend API in Docker..."
+	@echo "Backend: http://localhost:8000"
+	@echo "Supabase API: http://localhost:54321"
+	@echo "Make sure Redis, MinIO, and Supabase are running locally"
+	@echo ""
+	@echo "Starting Supabase database..."
+	@supabase start
+	@echo ""
+	@echo "Starting backend container..."
+	@docker compose up --build backend
 
 .PHONY: docker-stop
-docker-stop: ## Stop Docker containers
-	@cd backend && docker compose down
+docker-stop: ## Stop all Docker containers
+	@docker compose down
+
+.PHONY: dev-hybrid-stop
+dev-hybrid-stop: ## Stop hybrid development environment (backend services in Docker)
+	@echo "Stopping backend services..."
+	@docker compose stop redis minio backend worker
+
+.PHONY: docker-restart
+docker-restart: ## Clean restart (fixes cache issues)
+	@echo "Stopping containers..."
+	@docker compose down
+	@echo "Cleaning frontend cache..."
+	@rm -rf frontend/dist frontend/node_modules/.vite
+	@echo "Starting Supabase database..."
+	@supabase start
+	@echo "Rebuilding and starting containers..."
+	@docker compose up --build
+
+.PHONY: docker-rebuild-frontend
+docker-rebuild-frontend: ## Rebuild only frontend container (faster)
+	@echo "Rebuilding frontend container..."
+	@docker compose stop frontend
+	@docker compose rm -f frontend
+	@docker compose exec frontend rm -rf /app/node_modules/.vite 2>/dev/null || true
+	@docker compose up -d --build frontend
+	@echo "✅ Frontend rebuilt! Refresh your browser (F5)"
+
+.PHONY: docker-logs
+docker-logs: ## Show logs from all containers
+	@docker compose logs -f
+
+.PHONY: docker-clean
+docker-clean: ## Remove all containers and volumes (nuclear option)
+	@echo "⚠️  This will delete all Docker data (Redis, MinIO, logs)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker compose down -v; \
+		rm -rf frontend/dist frontend/node_modules/.vite; \
+		echo "✅ All Docker data cleaned"; \
+	fi
 
 .PHONY: telegram-setup
 telegram-setup: ## Setup Telegram webhook (requires running backend)

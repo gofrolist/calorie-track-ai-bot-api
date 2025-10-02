@@ -1,0 +1,420 @@
+openapi: 3.1.0
+info:
+  title: Photos & Estimates API (Multi-Photo Support)
+  description: Updated API contracts for multi-photo upload and estimation
+  version: 2.0.0
+
+paths:
+  /api/v1/photos:
+    post:
+      summary: Create photo upload (supports multiple photos)
+      operationId: createPhotos
+      tags:
+        - photos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      filename:
+                        type: string
+                        example: "meal_photo_1.jpg"
+                      content_type:
+                        type: string
+                        example: "image/jpeg"
+                  minItems: 1
+                  maxItems: 5
+                  description: Array of photos to upload (max 5)
+                media_group_id:
+                  type: string
+                  nullable: true
+                  description: Telegram media group ID (for grouped photos)
+              required:
+                - photos
+            example:
+              photos:
+                - filename: "meal_front.jpg"
+                  content_type: "image/jpeg"
+                - filename: "meal_side.jpg"
+                  content_type: "image/jpeg"
+              media_group_id: "12345678901234567"
+      responses:
+        '201':
+          description: Photos created with presigned upload URLs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        upload_url:
+                          type: string
+                          format: uri
+                          description: Presigned PUT URL for uploading photo
+                        file_key:
+                          type: string
+                          description: S3/Tigris object key
+                      required:
+                        - id
+                        - upload_url
+                        - file_key
+                  media_group_id:
+                    type: string
+                    nullable: true
+              example:
+                photos:
+                  - id: "photo1-uuid"
+                    upload_url: "https://storage.example.com/upload?signature=..."
+                    file_key: "users/user123/photos/photo1.jpg"
+                  - id: "photo2-uuid"
+                    upload_url: "https://storage.example.com/upload?signature=..."
+                    file_key: "users/user123/photos/photo2.jpg"
+                media_group_id: "12345678901234567"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/estimates:
+    post:
+      summary: Create calorie estimate from photo(s)
+      operationId: createEstimate
+      tags:
+        - estimates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photo_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 5
+                  description: Photos to analyze (max 5)
+                description:
+                  type: string
+                  nullable: true
+                  maxLength: 1000
+                  description: Optional user-provided meal description
+                media_group_id:
+                  type: string
+                  nullable: true
+                  description: Telegram media group ID for photo grouping
+              required:
+                - photo_ids
+            example:
+              photo_ids:
+                - "photo1-uuid"
+                - "photo2-uuid"
+              description: "Grilled chicken with rice and vegetables"
+              media_group_id: "12345678901234567"
+      responses:
+        '202':
+          description: Estimation job queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateJob'
+              example:
+                id: "estimate-job-uuid"
+                status: "queued"
+                photo_count: 2
+                created_at: "2025-09-30T12:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: One or more photos not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+              example:
+                detail: "Photo photo1-uuid not found"
+
+  /api/v1/estimates/{estimate_id}:
+    get:
+      summary: Get estimate result
+      operationId: getEstimate
+      tags:
+        - estimates
+      parameters:
+        - name: estimate_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateResult'
+              example:
+                id: "estimate-uuid"
+                status: "completed"
+                photo_count: 2
+                calories:
+                  min: 580
+                  max: 720
+                  estimate: 650
+                macronutrients:
+                  protein: 45.5
+                  carbs: 75.0
+                  fats: 18.2
+                confidence_score: 0.85
+                created_at: "2025-09-30T12:30:00Z"
+                completed_at: "2025-09-30T12:30:15Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /bot:
+    post:
+      summary: Telegram webhook handler (updated for multi-photo)
+      operationId: telegramWebhook
+      tags:
+        - bot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Telegram Update object
+              properties:
+                update_id:
+                  type: integer
+                message:
+                  type: object
+                  properties:
+                    message_id:
+                      type: integer
+                    from:
+                      type: object
+                    chat:
+                      type: object
+                    date:
+                      type: integer
+                    text:
+                      type: string
+                      nullable: true
+                    photo:
+                      type: array
+                      items:
+                        type: object
+                      nullable: true
+                    caption:
+                      type: string
+                      nullable: true
+                    media_group_id:
+                      type: string
+                      nullable: true
+                      description: Present when multiple photos sent together
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+              example:
+                ok: true
+        '400':
+          description: Invalid Telegram update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+              example:
+                ok: false
+                error: "Invalid update format"
+
+components:
+  schemas:
+    EstimateJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - queued
+            - processing
+            - completed
+            - failed
+        photo_count:
+          type: integer
+          minimum: 1
+          maximum: 5
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - status
+        - photo_count
+        - created_at
+
+    EstimateResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - queued
+            - processing
+            - completed
+            - failed
+        photo_count:
+          type: integer
+          minimum: 1
+          maximum: 5
+        calories:
+          type: object
+          properties:
+            min:
+              type: number
+              format: float
+            max:
+              type: number
+              format: float
+            estimate:
+              type: number
+              format: float
+          required:
+            - min
+            - max
+            - estimate
+        macronutrients:
+          type: object
+          properties:
+            protein:
+              type: number
+              format: float
+              description: Protein in grams
+            carbs:
+              type: number
+              format: float
+              description: Carbohydrates in grams
+            fats:
+              type: number
+              format: float
+              description: Fats in grams
+          required:
+            - protein
+            - carbs
+            - fats
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          nullable: true
+        error:
+          type: string
+          nullable: true
+          description: Error message if status is 'failed'
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - status
+        - photo_count
+        - created_at
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+          examples:
+            too_many_photos:
+              value:
+                detail: "Maximum 5 photos allowed per meal"
+            invalid_format:
+              value:
+                detail: "Invalid content_type. Must be image/*"
+
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+          example:
+            detail: "Not authenticated"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+          example:
+            detail: "Estimate not found"
+
+  securitySchemes:
+    telegramAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Telegram WebApp authentication token
+
+security:
+  - telegramAuth: []

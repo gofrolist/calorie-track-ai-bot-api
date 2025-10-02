@@ -64,3 +64,24 @@ async def tigris_presign_put(content_type: str) -> tuple[str, str]:
         HttpMethod="PUT",
     )
     return key, url
+
+
+def generate_presigned_url(file_key: str, expiry: int = 3600) -> str:
+    """Generate presigned GET URL for photo retrieval.
+
+    Args:
+        file_key: S3 object key
+        expiry: URL expiration time in seconds (default: 1 hour)
+
+    Returns:
+        Presigned URL for downloading the photo
+    """
+    if s3 is None or TIGRIS_BUCKET is None:
+        raise RuntimeError("TIGRIS configuration not available")
+
+    url = s3.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={"Bucket": TIGRIS_BUCKET, "Key": file_key},
+        ExpiresIn=expiry,
+    )
+    return url

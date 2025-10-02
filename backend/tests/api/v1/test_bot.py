@@ -132,9 +132,12 @@ class TestBotWebhook:
             mock_bot.download_file.assert_called_once_with("photos/file_123.jpg")
             mock_presign.assert_called_once_with(content_type="image/jpeg")
             mock_create_photo.assert_called_once_with(
-                tigris_key="photos/storage_key.jpg", user_id="user-uuid-123"
+                tigris_key="photos/storage_key.jpg",
+                user_id="user-uuid-123",
+                display_order=0,
+                media_group_id=None,
             )
-            mock_enqueue.assert_called_once_with("photo-123")
+            mock_enqueue.assert_called_once_with(["photo-123"], description=None)
 
     def test_webhook_text_message(self, client):
         """Test webhook handling of text message."""

@@ -9,6 +9,7 @@ import {
   type DailySummary
 } from '../services/api';
 import { TelegramWebAppContext } from '../app';
+import { Navigation } from '../components/Navigation';
 
 interface GoalFormData {
   daily_kcal_target: number;
@@ -197,9 +198,10 @@ export const Goals: React.FC = () => {
 
   return (
     <div className="main-content" style={{ padding: 16 }}>
-      <header style={{ marginBottom: 24 }}>
-        <h1>Goals</h1>
-      </header>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <header style={{ marginBottom: 24 }}>
+          <h1>Goals</h1>
+        </header>
 
       {/* Save Message */}
       {saveMessage && (
@@ -396,20 +398,9 @@ export const Goals: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="navigation">
-        <div className="navigation-item" onClick={() => navigate('/')}>
-          <div>📊</div>
-          <div>Today</div>
-        </div>
-        <div className="navigation-item" onClick={() => navigate('/stats')}>
-          <div>📈</div>
-          <div>Stats</div>
-        </div>
-        <div className="navigation-item active">
-          <div>🎯</div>
-          <div>Goals</div>
-        </div>
-      </nav>
+      </div>
+
+      <Navigation />
     </div>
   );
 };
