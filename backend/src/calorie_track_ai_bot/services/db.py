@@ -16,6 +16,11 @@ from ..schemas import (
 from .config import APP_ENV, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, logger
 from .storage import BUCKET_NAME, s3
 
+# User ID cache to reduce database queries
+_user_id_cache: dict[str, str] = {}
+_user_cache_ttl: dict[str, datetime] = {}
+CACHE_TTL_SECONDS = 300  # 5 minutes
+
 # Initialize Supabase client only if configuration is available
 sb: Any | None = None
 
@@ -210,17 +215,58 @@ async def db_create_meal_from_estimate(
     if data.overrides and isinstance(data.overrides, dict):
         kcal_total = data.overrides.get("kcal_total", kcal_total)
 
+    # Extract macronutrients from estimate
+    macronutrients = estimate.get("macronutrients", {})
+    protein_grams = macronutrients.get("protein", 0)
+    carbs_grams = macronutrients.get("carbs", 0)
+    fats_grams = macronutrients.get("fats", 0)
+
+    # Apply overrides if provided
+    if data.overrides and isinstance(data.overrides, dict):
+        protein_grams = data.overrides.get("protein_grams", protein_grams)
+        carbs_grams = data.overrides.get("carbs_grams", carbs_grams)
+        fats_grams = data.overrides.get("fats_grams", fats_grams)
+
     payload = {
         "id": mid,
         "user_id": user_id,
         "meal_date": data.meal_date.isoformat(),
         "meal_type": data.meal_type.value,
         "kcal_total": kcal_total,
+        "protein_grams": protein_grams,
+        "carbs_grams": carbs_grams,
+        "fats_grams": fats_grams,
         "source": "photo",
         "estimate_id": data.estimate_id,
     }
     sb.table("meals").insert(payload).execute()
     return {"meal_id": mid}
+
+
+def _generate_meal_description(estimate: dict[str, Any]) -> str:
+    """Generate a meal description from AI estimate items."""
+    if not estimate or "items" not in estimate:
+        return "No description available"
+
+    items = estimate["items"]
+    if not items or not isinstance(items, list):
+        return "No description available"
+
+    # Generate description from food items
+    descriptions = []
+    for item in items:
+        if isinstance(item, dict) and "label" in item:
+            descriptions.append(item["label"])
+
+    if descriptions:
+        if len(descriptions) == 1:
+            return descriptions[0]
+        elif len(descriptions) == 2:
+            return f"{descriptions[0]} and {descriptions[1]}"
+        else:
+            return f"{', '.join(descriptions[:-1])}, and {descriptions[-1]}"
+
+    return "No description available"
 
 
 async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
@@ -231,6 +277,10 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
         # Add default macros if not present
         if "macros" not in meal:
             meal["macros"] = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
+
+        # Add default description for manual meals
+        if "description" not in meal:
+            meal["description"] = "Manual entry"
 
         # Add default corrected status
         if "corrected" not in meal:
@@ -284,9 +334,15 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
     else:
         meal["photo_url"] = None
 
-    # Add macros from estimate (placeholder for now)
-    # TODO: Add macronutrient estimation to AI analysis
-    meal["macros"] = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
+    # Add macros from database (already stored during meal creation)
+    meal["macros"] = {
+        "protein_g": meal.get("protein_grams", 0) or 0,
+        "fat_g": meal.get("fats_grams", 0) or 0,
+        "carbs_g": meal.get("carbs_grams", 0) or 0,
+    }
+
+    # Generate description from AI estimate items
+    meal["description"] = _generate_meal_description(estimate)
 
     # Add corrected status
     meal["corrected"] = False  # Meals from estimates are not corrected by user
@@ -304,19 +360,58 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
 
 
 async def resolve_user_id(telegram_user_id: str | None) -> str | None:
-    """Resolve Telegram user ID to database UUID."""
+    """Resolve Telegram user ID to database UUID with caching."""
     if not telegram_user_id:
         return None
 
     try:
+        # Clean up expired cache entries periodically
+        _cleanup_user_cache()
+
+        # Check cache first
+        current_time = datetime.now(UTC)
+        if telegram_user_id in _user_id_cache:
+            # Check if cache entry is still valid
+            if (
+                telegram_user_id in _user_cache_ttl
+                and _user_cache_ttl[telegram_user_id] > current_time
+            ):
+                logger.debug(f"User ID cache hit for telegram_id: {telegram_user_id}")
+                return _user_id_cache[telegram_user_id]
+            else:
+                # Cache expired, remove it
+                _user_id_cache.pop(telegram_user_id, None)
+                _user_cache_ttl.pop(telegram_user_id, None)
+
         # Convert string to int for telegram_id lookup
         telegram_id_int = int(telegram_user_id)
         # Get or create user and return the UUID
-        return await db_get_or_create_user(telegram_id_int)
+        user_id = await db_get_or_create_user(telegram_id_int)
+
+        # Cache the result
+        if user_id:
+            _user_id_cache[telegram_user_id] = user_id
+            _user_cache_ttl[telegram_user_id] = current_time + timedelta(seconds=CACHE_TTL_SECONDS)
+            logger.debug(f"User ID cached for telegram_id: {telegram_user_id}")
+
+        return user_id
     except (ValueError, TypeError):
         # If conversion fails, return None
         logger.warning(f"Invalid telegram_user_id format: {telegram_user_id}")
         return None
+
+
+def _cleanup_user_cache():
+    """Clean up expired cache entries to prevent memory leaks."""
+    current_time = datetime.now(UTC)
+    expired_keys = [key for key, expiry in _user_cache_ttl.items() if expiry <= current_time]
+
+    for key in expired_keys:
+        _user_id_cache.pop(key, None)
+        _user_cache_ttl.pop(key, None)
+
+    if expired_keys:
+        logger.debug(f"Cleaned up {len(expired_keys)} expired user cache entries")
 
 
 async def db_get_meals_by_date(
@@ -890,12 +985,28 @@ async def db_get_meals_with_photos(
                 fats=meal_data.get("fats_grams", 0) or 0,
             )
 
+            # Generate description if not present
+            description = meal_data.get("description")
+            if not description and meal_data.get("estimate_id"):
+                # Try to generate description from estimate
+                try:
+                    estimate = await db_get_estimate(meal_data["estimate_id"])
+                    if estimate:
+                        description = _generate_meal_description(estimate)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to generate description for meal {meal_data['id']}: {e}"
+                    )
+                    description = "No description available"
+            elif not description:
+                description = "Manual entry"
+
             result_meals.append(
                 MealWithPhotos(
                     id=meal_data["id"],
                     userId=meal_data["user_id"],
                     createdAt=meal_data["created_at"],
-                    description=meal_data.get("description"),
+                    description=description,
                     calories=meal_data.get("kcal_total", 0),
                     macronutrients=macros,
                     photos=photos,
