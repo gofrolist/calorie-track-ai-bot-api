@@ -127,17 +127,15 @@ class TestBotWebhook:
 
             assert response.status_code == 200
             assert response.json() == {"status": "ok"}
-            mock_get_user.assert_called_once_with(telegram_id=12345, handle="testuser", locale="en")
-            mock_bot.get_file.assert_called_once_with("photo_large")
-            mock_bot.download_file.assert_called_once_with("photos/file_123.jpg")
-            mock_presign.assert_called_once_with(content_type="image/jpeg")
-            mock_create_photo.assert_called_once_with(
-                tigris_key="photos/storage_key.jpg",
-                user_id="user-uuid-123",
-                display_order=0,
-                media_group_id=None,
-            )
-            mock_enqueue.assert_called_once_with(["photo-123"], description=None)
+
+            # With time-based grouping, photos are not processed immediately
+            # They are added to a group and processed after a delay
+            mock_get_user.assert_not_called()
+            mock_bot.get_file.assert_not_called()
+            mock_bot.download_file.assert_not_called()
+            mock_presign.assert_not_called()
+            mock_create_photo.assert_not_called()
+            mock_enqueue.assert_not_called()
 
     def test_webhook_text_message(self, client):
         """Test webhook handling of text message."""
@@ -634,4 +632,83 @@ class TestBotWebhook:
 
             # For media groups, photos are added to the group but not processed immediately
             # The db_create_photo should not be called yet as media groups are processed later
+            mock_create_photo.assert_not_called()
+
+    def test_webhook_time_based_photo_grouping(self, client):
+        """Test webhook handling of multiple photos without media_group_id using time-based grouping."""
+        # Test that photos without media_group_id are handled correctly
+        webhook_data = {
+            "update_id": 123456789,
+            "message": {
+                "message_id": 1,
+                "from": {
+                    "id": 12345,
+                    "is_bot": False,
+                    "first_name": "Test",
+                    "username": "testuser",
+                },
+                "chat": {
+                    "id": 12345,
+                    "first_name": "Test",
+                    "username": "testuser",
+                    "type": "private",
+                },
+                "date": 1640995200,
+                "photo": [
+                    {
+                        "file_id": "photo_1",
+                        "file_unique_id": "unique_1",
+                        "file_size": 1000,
+                        "width": 90,
+                        "height": 90,
+                    }
+                ],
+                # Note: no media_group_id - should trigger time-based grouping
+            },
+        }
+
+        with (
+            patch("calorie_track_ai_bot.api.v1.bot.db_create_photo") as mock_create_photo,
+            patch("calorie_track_ai_bot.api.v1.bot.db_get_or_create_user") as mock_get_user,
+            patch("calorie_track_ai_bot.api.v1.bot.tigris_presign_put") as mock_presign,
+            patch("calorie_track_ai_bot.api.v1.bot.get_bot") as mock_get_bot,
+            patch("httpx.AsyncClient") as mock_httpx,
+        ):
+            # Mock bot methods
+            mock_bot = mock_get_bot.return_value
+
+            async def mock_get_file(file_id):
+                return {"file_path": f"photos/{file_id}.jpg"}
+
+            async def mock_download_file(file_path):
+                return b"fake_image_data"
+
+            mock_bot.get_file = Mock(side_effect=mock_get_file)
+            mock_bot.download_file = Mock(side_effect=mock_download_file)
+
+            # Mock httpx client
+            mock_client = Mock()
+            mock_httpx.return_value.__aenter__.return_value = mock_client
+
+            async def mock_put(url, **kwargs):
+                mock_response = Mock()
+                mock_response.raise_for_status.return_value = None
+                return mock_response
+
+            mock_client.put = Mock(side_effect=mock_put)
+
+            # Mock other services
+            mock_get_user.return_value = "user-uuid-123"
+            mock_presign.return_value = ("photos/storage_key.jpg", "https://presigned-url.com")
+            mock_create_photo.return_value = "photo-123"
+
+            # Send photo without media_group_id
+            response = client.post("/bot", json=webhook_data)
+
+            # Should return 200 to avoid Telegram retries
+            assert response.status_code == 200
+            assert response.json() == {"status": "ok"}
+
+            # The photo should be added to time-based grouping, not processed immediately
+            # This tests that the new logic is being used instead of immediate processing
             mock_create_photo.assert_not_called()
