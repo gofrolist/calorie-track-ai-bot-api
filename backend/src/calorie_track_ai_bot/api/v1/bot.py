@@ -21,8 +21,12 @@ router = APIRouter()
 media_groups: dict[str, dict[str, Any]] = {}
 
 # Time-based photo grouping for photos without media_group_id
-# {user_id: {photos: [], timestamp: float, task: Task}}
+# {user_id: {photos: [], timestamp: float, task: Task, message_ids: []}}
 user_photo_groups: dict[str, dict[str, Any]] = {}
+
+# Track recent photo messages to detect rapid-fire uploads
+# {user_id: [message_data]}
+recent_photo_messages: dict[str, list[dict[str, Any]]] = {}
 
 
 class TelegramUpdate(BaseModel):
@@ -47,7 +51,14 @@ async def telegram_webhook(request: Request):
     try:
         # Parse the incoming webhook data
         data = await request.json()
-        logger.info(f"Received Telegram webhook: {data}")
+        # Only log full webhook data in debug mode to reduce CPU usage
+        logger.debug(f"Received Telegram webhook: {data}")
+
+        # Log detailed message info for debugging photo grouping issues (only for photos)
+        if data.get("message", {}).get("photo"):
+            logger.info(
+                f"Photo message details - media_group_id: {data['message'].get('media_group_id')}, message_id: {data['message'].get('message_id')}"
+            )
 
         update = TelegramUpdate(**data)
 
@@ -153,9 +164,45 @@ async def handle_photo_message(message: TelegramMessage) -> None:
 
     # If this is part of a media group, aggregate photos
     if media_group_id:
+        logger.info(f"Photo has media_group_id: {media_group_id}, using Telegram grouping")
         await handle_media_group_photo(message, media_group_id, file_id)
     else:
-        # No media_group_id - use time-based grouping to handle multiple photos
+        # No media_group_id - this might be multiple photos sent separately
+        # Use improved time-based grouping with better detection
+        logger.info(f"Photo has no media_group_id, using time-based grouping for user {user_id}")
+
+        # Track this message for rapid-fire detection
+        if user_id:
+            current_time = time.time()
+            if user_id not in recent_photo_messages:
+                recent_photo_messages[user_id] = []
+
+            # Add current message to tracking
+            recent_photo_messages[user_id].append(
+                {
+                    "message_id": message.message_id,
+                    "file_id": file_id,
+                    "timestamp": current_time,
+                    "message": message,
+                }
+            )
+
+            # Clean up old messages (older than 5 seconds) - only if list is getting large
+            if len(recent_photo_messages[user_id]) > 10:
+                recent_photo_messages[user_id] = [
+                    msg
+                    for msg in recent_photo_messages[user_id]
+                    if current_time - msg["timestamp"] < 5.0
+                ]
+
+            # Only log if there are multiple messages (potential grouping scenario)
+            if len(recent_photo_messages[user_id]) > 1:
+                logger.info(
+                    f"User {user_id} recent photo messages: {len(recent_photo_messages[user_id])}"
+                )
+
+        # Check if this looks like a multi-photo upload based on message timing
+        # If messages are very close together (< 1 second), they're likely from the same upload
         await handle_time_based_photo_group(message, file_id, user_id)
 
 
@@ -238,6 +285,7 @@ async def handle_time_based_photo_group(
     """Handle photos without media_group_id using time-based grouping."""
     if not user_id:
         # Fallback to immediate processing if no user_id
+        logger.warning("No user_id available, processing photo immediately")
         await process_single_photo(message, file_id)
         return
 
@@ -251,12 +299,16 @@ async def handle_time_based_photo_group(
             "message": message,
             "processing_task": None,
             "timestamp": current_time,
+            "message_ids": [],
         }
         logger.info(f"Created new time-based photo group for user: {user_id}")
     else:
-        # Check if photos are within 3 seconds of each other
+        # Check if photos are within 2 seconds of each other (more aggressive grouping)
         time_diff = current_time - user_photo_groups[user_id]["timestamp"]
-        if time_diff > 3.0:  # 3 seconds timeout
+        if time_diff > 2.0:  # 2 seconds timeout for better grouping
+            logger.info(
+                f"Time gap {time_diff:.2f}s > 2s, processing previous group for user {user_id}"
+            )
             # Process previous group first
             await _process_user_photo_group(user_id)
             # Start new group
@@ -266,14 +318,16 @@ async def handle_time_based_photo_group(
                 "message": message,
                 "processing_task": None,
                 "timestamp": current_time,
+                "message_ids": [],
             }
             logger.info(f"Started new time-based photo group for user: {user_id}")
 
     # Add photo to group
     user_photo_groups[user_id]["photos"].append(file_id)
+    user_photo_groups[user_id]["message_ids"].append(message.message_id)
     user_photo_groups[user_id]["timestamp"] = current_time
     logger.info(
-        f"Added photo to user {user_id} group, total photos: {len(user_photo_groups[user_id]['photos'])}"
+        f"Added photo to user {user_id} group, total photos: {len(user_photo_groups[user_id]['photos'])}, message_ids: {user_photo_groups[user_id]['message_ids']}"
     )
 
     # Check photo limit (max 5 photos)
@@ -302,7 +356,7 @@ async def handle_time_based_photo_group(
     # Schedule processing after 2.5 second wait (increased for better grouping)
     async def process_after_wait():
         try:
-            await asyncio.sleep(2.5)  # 2.5 second wait for time-based grouping
+            await asyncio.sleep(1.5)  # 1.5 second wait for time-based grouping
 
             # Double-check the group still exists and hasn't been processed
             if user_id in user_photo_groups:
@@ -320,7 +374,7 @@ async def handle_time_based_photo_group(
     # Create and store the processing task
     task = asyncio.create_task(process_after_wait())
     user_photo_groups[user_id]["processing_task"] = task
-    logger.info(f"Scheduled processing task for user {user_id} in 2.5 seconds")
+    logger.info(f"Scheduled processing task for user {user_id} in 1.5 seconds")
 
 
 async def _process_user_photo_group(user_id: str) -> None:

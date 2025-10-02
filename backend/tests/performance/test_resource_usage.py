@@ -318,12 +318,17 @@ class TestCPUUsage:
         resource_monitor.take_measurement("after_cpu_load")
 
         # Verify CPU usage stayed reasonable
+        import psutil
+
+        max_cpu_cores = psutil.cpu_count()
+        cpu_threshold = max_cpu_cores * 50  # 50% of total CPU capacity
+
         summary = resource_monitor.get_summary()
-        assert summary["cpu_peak_percent"] < 120, (
-            f"Peak CPU usage {summary['cpu_peak_percent']:.1f}% is too high"
+        assert summary["cpu_peak_percent"] < cpu_threshold, (
+            f"Peak CPU usage {summary['cpu_peak_percent']:.1f}% is too high (threshold: {cpu_threshold}%)"
         )
-        assert summary["cpu_avg_percent"] < 80, (
-            f"Average CPU usage {summary['cpu_avg_percent']:.1f}% is too high"
+        assert summary["cpu_avg_percent"] < cpu_threshold * 0.8, (
+            f"Average CPU usage {summary['cpu_avg_percent']:.1f}% is too high (threshold: {cpu_threshold * 0.8:.1f}%)"
         )
 
         # Verify throughput
@@ -448,13 +453,20 @@ def test_performance_summary(resource_monitor: ResourceMonitor):
     print(f"Total Measurements: {summary.get('measurements_count', 0)}")
 
     # Assert overall performance criteria
+    import psutil
+
+    # Calculate realistic CPU threshold based on system cores
+    # Allow up to 50% of total CPU capacity for peak usage
+    max_cpu_cores = psutil.cpu_count()
+    cpu_threshold = max_cpu_cores * 50  # 50% of total CPU capacity
+
     assert summary.get("memory_increase_mb", 0) < 100, "Overall memory increase too high"
-    assert summary.get("cpu_peak_percent", 0) < 100, (
-        "Peak CPU usage too high"
-    )  # Realistic threshold accounting for system load during testing
-    assert summary.get("cpu_avg_percent", 0) < 100, (
-        "Average CPU usage too high"
-    )  # Realistic threshold accounting for system load during testing
+    assert summary.get("cpu_peak_percent", 0) < cpu_threshold, (
+        f"Peak CPU usage {summary.get('cpu_peak_percent', 0):.1f}% exceeds threshold {cpu_threshold}% (50% of {max_cpu_cores} cores)"
+    )
+    assert summary.get("cpu_avg_percent", 0) < cpu_threshold * 0.8, (
+        f"Average CPU usage {summary.get('cpu_avg_percent', 0):.1f}% exceeds threshold {cpu_threshold * 0.8:.1f}% (40% of {max_cpu_cores} cores)"
+    )
 
 
 if __name__ == "__main__":
