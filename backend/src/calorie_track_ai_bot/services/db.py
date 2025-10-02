@@ -738,7 +738,7 @@ async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
         # Get associated photos
         photos_res = (
             sb.table("photos")
-            .select("id, file_key, display_order")
+            .select("id, tigris_key, display_order")
             .eq("meal_id", str(meal_id))
             .order("display_order")
             .execute()
@@ -750,8 +750,8 @@ async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
             # Generate presigned URLs (1 hour expiry)
             from .storage import generate_presigned_url
 
-            thumbnail_url = generate_presigned_url(photo["file_key"], expiry=3600)
-            full_url = generate_presigned_url(photo["file_key"], expiry=3600)
+            thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
+            full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
 
             photos.append(
                 MealPhotoInfo(
@@ -845,7 +845,7 @@ async def db_get_meals_with_photos(
         for meal_data in meals_res.data:
             photos_res = (
                 sb.table("photos")
-                .select("id, file_key, display_order")
+                .select("id, tigris_key, display_order")
                 .eq("meal_id", meal_data["id"])
                 .order("display_order")
                 .execute()
@@ -856,8 +856,8 @@ async def db_get_meals_with_photos(
             for photo in photos_res.data if photos_res.data else []:
                 from .storage import generate_presigned_url
 
-                thumbnail_url = generate_presigned_url(photo["file_key"], expiry=3600)
-                full_url = generate_presigned_url(photo["file_key"], expiry=3600)
+                thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
+                full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
 
                 photos.append(
                     MealPhotoInfo(

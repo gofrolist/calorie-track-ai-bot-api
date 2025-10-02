@@ -293,23 +293,40 @@ async def handle_time_based_photo_group(
 
     # Cancel previous processing task if exists
     if user_photo_groups[user_id]["processing_task"]:
-        user_photo_groups[user_id]["processing_task"].cancel()
+        try:
+            user_photo_groups[user_id]["processing_task"].cancel()
+            logger.info(f"Cancelled previous processing task for user {user_id}")
+        except Exception as e:
+            logger.warning(f"Error cancelling previous task: {e}")
 
-    # Schedule processing after 1 second wait (for time-based grouping)
+    # Schedule processing after 1.5 second wait (increased from 1 second for better grouping)
     async def process_after_wait():
-        await asyncio.sleep(1.0)  # 1 second wait for time-based grouping
+        try:
+            await asyncio.sleep(1.5)  # 1.5 second wait for time-based grouping
 
-        if user_id in user_photo_groups:
-            await _process_user_photo_group(user_id)
+            # Double-check the group still exists and hasn't been processed
+            if user_id in user_photo_groups:
+                logger.info(
+                    f"Processing delayed group for user {user_id} with {len(user_photo_groups[user_id]['photos'])} photos"
+                )
+                await _process_user_photo_group(user_id)
+            else:
+                logger.info(f"Photo group for user {user_id} no longer exists, skipping processing")
+        except asyncio.CancelledError:
+            logger.info(f"Processing task for user {user_id} was cancelled")
+        except Exception as e:
+            logger.error(f"Error in delayed processing for user {user_id}: {e}", exc_info=True)
 
     # Create and store the processing task
     task = asyncio.create_task(process_after_wait())
     user_photo_groups[user_id]["processing_task"] = task
+    logger.info(f"Scheduled processing task for user {user_id} in 1.5 seconds")
 
 
 async def _process_user_photo_group(user_id: str) -> None:
     """Process accumulated photos for a user."""
     if user_id not in user_photo_groups:
+        logger.warning(f"No photo group found for user {user_id}")
         return
 
     group_data = user_photo_groups.pop(user_id)
@@ -321,11 +338,15 @@ async def _process_user_photo_group(user_id: str) -> None:
         f"Processing time-based photo group for user {user_id} with {len(photo_ids_list)} photos"
     )
 
-    await process_photo_group(
-        original_message,
-        photo_ids_list,
-        caption,
-    )
+    try:
+        await process_photo_group(
+            original_message,
+            photo_ids_list,
+            caption,
+        )
+        logger.info(f"Successfully processed photo group for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error processing photo group for user {user_id}: {e}", exc_info=True)
 
 
 async def process_single_photo(message: TelegramMessage, file_id: str) -> None:
