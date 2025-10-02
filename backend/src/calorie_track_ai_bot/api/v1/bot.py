@@ -254,9 +254,9 @@ async def handle_time_based_photo_group(
         }
         logger.info(f"Created new time-based photo group for user: {user_id}")
     else:
-        # Check if photos are within 2 seconds of each other
+        # Check if photos are within 3 seconds of each other
         time_diff = current_time - user_photo_groups[user_id]["timestamp"]
-        if time_diff > 2.0:  # 2 seconds timeout
+        if time_diff > 3.0:  # 3 seconds timeout
             # Process previous group first
             await _process_user_photo_group(user_id)
             # Start new group
@@ -299,10 +299,10 @@ async def handle_time_based_photo_group(
         except Exception as e:
             logger.warning(f"Error cancelling previous task: {e}")
 
-    # Schedule processing after 1.5 second wait (increased from 1 second for better grouping)
+    # Schedule processing after 2.5 second wait (increased for better grouping)
     async def process_after_wait():
         try:
-            await asyncio.sleep(1.5)  # 1.5 second wait for time-based grouping
+            await asyncio.sleep(2.5)  # 2.5 second wait for time-based grouping
 
             # Double-check the group still exists and hasn't been processed
             if user_id in user_photo_groups:
@@ -320,7 +320,7 @@ async def handle_time_based_photo_group(
     # Create and store the processing task
     task = asyncio.create_task(process_after_wait())
     user_photo_groups[user_id]["processing_task"] = task
-    logger.info(f"Scheduled processing task for user {user_id} in 1.5 seconds")
+    logger.info(f"Scheduled processing task for user {user_id} in 2.5 seconds")
 
 
 async def _process_user_photo_group(user_id: str) -> None:
