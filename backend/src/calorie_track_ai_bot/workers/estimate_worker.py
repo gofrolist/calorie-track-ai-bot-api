@@ -126,8 +126,10 @@ async def handle_multiphotos_job(
             "items": result.get("items", []),  # Include food items breakdown
         }
 
-        # Save estimate (use first photo as primary)
-        estimate_id = await db_save_estimate(photo_id=photo_ids[0], est=estimate_data)
+        # Save estimate with all photo IDs
+        estimate_id = await db_save_estimate(
+            photo_id=photo_ids[0], est=estimate_data, photo_ids=photo_ids
+        )
         logger.info(f"Multi-photo estimate saved with ID: {estimate_id}")
 
         # Create meal from estimate
