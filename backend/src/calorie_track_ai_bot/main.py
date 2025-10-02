@@ -33,6 +33,8 @@ from .services.config import (
     get_trusted_hosts,
     logger,
 )
+from .services.db import sb
+from .services.queue import r as redis_client
 from .services.telegram import get_bot
 
 # Load environment variables from .env file only when running the main application
@@ -145,13 +147,41 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown
+    # Shutdown - Clean up all resources
+    logger.info("Starting application shutdown...")
+
+    # Close Telegram bot client
     try:
-        bot = get_bot()
-        await bot.close()
-        logger.info("Telegram bot client closed")
+        if TELEGRAM_BOT_TOKEN:
+            bot = get_bot()
+            await bot.close()
+            logger.info("✅ Telegram bot client closed")
+        else:
+            logger.info("i Telegram bot client cleanup skipped (no token)")
     except Exception as e:
-        logger.error(f"Error closing bot client: {e}")
+        logger.error(f"❌ Error closing bot client: {e}")
+
+    # Close Redis client
+    try:
+        if redis_client:
+            await redis_client.aclose()
+            logger.info("✅ Redis client closed")
+        else:
+            logger.info("i Redis client cleanup skipped (not configured)")
+    except Exception as e:
+        logger.error(f"❌ Error closing Redis client: {e}")
+
+    # Close Supabase HTTP client
+    try:
+        if sb and hasattr(sb, "_client") and hasattr(sb._client, "close"):
+            sb._client.close()
+            logger.info("✅ Supabase HTTP client closed")
+        else:
+            logger.info("i Supabase client cleanup skipped (not configured)")
+    except Exception as e:
+        logger.error(f"❌ Error closing Supabase client: {e}")
+
+    logger.info("✅ Application shutdown completed")
 
 
 app = FastAPI(title="Calories Count API", version="0.1.0", lifespan=lifespan)

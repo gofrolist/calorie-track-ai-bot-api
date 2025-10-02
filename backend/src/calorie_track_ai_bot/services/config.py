@@ -43,6 +43,13 @@ AWS_REGION: str = os.getenv("AWS_REGION", "auto")
 
 # Telegram Bot configuration
 TELEGRAM_BOT_TOKEN: str | None = os.getenv("TELEGRAM_BOT_TOKEN")
+
+# Performance testing configuration
+THREAD_DELTA_LIMIT: int = int(os.getenv("THREAD_DELTA_LIMIT", "20"))
+PERFORMANCE_THRESHOLD_FACTOR: float = float(os.getenv("PERFORMANCE_THRESHOLD_FACTOR", "1.0"))
+HEALTH_TIME_LIMIT: float = float(os.getenv("HEALTH_TIME_LIMIT", "200"))
+MEMORY_THRESHOLD_MB: float = float(os.getenv("MEMORY_THRESHOLD_MB", "100"))
+CPU_THRESHOLD_PERCENT: float = float(os.getenv("CPU_THRESHOLD_PERCENT", "200"))
 WEBHOOK_URL: str | None = os.getenv("WEBHOOK_URL")
 USE_WEBHOOK: bool = os.getenv("USE_WEBHOOK", "false").lower() == "true"
 
