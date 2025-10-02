@@ -28,6 +28,9 @@ user_photo_groups: dict[str, dict[str, Any]] = {}
 # {user_id: [message_data]}
 recent_photo_messages: dict[str, list[dict[str, Any]]] = {}
 
+# Track groups currently being processed to prevent duplicate responses
+processing_groups: set[str] = set()
+
 
 class TelegramUpdate(BaseModel):
     update_id: int
@@ -252,26 +255,49 @@ async def handle_media_group_photo(
 
     # Cancel previous processing task if exists
     if media_groups[media_group_id]["processing_task"]:
-        media_groups[media_group_id]["processing_task"].cancel()
+        try:
+            media_groups[media_group_id]["processing_task"].cancel()
+            logger.info(f"Cancelled previous processing task for media group {media_group_id}")
+        except Exception as e:
+            logger.warning(f"Error cancelling previous media group task: {e}")
 
-    # Schedule processing after 200ms wait (Telegram typically sends photos within this window)
+    # Schedule processing after 1.5s wait (increased for better media group handling)
     async def process_after_wait():
-        await asyncio.sleep(0.2)  # 200ms wait
+        try:
+            await asyncio.sleep(1.5)  # Increased to 1.5 seconds for better grouping
 
-        if media_group_id in media_groups:
-            group_data = media_groups.pop(media_group_id)
-            photo_ids_list = group_data["photos"]
-            caption = group_data["caption"]
-            original_message = group_data["message"]
+            # Double-check the group still exists and hasn't been processed
+            if media_group_id in media_groups and media_group_id not in processing_groups:
+                # Mark as processing to prevent duplicates
+                processing_groups.add(media_group_id)
 
-            logger.info(
-                f"Processing media group {media_group_id} with {len(photo_ids_list)} photos"
-            )
+                group_data = media_groups.pop(media_group_id)
+                photo_ids_list = group_data["photos"]
+                caption = group_data["caption"]
+                original_message = group_data["message"]
 
-            await process_photo_group(
-                original_message,
-                photo_ids_list,
-                caption,
+                logger.info(
+                    f"Processing media group {media_group_id} with {len(photo_ids_list)} photos"
+                )
+
+                try:
+                    await process_photo_group(
+                        original_message,
+                        photo_ids_list,
+                        caption,
+                    )
+                finally:
+                    # Remove from processing set
+                    processing_groups.discard(media_group_id)
+            else:
+                logger.info(
+                    f"Media group {media_group_id} no longer exists or already processing, skipping"
+                )
+        except asyncio.CancelledError:
+            logger.info(f"Media group processing task for {media_group_id} was cancelled")
+        except Exception as e:
+            logger.error(
+                f"Error in media group processing for {media_group_id}: {e}", exc_info=True
             )
 
     # Create and store the processing task
@@ -303,11 +329,11 @@ async def handle_time_based_photo_group(
         }
         logger.info(f"Created new time-based photo group for user: {user_id}")
     else:
-        # Check if photos are within 2 seconds of each other (more aggressive grouping)
+        # Check if photos are within 3 seconds of each other (more generous grouping)
         time_diff = current_time - user_photo_groups[user_id]["timestamp"]
-        if time_diff > 2.0:  # 2 seconds timeout for better grouping
+        if time_diff > 3.0:  # 3 seconds timeout for better grouping
             logger.info(
-                f"Time gap {time_diff:.2f}s > 2s, processing previous group for user {user_id}"
+                f"Time gap {time_diff:.2f}s > 3s, processing previous group for user {user_id}"
             )
             # Process previous group first
             await _process_user_photo_group(user_id)
@@ -353,19 +379,29 @@ async def handle_time_based_photo_group(
         except Exception as e:
             logger.warning(f"Error cancelling previous task: {e}")
 
-    # Schedule processing after 2.5 second wait (increased for better grouping)
+    # Schedule processing after 2.0 second wait (increased for better grouping)
     async def process_after_wait():
         try:
-            await asyncio.sleep(1.5)  # 1.5 second wait for time-based grouping
+            await asyncio.sleep(2.0)  # 2.0 second wait for time-based grouping
 
             # Double-check the group still exists and hasn't been processed
-            if user_id in user_photo_groups:
+            if user_id in user_photo_groups and f"user_{user_id}" not in processing_groups:
+                # Mark as processing to prevent duplicates
+                processing_groups.add(f"user_{user_id}")
+
                 logger.info(
                     f"Processing delayed group for user {user_id} with {len(user_photo_groups[user_id]['photos'])} photos"
                 )
-                await _process_user_photo_group(user_id)
+
+                try:
+                    await _process_user_photo_group(user_id)
+                finally:
+                    # Remove from processing set
+                    processing_groups.discard(f"user_{user_id}")
             else:
-                logger.info(f"Photo group for user {user_id} no longer exists, skipping processing")
+                logger.info(
+                    f"Photo group for user {user_id} no longer exists or already processing, skipping"
+                )
         except asyncio.CancelledError:
             logger.info(f"Processing task for user {user_id} was cancelled")
         except Exception as e:
@@ -374,7 +410,7 @@ async def handle_time_based_photo_group(
     # Create and store the processing task
     task = asyncio.create_task(process_after_wait())
     user_photo_groups[user_id]["processing_task"] = task
-    logger.info(f"Scheduled processing task for user {user_id} in 1.5 seconds")
+    logger.info(f"Scheduled processing task for user {user_id} in 2.0 seconds")
 
 
 async def _process_user_photo_group(user_id: str) -> None:
@@ -478,21 +514,17 @@ async def process_photo_group(
         job_id = await enqueue_estimate_job(photo_ids, description=description)
         logger.info(f"Estimation job enqueued for {len(photo_ids)} photo(s), job ID: {job_id}")
 
-        # Send acknowledgment to user
+        # Send typing indicator to user
         if chat_id:
             try:
                 bot = get_bot()
-                ack_message = (
-                    f"📸 Processing {len(photo_ids)} photo{'s' if len(photo_ids) > 1 else ''} "
-                    f"for your meal... I'll send you the calorie estimate shortly!"
-                )
-                await bot.send_message(
-                    chat_id,
-                    ack_message,
-                    reply_to_message_id=message.message_id,
+                # Send typing action instead of notification message
+                await bot.send_chat_action(chat_id, "typing")
+                logger.info(
+                    f"Sent typing indicator to chat {chat_id} for {len(photo_ids)} photo(s)"
                 )
             except Exception as e:
-                logger.error(f"Failed to send acknowledgment: {e}")
+                logger.error(f"Failed to send typing indicator: {e}")
 
     except Exception as e:
         logger.error(f"Error processing photo group: {e}", exc_info=True)
