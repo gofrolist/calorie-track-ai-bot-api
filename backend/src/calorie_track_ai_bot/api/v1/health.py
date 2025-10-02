@@ -4,10 +4,10 @@ router = APIRouter()
 
 
 @router.get("/live")
-def live():
+async def live():
     return {"status": "ok"}
 
 
 @router.get("/ready")
-def ready():
+async def ready():
     return {"status": "ok"}
