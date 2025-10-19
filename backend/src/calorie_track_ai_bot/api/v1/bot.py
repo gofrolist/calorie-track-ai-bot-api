@@ -185,6 +185,44 @@ def _parse_inline_query_payload(raw_query: str | None) -> dict[str, Any]:
         return {}
 
 
+async def send_inline_query_help(inline_query_id: str) -> None:
+    """Send helpful article results when user invokes inline mode without a photo."""
+    bot = telegram.get_bot()
+
+    # Create article result with instructions
+    results = [
+        {
+            "type": "article",
+            "id": "help-1",
+            "title": "📸 How to use Inline Mode",
+            "description": "Learn how to analyze photos using inline mode",
+            "input_message_content": {
+                "message_text": (
+                    "🤖 <b>How to use Calorie Track AI in Inline Mode:</b>\n\n"
+                    "1️⃣ Send a photo to a group chat or channel\n"
+                    "2️⃣ Reply to that photo and mention me: @calorietrackai_bot\n"
+                    "3️⃣ I'll analyze the photo and provide calorie estimates!\n\n"
+                    "Or tag me in your photo caption in group chats:\n"
+                    "<code>@calorietrackai_bot [your photo]</code>\n\n"
+                    "💡 For private calorie tracking, send photos directly to me!"
+                ),
+                "parse_mode": "HTML",
+            },
+        }
+    ]
+
+    try:
+        await bot.answer_inline_query(
+            inline_query_id=inline_query_id,
+            results=results,
+            cache_time=300,  # Cache for 5 minutes
+            is_personal=True,
+        )
+        logger.info(f"Sent help results for inline query {inline_query_id}")
+    except Exception as e:
+        logger.error(f"Failed to send inline query help: {e}", exc_info=True)
+
+
 async def handle_inline_query(inline_query: dict[str, Any]) -> dict[str, Any]:
     """Handle Telegram inline query updates for inline photo analysis."""
     user = inline_query.get("from", {})
@@ -192,7 +230,11 @@ async def handle_inline_query(inline_query: dict[str, Any]) -> dict[str, Any]:
 
     file_id = payload.get("file_id")
     if not file_id:
-        raise HTTPException(status_code=400, detail="Inline query missing photo reference")
+        # When query is empty or missing file_id, send helpful placeholder results
+        inline_query_id = inline_query.get("id")
+        if inline_query_id:
+            await send_inline_query_help(inline_query_id)
+        return {"status": "ok", "message": "Help results sent"}
 
     chat_type = _normalize_chat_type(inline_query.get("chat_type"))
     raw_chat_id = payload.get("chat_id")
@@ -792,6 +834,32 @@ async def process_single_photo(message: TelegramMessage, file_id: str) -> None:
     await process_photo_group(message, [file_id], message.caption)
 
 
+async def keep_sending_status_indicator(chat_id: int, stop_event: asyncio.Event) -> None:
+    """Keep sending 'upload_photo' status indicator every 4 seconds until stopped.
+
+    Args:
+        chat_id: Target chat ID
+        stop_event: Event to signal when to stop sending indicators
+    """
+    bot = telegram.get_bot()
+    try:
+        while not stop_event.is_set():
+            try:
+                await bot.send_chat_action(chat_id, "typing")
+                logger.debug(f"Sent status indicator to chat {chat_id}")
+            except Exception as e:
+                logger.warning(f"Failed to send status indicator: {e}")
+
+            # Wait 4 seconds or until stop event is set
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=4.0)
+                break  # Stop event was set
+            except TimeoutError:
+                continue  # Continue sending indicators
+    except asyncio.CancelledError:
+        logger.debug(f"Status indicator task cancelled for chat {chat_id}")
+
+
 async def process_photo_group(
     message: TelegramMessage,
     file_ids: list[str],
@@ -801,6 +869,12 @@ async def process_photo_group(
     user_id = message.from_user.get("id") if message.from_user else None
     chat_id = message.chat.get("id") if message.chat else None
     logger.info(f"Processing {len(file_ids)} photo(s) from user {user_id}")
+
+    # Start status indicator task
+    stop_indicator = asyncio.Event()
+    indicator_task = None
+    if chat_id:
+        indicator_task = asyncio.create_task(keep_sending_status_indicator(chat_id, stop_indicator))
 
     try:
         # Get or create user to get proper UUID
@@ -862,18 +936,6 @@ async def process_photo_group(
         job_id = await enqueue_estimate_job(photo_ids, description=description)
         logger.info(f"Estimation job enqueued for {len(photo_ids)} photo(s), job ID: {job_id}")
 
-        # Send typing indicator to user
-        if chat_id:
-            try:
-                bot = telegram.get_bot()
-                # Send typing action instead of notification message
-                await bot.send_chat_action(chat_id, "typing")
-                logger.info(
-                    f"Sent typing indicator to chat {chat_id} for {len(photo_ids)} photo(s)"
-                )
-            except Exception as e:
-                logger.error(f"Failed to send typing indicator: {e}")
-
     except Exception as e:
         logger.error(f"Error processing photo group: {e}", exc_info=True)
 
@@ -889,6 +951,19 @@ async def process_photo_group(
                 logger.info(f"Error message sent to user {user_id}")
             except Exception as e:
                 logger.error(f"Failed to send error message: {e}")
+    finally:
+        # Stop status indicator task
+        if indicator_task:
+            stop_indicator.set()
+            try:
+                await asyncio.wait_for(indicator_task, timeout=2.0)
+            except TimeoutError:
+                indicator_task.cancel()
+                try:
+                    await indicator_task
+                except asyncio.CancelledError:
+                    pass
+            logger.debug(f"Status indicator task stopped for chat {chat_id}")
 
 
 async def handle_text_message(message: TelegramMessage) -> None:
