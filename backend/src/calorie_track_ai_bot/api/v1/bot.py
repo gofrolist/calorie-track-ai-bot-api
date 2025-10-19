@@ -845,7 +845,7 @@ async def keep_sending_status_indicator(chat_id: int, stop_event: asyncio.Event)
     try:
         while not stop_event.is_set():
             try:
-                await bot.send_chat_action(chat_id, "typing")
+                await bot.send_chat_action(chat_id, "upload_photo")
                 logger.debug(f"Sent status indicator to chat {chat_id}")
             except Exception as e:
                 logger.warning(f"Failed to send status indicator: {e}")
