@@ -1,0 +1,37 @@
+# General
+.git/
+.dockerignore
+Dockerfile*
+*.log*
+.env
+.env.*
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.venv/
+venv/
+dist/
+build/
+
+# Node/Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/.vite/
+frontend/coverage/
+frontend/.nyc_output/
+
+# Tests & coverage
+.pytest_cache/
+coverage/
+htmlcov/
+
+# Misc
+.ruff_cache/
+.mypy_cache/
+.idea/
+.vscode/

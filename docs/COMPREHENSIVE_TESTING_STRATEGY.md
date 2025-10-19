@@ -88,6 +88,21 @@ assert meal["kcal_total"] == 650  # Correct calories displayed
 mock_dependencies["create_meal"].assert_called_once()
 ```
 
+### 4. **Inline Mode Regression Suite** (`tests/api/v1/test_bot_inline.py`, `tests/integration/test_inline_*`)
+
+Inline mode followed a strict red-green cycle (Principle VI). Each user story introduced failing contract and integration tests before implementation:
+
+- `tests/api/v1/test_bot_inline.py` asserts webhook acknowledgement JSON, inline job identifiers, and privacy disclaimers for group and private chats.
+- `tests/integration/test_inline_group_flow.py` and `tests/integration/test_inline_failure_flow.py` replay Telegram updates end-to-end, verifying ≤3 s placeholder latency, threaded delivery, fallback DMs on permission blocks, and analytics counters.
+- `tests/integration/test_inline_private_flow.py` validates the private inline query path and DM privacy notices.
+
+**Execution proof**: The Phase 6 regression command
+```bash
+cd backend
+uv run pytest tests/api/v1/test_bot_inline.py tests/integration/test_inline_*
+```
+is recorded in release notes and CI artifacts to demonstrate the inline pipelines remain green after final polish tasks.
+
 ### 3. **Comprehensive Test Runner** (`run_comprehensive_tests.sh`)
 
 **Features**:

@@ -66,6 +66,41 @@ export interface DailySummary {
   };
 }
 
+export interface InlineAnalyticsFailureReason {
+  reason: string;
+  count: number;
+}
+
+export interface InlineAnalyticsBucket {
+  date: string;
+  chat_type: 'private' | 'group';
+  request_count: number;
+  success_count: number;
+  failure_count: number;
+  permission_block_count: number;
+  avg_ack_latency_ms: number;
+  p95_result_latency_ms: number;
+  accuracy_within_tolerance_pct: number;
+  trigger_counts: Record<string, number>;
+  failure_reasons: InlineAnalyticsFailureReason[];
+}
+
+export interface InlineAnalyticsSummary {
+  range: {
+    start: string;
+    end: string;
+  };
+  buckets: InlineAnalyticsBucket[];
+  sla: {
+    ack_target_ms: number;
+    result_target_ms: number;
+  };
+  accuracy: {
+    tolerance_pct: number;
+    benchmark_dataset: string;
+  };
+}
+
 export interface Goal {
   user_id: string;
   daily_kcal_target: number;
@@ -486,6 +521,24 @@ export const goalsApi = {
     const response = await api.patch('/api/v1/goals', {
       daily_kcal_target: dailyKcalTarget,
     });
+    return response.data;
+  },
+};
+
+export const analyticsApi = {
+  async getInlineSummary(params?: {
+    rangeStart?: string;
+    rangeEnd?: string;
+    chatType?: 'private' | 'group';
+  }): Promise<InlineAnalyticsSummary> {
+    const response = await api.get('/api/v1/analytics/inline-summary', {
+      params: {
+        range_start: params?.rangeStart,
+        range_end: params?.rangeEnd,
+        chat_type: params?.chatType,
+      },
+    });
+
     return response.data;
   },
 };

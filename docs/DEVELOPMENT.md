@@ -39,6 +39,7 @@ Required environment variables for backend:
 ```env
 # Application
 APP_ENV=dev
+LOG_LEVEL=INFO
 
 # OpenAI
 OPENAI_API_KEY=sk-your-openai-key
@@ -59,10 +60,20 @@ BUCKET_NAME=your-bucket-name
 
 # Telegram
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+USE_WEBHOOK=false
+WEBHOOK_URL=https://your-public-url/bot
 
-# Logging
-LOG_LEVEL=INFO
+# Inline Mode
+INLINE_MODE_ENABLED=false
+INLINE_HASH_SALT=change-me-inline-hash-salt
+INLINE_THROUGHPUT_PER_MIN=60
+INLINE_BURST_RPS=5
+
+# Optional API overrides
+API_BASE_URL=http://localhost:8000
 ```
+
+> Inline mode prerequisites: when enabling inline features, set `INLINE_MODE_ENABLED=true`, provide a high-entropy `INLINE_HASH_SALT`, and keep `INLINE_THROUGHPUT_PER_MIN` / `INLINE_BURST_RPS` aligned with the 60 requests-per-minute (≈5 rps burst) capacity. See `specs/004-add-inline-mode/quickstart.md` for end-to-end inline verification steps.
 
 #### Frontend Configuration
 Create a `.env.local` file in the `frontend/` directory:

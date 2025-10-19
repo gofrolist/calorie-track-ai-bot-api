@@ -10,9 +10,11 @@ Provides comprehensive application performance monitoring including:
 """
 
 import asyncio
+import math
 import threading
 import time
-from collections import deque
+from collections import defaultdict, deque
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -21,6 +23,212 @@ import psutil
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+INLINE_ACK_SLA_MS = 3000
+INLINE_RESULT_SLA_MS = 12000
+
+
+def record_inline_metadata(
+    *,
+    job_id: str,
+    trigger_type: str,
+    chat_type: str,
+    consent: dict[str, Any],
+    retention: dict[str, Any],
+) -> None:
+    """Record inline consent and retention metadata for telemetry consumption."""
+    safe_consent = {
+        "granted": consent.get("granted"),
+        "scope": consent.get("scope"),
+        "reference": consent.get("reference"),
+        "retention_hours": consent.get("retention_hours"),
+        "captured_at": consent.get("captured_at"),
+    }
+    safe_retention = {
+        "expires_in_hours": retention.get("expires_in_hours"),
+    }
+
+    logger.info(
+        "inline.metadata",
+        job_id=job_id,
+        trigger_type=trigger_type,
+        chat_type=chat_type,
+        consent=safe_consent,
+        retention=safe_retention,
+    )
+
+
+class InlineTriggerMetrics:
+    def __init__(self, window: int):
+        self.ack_latencies: deque[int] = deque(maxlen=window)
+        self.result_latencies: deque[int] = deque(maxlen=window)
+        self.accuracy_deltas: deque[float] = deque(maxlen=window)
+        self.permission_blocks: int = 0
+        self.failure_reasons: dict[str, int] = {}
+
+
+@dataclass
+class InlineTelemetrySnapshot:
+    trigger_type: str
+    ack_p95_ms: float
+    result_p95_ms: float
+    avg_accuracy_delta_pct: float
+    permission_blocks: int
+    permission_blocks_by_chat: dict[str, int]
+    sample_size: int
+    failure_reasons: dict[str, int]
+
+
+class InlineTelemetry:
+    def __init__(self, window: int = 200):
+        self._window = window
+        self._lock = threading.RLock()
+        self._metrics: dict[str, InlineTriggerMetrics] = {}
+        self._permission_blocks_by_chat: dict[str, dict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
+
+    def _get_metrics(self, trigger_type: str) -> InlineTriggerMetrics:
+        metrics = self._metrics.get(trigger_type)
+        if metrics is None:
+            metrics = InlineTriggerMetrics(self._window)
+            self._metrics[trigger_type] = metrics
+        return metrics
+
+    def record_ack_latency(self, trigger_type: str, latency_ms: int) -> None:
+        with self._lock:
+            self._get_metrics(trigger_type).ack_latencies.append(latency_ms)
+            self._get_metrics("__all__").ack_latencies.append(latency_ms)
+
+        logger.info(
+            "inline.telemetry.ack_latency", trigger_type=trigger_type, latency_ms=latency_ms
+        )
+        if latency_ms > INLINE_ACK_SLA_MS:
+            logger.warning(
+                "inline.telemetry.ack_sla_breach",
+                trigger_type=trigger_type,
+                latency_ms=latency_ms,
+                sla_ms=INLINE_ACK_SLA_MS,
+            )
+
+    def record_result_latency(self, trigger_type: str, latency_ms: int) -> None:
+        with self._lock:
+            self._get_metrics(trigger_type).result_latencies.append(latency_ms)
+            self._get_metrics("__all__").result_latencies.append(latency_ms)
+
+        logger.info(
+            "inline.telemetry.result_latency", trigger_type=trigger_type, latency_ms=latency_ms
+        )
+        if latency_ms > INLINE_RESULT_SLA_MS:
+            logger.warning(
+                "inline.telemetry.result_sla_breach",
+                trigger_type=trigger_type,
+                latency_ms=latency_ms,
+                sla_ms=INLINE_RESULT_SLA_MS,
+            )
+
+    def record_accuracy_delta(self, trigger_type: str, delta_pct: float) -> None:
+        with self._lock:
+            self._get_metrics(trigger_type).accuracy_deltas.append(delta_pct)
+            self._get_metrics("__all__").accuracy_deltas.append(delta_pct)
+
+        logger.info("inline.telemetry.accuracy", trigger_type=trigger_type, delta_pct=delta_pct)
+
+    def record_permission_block(self, trigger_type: str, chat_type: str) -> None:
+        with self._lock:
+            self._get_metrics(trigger_type).permission_blocks += 1
+            self._get_metrics("__all__").permission_blocks += 1
+            self._permission_blocks_by_chat[trigger_type][chat_type] += 1
+            self._permission_blocks_by_chat["__all__"][chat_type] += 1
+
+        logger.warning(
+            "inline.telemetry.permission_block",
+            trigger_type=trigger_type,
+            chat_type=chat_type,
+        )
+
+    def record_failure(self, trigger_type: str, reason: str) -> None:
+        with self._lock:
+            metrics = self._get_metrics(trigger_type)
+            metrics.failure_reasons[reason] = metrics.failure_reasons.get(reason, 0) + 1
+            all_metrics = self._get_metrics("__all__")
+            all_metrics.failure_reasons[reason] = all_metrics.failure_reasons.get(reason, 0) + 1
+
+        logger.error(
+            "inline.telemetry.failure",
+            trigger_type=trigger_type,
+            reason=reason,
+        )
+
+    def snapshot(self, trigger_type: str | None = None) -> InlineTelemetrySnapshot:
+        key = trigger_type or "__all__"
+        with self._lock:
+            metrics = self._metrics.get(key)
+            if metrics is None:
+                metrics = InlineTriggerMetrics(self._window)
+                self._metrics[key] = metrics
+            ack_values = list(metrics.ack_latencies)
+            result_values = list(metrics.result_latencies)
+            accuracy_values = list(metrics.accuracy_deltas)
+            permission_blocks = metrics.permission_blocks
+            blocks_by_chat = dict(self._permission_blocks_by_chat.get(key, {}))
+
+        return InlineTelemetrySnapshot(
+            trigger_type=key,
+            ack_p95_ms=_percentile(ack_values, 0.95),
+            result_p95_ms=_percentile(result_values, 0.95),
+            avg_accuracy_delta_pct=(sum(accuracy_values) / len(accuracy_values))
+            if accuracy_values
+            else 0.0,
+            permission_blocks=permission_blocks,
+            permission_blocks_by_chat=blocks_by_chat,
+            sample_size=len(ack_values),
+            failure_reasons=dict(metrics.failure_reasons),
+        )
+
+
+def _percentile(values: Sequence[int | float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    data = sorted(float(v) for v in values)
+    if len(data) <= 2:
+        return data[-1]
+
+    index = (len(data) - 1) * percentile
+    lower = math.floor(index)
+    upper = math.ceil(index)
+    if lower == upper:
+        return data[int(index)]
+    lower_value = data[lower]
+    upper_value = data[upper]
+    return lower_value + (upper_value - lower_value) * (index - lower)
+
+
+_inline_telemetry = InlineTelemetry()
+
+
+def record_inline_ack_latency(trigger_type: str, latency_ms: int) -> None:
+    _inline_telemetry.record_ack_latency(trigger_type, latency_ms)
+
+
+def record_inline_result_latency(trigger_type: str, latency_ms: int) -> None:
+    _inline_telemetry.record_result_latency(trigger_type, latency_ms)
+
+
+def record_inline_accuracy_delta(trigger_type: str, delta_pct: float) -> None:
+    _inline_telemetry.record_accuracy_delta(trigger_type, delta_pct)
+
+
+def record_inline_permission_block_event(trigger_type: str, chat_type: str) -> None:
+    _inline_telemetry.record_permission_block(trigger_type, chat_type)
+
+
+def get_inline_metrics_snapshot(trigger_type: str | None = None) -> InlineTelemetrySnapshot:
+    return _inline_telemetry.snapshot(trigger_type)
+
+
+def record_inline_failure_event(trigger_type: str, reason: str) -> None:
+    _inline_telemetry.record_failure(trigger_type, reason)
 
 
 @dataclass

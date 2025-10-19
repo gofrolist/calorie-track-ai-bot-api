@@ -116,11 +116,17 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "pre-commit" },
+    { name = "psutil" },
     { name = "pyright" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-watch" },
     { name = "ruff" },
+    { name = "tabulate" },
 ]
 test = [
     { name = "psutil" },
@@ -138,24 +144,35 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "openai", specifier = ">=1.99.2,<2" },
     { name = "openapi-spec-validator", specifier = ">=0.7.2" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "psutil", marker = "extra == 'test'", specifier = ">=6.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.2.9" },
-    { name = "pyright", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "pytest-asyncio", marker = "extra == 'test'" },
-    { name = "pytest-cov", marker = "extra == 'test'" },
-    { name = "pytest-watch", marker = "extra == 'test'" },
     { name = "python-dotenv", specifier = "==1.1.1" },
     { name = "python-json-logger", specifier = ">=2.0.7" },
     { name = "redis", specifier = ">=6.4.0" },
-    { name = "ruff", marker = "extra == 'dev'" },
     { name = "structlog", specifier = ">=24.4.0" },
     { name = "supabase", specifier = ">=2.18.1" },
     { name = "uuid-utils", specifier = ">=0.9.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.35.0" },
 ]
-provides-extras = ["dev", "test"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pre-commit" },
+    { name = "psutil", specifier = ">=6.0.0" },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-watch" },
+    { name = "ruff" },
+    { name = "tabulate", specifier = ">=0.9.0" },
+]
+test = [
+    { name = "psutil", specifier = ">=6.0.0" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-watch" },
+]
 
 [[package]]
 name = "certifi"
@@ -1424,6 +1441,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6c/e4/6df7cd4366396553449e9907c745862ebf010305835b2bac99933dd7db9d/supabase_functions-0.10.1.tar.gz", hash = "sha256:4779d33a1cc3d4aea567f586b16d8efdb7cddcd6b40ce367c5fb24288af3a4f1", size = 5025, upload-time = "2025-06-23T18:26:12.239Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/06/060118a1e602c9bda8e4bf950bd1c8b5e1542349f2940ec57541266fabe1/supabase_functions-0.10.1-py3-none-any.whl", hash = "sha256:1db85e20210b465075aacee4e171332424f7305f9903c5918096be1423d6fcc5", size = 8275, upload-time = "2025-06-23T18:26:10.387Z" },
+]
+
+[[package]]
+name = "tabulate"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/fe/802052aecb21e3797b8f7902564ab6ea0d60ff8ca23952079064155d1ae1/tabulate-0.9.0.tar.gz", hash = "sha256:0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c", size = 81090, upload-time = "2022-10-06T17:21:48.54Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f", size = 35252, upload-time = "2022-10-06T17:21:44.262Z" },
 ]
 
 [[package]]

@@ -20,6 +20,7 @@ from .api.v1 import (
     estimates,
     goals,
     health,
+    inline_analytics,
     logs,
     meals,
     photos,
@@ -238,6 +239,7 @@ app.include_router(estimates.router, prefix="/api/v1", tags=["estimates"])
 app.include_router(meals.router, prefix="/api/v1", tags=["meals"])
 app.include_router(daily_summary.router, prefix="/api/v1", tags=["daily-summary"])
 app.include_router(goals.router, prefix="/api/v1", tags=["goals"])
+app.include_router(inline_analytics.router, prefix="/api/v1", tags=["analytics"])
 app.include_router(bot.router, tags=["bot"])
 
 
