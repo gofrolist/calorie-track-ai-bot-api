@@ -431,7 +431,7 @@ async def send_group_inline_result(
     text: str,
 ) -> None:
     """Send the final inline result back to the originating group conversation."""
-    if not TELEGRAM_BOT_TOKEN and not os.getenv("PYTEST_CURRENT_TEST"):
+    if not TELEGRAM_BOT_TOKEN or os.getenv("PYTEST_CURRENT_TEST"):
         logger.warning(
             "Skipping inline result delivery: Telegram bot token missing",
             extra={"chat_id": chat_id, "thread_id": thread_id},

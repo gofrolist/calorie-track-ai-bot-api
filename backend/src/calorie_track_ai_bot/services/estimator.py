@@ -88,6 +88,11 @@ async def estimate_from_image_url(image_url: str) -> dict[str, Any]:
             "kcal_min": 480.0,
             "kcal_max": 560.0,
             "confidence": 0.8,
+            "macronutrients": {
+                "protein": 25.0,
+                "carbs": 60.0,
+                "fats": 15.0,
+            },
             "items": [
                 {"label": "Test Meal", "kcal": 520.0, "confidence": 0.8},
             ],

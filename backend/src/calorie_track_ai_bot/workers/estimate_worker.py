@@ -691,13 +691,10 @@ async def _update_inline_analytics(
             InlineFailureReason(reason=reason, count=count) for reason, count in reasons.items()
         ]
 
-    # Ack latency cannot be measured post-hoc yet; keep rolling average untouched.
-    if record.request_count > 0:
-        record.avg_ack_latency_ms = int(
-            (record.avg_ack_latency_ms * previous_requests) / max(previous_requests, 1)
-            if previous_requests
-            else record.avg_ack_latency_ms
-        )
+    # Update rolling average with new result latency
+    record.avg_ack_latency_ms = int(
+        (record.avg_ack_latency_ms * previous_requests + result_latency_ms) / record.request_count
+    )
 
     record.p95_result_latency_ms = max(record.p95_result_latency_ms, result_latency_ms)
     if record.request_count:
