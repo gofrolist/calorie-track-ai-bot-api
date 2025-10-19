@@ -44,6 +44,12 @@ AWS_REGION: str = os.getenv("AWS_REGION", "auto")
 # Telegram Bot configuration
 TELEGRAM_BOT_TOKEN: str | None = os.getenv("TELEGRAM_BOT_TOKEN")
 
+# Inline mode configuration
+INLINE_MODE_ENABLED: bool = os.getenv("INLINE_MODE_ENABLED", "false").lower() == "true"
+INLINE_HASH_SALT: str = os.getenv("INLINE_HASH_SALT", "")
+INLINE_THROUGHPUT_PER_MIN: int = int(os.getenv("INLINE_THROUGHPUT_PER_MIN", "60"))
+INLINE_BURST_RPS: int = int(os.getenv("INLINE_BURST_RPS", "5"))
+
 # Performance testing configuration
 THREAD_DELTA_LIMIT: int = int(os.getenv("THREAD_DELTA_LIMIT", "20"))
 PERFORMANCE_THRESHOLD_FACTOR: float = float(os.getenv("PERFORMANCE_THRESHOLD_FACTOR", "1.0"))

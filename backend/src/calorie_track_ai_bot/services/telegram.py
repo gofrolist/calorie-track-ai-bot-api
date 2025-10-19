@@ -1,10 +1,12 @@
 import asyncio
+import os
 from datetime import datetime
 from typing import Any
 
 import httpx
 from fastapi import HTTPException
 
+from ..schemas import InlineTriggerType
 from .config import TELEGRAM_BOT_TOKEN, logger
 
 
@@ -25,12 +27,15 @@ class TelegramBot:
         text: str,
         parse_mode: str = "HTML",
         reply_to_message_id: int | None = None,
+        message_thread_id: int | None = None,
     ) -> dict[str, Any]:
         """Send a text message to a chat."""
         url = f"{self.base_url}/sendMessage"
         data = {"chat_id": chat_id, "text": text, "parse_mode": parse_mode}
         if reply_to_message_id:
             data["reply_to_message_id"] = reply_to_message_id
+        if message_thread_id is not None:
+            data["message_thread_id"] = message_thread_id
 
         logger.debug(f"Sending message to chat {chat_id}: {text[:100]}...")
 
@@ -241,6 +246,78 @@ class TelegramBot:
         """Close the HTTP client."""
         await self.client.aclose()
 
+    async def answer_inline_query(
+        self,
+        inline_query_id: str,
+        results: list[dict[str, Any]],
+        cache_time: int = 0,
+        is_personal: bool = True,
+    ) -> dict[str, Any]:
+        """Answer an inline query with provided results."""
+        url = f"{self.base_url}/answerInlineQuery"
+        data = {
+            "inline_query_id": inline_query_id,
+            "results": results,
+            "cache_time": cache_time,
+            "is_personal": is_personal,
+        }
+
+        logger.debug(f"Answering inline query {inline_query_id} with {len(results)} result(s)")
+
+        try:
+            response = await self.client.post(url, json=data)
+            response.raise_for_status()
+            payload = response.json()
+            if not payload.get("ok", False):
+                logger.error(f"Failed to answer inline query: {payload.get('description')}")
+                raise Exception(payload.get("description"))
+            return payload
+        except httpx.HTTPError as exc:
+            logger.error(f"HTTP error answering inline query: {exc}")
+            raise
+        except Exception as exc:
+            logger.error(f"Error answering inline query: {exc}")
+            raise
+
+    async def edit_message_text(
+        self,
+        text: str,
+        chat_id: int | None = None,
+        message_id: int | None = None,
+        inline_message_id: str | None = None,
+        parse_mode: str = "HTML",
+    ) -> dict[str, Any]:
+        """Edit an existing message or inline placeholder."""
+        url = f"{self.base_url}/editMessageText"
+        data: dict[str, Any] = {"text": text, "parse_mode": parse_mode}
+
+        if inline_message_id:
+            data["inline_message_id"] = inline_message_id
+        else:
+            if chat_id is None or message_id is None:
+                raise ValueError("chat_id and message_id required for chat message editing")
+            data["chat_id"] = chat_id
+            data["message_id"] = message_id
+
+        logger.debug(
+            "Editing message text (inline=%s chat=%s)", inline_message_id or "N/A", chat_id or "N/A"
+        )
+
+        try:
+            response = await self.client.post(url, json=data)
+            response.raise_for_status()
+            payload = response.json()
+            if not payload.get("ok", False):
+                logger.error(f"Failed to edit message: {payload.get('description')}")
+                raise Exception(payload.get("description"))
+            return payload
+        except httpx.HTTPError as exc:
+            logger.error(f"HTTP error editing message: {exc}")
+            raise
+        except Exception as exc:
+            logger.error(f"Error editing message: {exc}")
+            raise
+
 
 # Global bot instance
 bot: TelegramBot | None = None
@@ -252,6 +329,136 @@ def get_bot() -> TelegramBot:
     if bot is None:
         bot = TelegramBot()
     return bot
+
+
+def _inline_placeholder_text(short_job_id: str) -> str:
+    return (
+        "🔄 <b>Analyzing meal photo…</b>\n"
+        f"Job ID: <code>{short_job_id}</code>\n"
+        "We'll share the calorie summary here in a few seconds."
+    )
+
+
+async def send_group_inline_placeholder(
+    *,
+    chat_id: int,
+    thread_id: int | None,
+    reply_to_message_id: int | None,
+    job_id: str,
+    trigger_type: InlineTriggerType,
+) -> None:
+    """Send a placeholder message back to the group thread while analysis runs."""
+    if not TELEGRAM_BOT_TOKEN:
+        logger.warning(
+            "Skipping inline placeholder: Telegram bot token missing",
+            extra={"chat_id": chat_id, "thread_id": thread_id, "job_id": job_id},
+        )
+        return
+
+    bot_instance = get_bot()
+    short_job_id = job_id[:8]
+    text = _inline_placeholder_text(short_job_id)
+
+    await bot_instance.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_to_message_id=reply_to_message_id,
+        message_thread_id=thread_id,
+    )
+    logger.info(
+        "Inline placeholder sent",
+        extra={
+            "chat_id": chat_id,
+            "thread_id": thread_id,
+            "job_id": job_id,
+            "trigger_type": trigger_type.value,
+        },
+    )
+
+
+async def send_inline_query_acknowledgement(
+    *,
+    inline_query_id: str | None,
+    job_id: str,
+    trigger_type: InlineTriggerType,
+    placeholder_text: str | None = None,
+) -> None:
+    """Answer inline queries with a placeholder result to keep Telegram UX responsive."""
+    if not inline_query_id:
+        return
+
+    bot_instance = get_bot()
+    short_job_id = job_id[:8]
+    message_text = placeholder_text or _inline_placeholder_text(short_job_id)
+    placeholder_result = {
+        "type": "article",
+        "id": job_id,
+        "title": "Analyzing meal photo…",
+        "description": "Calorie Track AI is working on your photo.",
+        "input_message_content": {
+            "message_text": message_text,
+            "parse_mode": "HTML",
+        },
+    }
+
+    try:
+        await bot_instance.answer_inline_query(
+            inline_query_id=inline_query_id,
+            results=[placeholder_result],
+            cache_time=0,
+            is_personal=True,
+        )
+        logger.info(
+            "Inline query acknowledgement sent",
+            extra={
+                "inline_query_id": inline_query_id,
+                "job_id": job_id,
+                "trigger_type": trigger_type.value,
+            },
+        )
+    except Exception as exc:
+        logger.warning(
+            "Failed to answer inline query",
+            extra={"inline_query_id": inline_query_id, "error": str(exc)},
+        )
+
+
+async def send_group_inline_result(
+    *,
+    chat_id: int,
+    thread_id: int | None,
+    reply_to_message_id: int | None,
+    text: str,
+) -> None:
+    """Send the final inline result back to the originating group conversation."""
+    if not TELEGRAM_BOT_TOKEN or os.getenv("PYTEST_CURRENT_TEST"):
+        logger.warning(
+            "Skipping inline result delivery: Telegram bot token missing",
+            extra={"chat_id": chat_id, "thread_id": thread_id},
+        )
+        return
+
+    bot_instance = get_bot()
+    await bot_instance.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_to_message_id=reply_to_message_id,
+        message_thread_id=thread_id,
+    )
+    logger.info(
+        "Inline result message sent",
+        extra={"chat_id": chat_id, "thread_id": thread_id},
+    )
+
+
+async def send_inline_query_result(*, inline_message_id: str | None, text: str) -> None:
+    """Edit inline query result placeholder with the final summary."""
+    if not inline_message_id:
+        return
+
+    bot_instance = get_bot()
+    await bot_instance.edit_message_text(text=text, inline_message_id=inline_message_id)
+    logger.info("Inline query result updated", extra={"inline_message_id": inline_message_id})
 
 
 # Multi-Photo Support Functions (Feature: 003-update-logic-for)

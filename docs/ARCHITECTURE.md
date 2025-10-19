@@ -121,6 +121,38 @@ graph TB
     class LOGS,METRICS,HEALTH,ALERTS observability
 ```
 
+## Inline Mode Pipeline
+
+Inline photo analysis introduces an additional fast-path inside the existing architecture. The diagram below highlights the components that participate in the inline acknowledgement (≤3 s) and result delivery (≤10 s) SLAs while maintaining the 24 hour retention boundary for transient artifacts.
+
+```mermaid
+sequenceDiagram
+    participant TG as Telegram Bot API
+    participant API as FastAPI /api/v1/bot
+    participant RQ as Upstash Redis Queue
+    participant WK as Inline Worker
+    participant OA as OpenAI Vision
+    participant ST as Tigris Storage
+    participant SA as Supabase Analytics
+
+    TG->>API: Inline update (query / reply / tagged photo)
+    API->>API: Validate + hash identifiers<br/>record request metadata
+    API->>TG: Placeholder acknowledgement (≤3 s)
+    API->>RQ: Enqueue InlineInteractionJob
+    RQ->>WK: Pop job
+    WK->>TG: Download photo file
+    WK->>ST: Upload transient copy (expires ≤24 h)
+    WK->>OA: Request calorie/macronutrient analysis
+    OA-->>WK: Analysis payload
+    WK->>TG: Edit inline message / threaded reply
+    WK->>SA: Upsert InlineAnalyticsDaily aggregates
+    WK->>API: Emit structured logs + metrics (trigger_type, latency, permission status)
+```
+
+**Throughput target**: the inline queue is dimensioned for 60 jobs per minute with bursts up to 5 RPS across active groups, matching the plan’s scaling assumptions. The worker pool scales horizontally once Redis pending counts exceed thresholds logged via the telemetry hooks.
+
+**Privacy boundary**: chat and user identifiers are salted + hashed before leaving the webhook, and only aggregate analytics (success/failure counts, latency, accuracy within tolerance, permission block counts) reach Supabase. Transient photos uploaded to Tigris are purged within 24 hours by the existing cleanup routine.
+
 ## Component Architecture
 
 ### Frontend Architecture

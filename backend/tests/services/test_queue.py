@@ -1,14 +1,26 @@
 """Tests for queue module."""
 
+import hmac
 import json
-from unittest.mock import Mock, patch
+from hashlib import sha256
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 
+from calorie_track_ai_bot.services import queue as queue_module
 from calorie_track_ai_bot.services.queue import (
+    INLINE_BURST_KEY,
+    INLINE_MINUTE_KEY,
+    INLINE_QUEUE,
     QUEUE,
+    InlineChatType,
+    InlineQueueThrottleError,
+    InlineTriggerType,
     dequeue_estimate_job,
+    dequeue_inline_job,
     enqueue_estimate_job,
+    enqueue_inline_job,
 )
 
 
@@ -20,8 +32,10 @@ class TestQueueFunctions:
         """Mock Redis client."""
         with patch("calorie_track_ai_bot.services.queue.r") as mock_r:
             # Create a mock that can be configured per test
-            mock_r.lpush = Mock()
-            mock_r.brpop = Mock()
+            mock_r.lpush = AsyncMock()
+            mock_r.brpop = AsyncMock()
+            mock_r.pipeline = Mock()
+            mock_r.decr = AsyncMock()
             yield mock_r
 
     @pytest.mark.asyncio
@@ -204,3 +218,126 @@ class TestQueueFunctions:
         # Should get back the same data
         assert result == job_data
         assert result["photo_ids"] == [photo_id]
+
+    @pytest.mark.asyncio
+    async def test_enqueue_inline_job_hashes_identifiers(self, mock_redis):
+        """Inline enqueue should hash identifiers and include consent metadata."""
+        mock_redis.pipeline.return_value = PipelineStub([1, True, 1, True])
+
+        # Ensure hash salt configured
+        original_salt = queue_module.INLINE_HASH_SALT
+        original_min = queue_module.INLINE_THROUGHPUT_PER_MIN
+        original_burst = queue_module.INLINE_BURST_RPS
+        try:
+            queue_module.INLINE_HASH_SALT = "unit-test-salt"
+            queue_module._salt_warning_emitted = False
+            queue_module.INLINE_THROUGHPUT_PER_MIN = 5
+            queue_module.INLINE_BURST_RPS = 5
+
+            job_id = uuid4()
+
+            await enqueue_inline_job(
+                job_id=job_id,
+                trigger_type=InlineTriggerType.inline_query,
+                chat_type=InlineChatType.private,
+                file_id="abc123",
+                raw_chat_id=12345,
+                raw_user_id=67890,
+                consent_granted=True,
+                consent_scope="inline_processing",
+                consent_reference="consent-42",
+                retention_hours=12,
+                metadata={"origin": "test"},
+            )
+
+            mock_redis.lpush.assert_called_once()
+            queue_name, payload = mock_redis.lpush.call_args[0]
+            assert queue_name == INLINE_QUEUE
+
+            job_payload = json.loads(payload)
+            expected_chat_hash = hmac.new(
+                queue_module.INLINE_HASH_SALT.encode(),
+                str(12345).encode(),
+                sha256,
+            ).hexdigest()
+            expected_user_hash = hmac.new(
+                queue_module.INLINE_HASH_SALT.encode(),
+                str(67890).encode(),
+                sha256,
+            ).hexdigest()
+            assert job_payload["chat_id_hash"] == expected_chat_hash
+            assert job_payload["source_user_hash"] == expected_user_hash
+            assert job_payload["consent"]["granted"] is True
+            assert job_payload["consent"]["scope"] == "inline_processing"
+            assert job_payload["consent"]["reference"] == "consent-42"
+            assert job_payload["consent"]["retention_hours"] == 12
+            assert job_payload["retention_policy"]["expires_in_hours"] == 12
+            assert job_payload["metadata"] == {"origin": "test"}
+            assert job_payload["trigger_type"] == InlineTriggerType.inline_query.value
+        finally:
+            queue_module.INLINE_HASH_SALT = original_salt
+            queue_module.INLINE_THROUGHPUT_PER_MIN = original_min
+            queue_module.INLINE_BURST_RPS = original_burst
+            queue_module._salt_warning_emitted = False
+
+    @pytest.mark.asyncio
+    async def test_enqueue_inline_job_rate_limit_exceeded(self, mock_redis):
+        """Inline enqueue should enforce throughput limits."""
+        original_salt = queue_module.INLINE_HASH_SALT
+        original_min = queue_module.INLINE_THROUGHPUT_PER_MIN
+        original_burst = queue_module.INLINE_BURST_RPS
+        try:
+            queue_module.INLINE_HASH_SALT = "unit-test-salt"
+            queue_module._salt_warning_emitted = False
+            queue_module.INLINE_THROUGHPUT_PER_MIN = 1
+            queue_module.INLINE_BURST_RPS = 1
+
+            mock_redis.pipeline.return_value = PipelineStub([2, True, 2, True])
+
+            with pytest.raises(InlineQueueThrottleError):
+                await enqueue_inline_job(
+                    job_id=uuid4(),
+                    trigger_type=InlineTriggerType.inline_query,
+                    chat_type=InlineChatType.private,
+                    file_id="abc123",
+                    raw_chat_id=1,
+                    raw_user_id=2,
+                )
+
+            mock_redis.decr.assert_any_call(INLINE_MINUTE_KEY)
+            mock_redis.decr.assert_any_call(INLINE_BURST_KEY)
+        finally:
+            queue_module.INLINE_HASH_SALT = original_salt
+            queue_module.INLINE_THROUGHPUT_PER_MIN = original_min
+            queue_module.INLINE_BURST_RPS = original_burst
+            queue_module._salt_warning_emitted = False
+
+    @pytest.mark.asyncio
+    async def test_dequeue_inline_job_returns_payload(self, mock_redis):
+        """Inline dequeue should parse payload."""
+        job_payload = {"job_id": "123", "trigger_type": "inline_query"}
+
+        async def mock_brpop(queue, timeout):
+            return (INLINE_QUEUE, json.dumps(job_payload))
+
+        mock_redis.brpop.side_effect = mock_brpop
+
+        result = await dequeue_inline_job()
+        assert result == job_payload
+        mock_redis.brpop.assert_called_once_with([INLINE_QUEUE], timeout=10)
+
+
+class PipelineStub:
+    """Simple pipeline stub for Redis rate limit tests."""
+
+    def __init__(self, results):
+        self.results = results
+
+    def incr(self, *_args, **_kwargs):
+        return self
+
+    def expire(self, *_args, **_kwargs):
+        return self
+
+    async def execute(self):
+        return self.results

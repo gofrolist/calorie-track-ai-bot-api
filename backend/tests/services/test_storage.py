@@ -1,11 +1,12 @@
 """Tests for storage module."""
 
 import uuid
-from unittest.mock import patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import Mock, patch
 
 import pytest
 
-from calorie_track_ai_bot.services.storage import tigris_presign_put
+from calorie_track_ai_bot.services.storage import purge_transient_media, tigris_presign_put
 
 
 class TestStorageFunctions:
@@ -14,7 +15,10 @@ class TestStorageFunctions:
     @pytest.fixture
     def mock_s3_client(self):
         """Mock S3 client."""
-        with patch("calorie_track_ai_bot.services.storage.s3") as mock_s3:
+        with (
+            patch("calorie_track_ai_bot.services.storage.s3") as mock_s3,
+            patch("calorie_track_ai_bot.services.storage.TIGRIS_BUCKET", "test-bucket"),
+        ):
             mock_s3.generate_presigned_url.return_value = "https://presigned-url.example.com"
             yield mock_s3
 
@@ -198,3 +202,60 @@ class TestStorageFunctions:
         # URLs should be the same (mocked)
         assert len(set(urls)) == 1
         assert urls[0] == "https://presigned-url.example.com"
+
+    @pytest.mark.asyncio
+    async def test_tigris_presign_put_custom_prefix(self, mock_s3_client):
+        """Inline uploads should support custom prefixes."""
+        key, _ = await tigris_presign_put("image/jpeg", prefix="inline")
+        assert key.startswith("inline/")
+
+    def test_purge_transient_media_deletes_old_objects(self, mock_s3_client):
+        """Purge routine should delete inline artifacts older than retention window."""
+        old_time = datetime.now(UTC) - timedelta(hours=25)
+        recent_time = datetime.now(UTC) - timedelta(hours=1)
+
+        paginator = Mock()
+        paginator.paginate.return_value = [
+            {
+                "Contents": [
+                    {"Key": "inline/old-object.jpg", "LastModified": old_time},
+                    {"Key": "inline/new-object.jpg", "LastModified": recent_time},
+                ]
+            }
+        ]
+        mock_s3_client.get_paginator.return_value = paginator
+        mock_s3_client.delete_object = Mock()
+
+        deleted = purge_transient_media(prefixes=["inline/"], retention_hours=24)
+
+        assert deleted == {"inline/": ["inline/old-object.jpg"]}
+        mock_s3_client.delete_object.assert_called_once_with(
+            Bucket="test-bucket", Key="inline/old-object.jpg"
+        )
+
+    def test_purge_transient_media_no_deletions(self, mock_s3_client):
+        """Purge routine should skip objects within retention window."""
+        paginator = Mock()
+        paginator.paginate.return_value = [{"Contents": []}]
+        mock_s3_client.get_paginator.return_value = paginator
+        mock_s3_client.delete_object = Mock()
+
+        deleted = purge_transient_media(prefixes=["inline/"], retention_hours=24)
+
+        assert deleted == {}
+        mock_s3_client.delete_object.assert_not_called()
+
+    def test_purge_transient_media_handles_naive_timestamps(self, mock_s3_client):
+        """Purge routine should coerce naive datetimes to UTC before comparison."""
+        old_time = (datetime.now(UTC) - timedelta(hours=30)).replace(tzinfo=None)
+        paginator = Mock()
+        paginator.paginate.return_value = [
+            {"Contents": [{"Key": "inline/naive.jpg", "LastModified": old_time}]}
+        ]
+        mock_s3_client.get_paginator.return_value = paginator
+        mock_s3_client.delete_object = Mock()
+
+        deleted = purge_transient_media(prefixes=["inline/"], retention_hours=24)
+
+        assert deleted == {"inline/": ["inline/naive.jpg"]}
+        mock_s3_client.delete_object.assert_called_once()

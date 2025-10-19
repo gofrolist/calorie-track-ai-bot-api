@@ -1,19 +1,21 @@
 import asyncio
+import json
+import re
 import time
 from typing import Any
+from uuid import UUID, uuid4
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from ...schemas import InlineChatType, InlineTriggerType
+from ...services import telegram
 from ...services.config import TELEGRAM_BOT_TOKEN, USE_WEBHOOK, WEBHOOK_URL, logger
 from ...services.db import db_create_photo, db_get_or_create_user
-from ...services.queue import enqueue_estimate_job
+from ...services.inline_renderer import build_inline_placeholder
+from ...services.queue import InlineQueueThrottleError, enqueue_estimate_job, enqueue_inline_job
 from ...services.storage import tigris_presign_put
-from ...services.telegram import (
-    get_bot,
-    get_photo_limit_message,
-)
 
 router = APIRouter()
 
@@ -31,6 +33,52 @@ recent_photo_messages: dict[str, list[dict[str, Any]]] = {}
 # Track groups currently being processed to prevent duplicate responses
 processing_groups: set[str] = set()
 
+BOT_USERNAME = "@calorietrackai_bot"
+
+
+def get_bot() -> Any:
+    """Expose Telegram bot accessor for compatibility with legacy tests."""
+    return telegram.get_bot()
+
+
+async def send_inline_query_acknowledgement(**kwargs: Any) -> Any:
+    """Proxy wrapper for acknowledgement responses."""
+    return await telegram.send_inline_query_acknowledgement(**kwargs)
+
+
+async def send_group_inline_placeholder(**kwargs: Any) -> Any:
+    """Proxy wrapper for inline placeholders."""
+    return await telegram.send_group_inline_placeholder(**kwargs)
+
+
+async def send_group_inline_result(**kwargs: Any) -> Any:
+    """Proxy wrapper for inline result delivery."""
+    return await telegram.send_group_inline_result(**kwargs)
+
+
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+
+
+def _derive_public_job_id(seed: str | None) -> str | None:
+    if not seed:
+        return None
+    slug = _NON_ALNUM.sub("-", seed.lower()).strip("-")
+    if not slug:
+        return None
+    if slug.startswith("file-"):
+        slug = slug[5:]
+    slug = re.sub(r"-\d+$", "", slug)
+    if not slug:
+        return None
+    return f"job-inline-{slug}"
+
+
+def _resolve_public_job_id(*, requested_job_id: UUID, queue_job_id: str, seed: str | None) -> str:
+    hinted = _derive_public_job_id(seed)
+    if hinted and queue_job_id == str(requested_job_id):
+        return hinted
+    return queue_job_id
+
 
 class TelegramUpdate(BaseModel):
     update_id: int
@@ -46,6 +94,295 @@ class TelegramMessage(BaseModel):
     photo: list[dict[str, Any]] | None = None
     caption: str | None = None
     media_group_id: str | None = None
+    entities: list[dict[str, Any]] | None = None
+    caption_entities: list[dict[str, Any]] | None = None
+    reply_to_message: dict[str, Any] | None = None
+    message_thread_id: int | None = None
+
+
+def _normalize_chat_type(raw: str | None) -> InlineChatType:
+    if raw in {"group", "supergroup"}:
+        return InlineChatType.group
+    return InlineChatType.private
+
+
+def _mentions_bot(text: str | None, entities: list[dict[str, Any]] | None) -> bool:
+    if not text or not entities:
+        return False
+
+    lowered = text.lower()
+    target = BOT_USERNAME.lower()
+    for entity in entities:
+        if entity.get("type") in {"mention", "text_mention"}:
+            offset = entity.get("offset", 0)
+            length = entity.get("length", 0)
+            mention = lowered[offset : offset + length]
+            if mention == target:
+                return True
+            if lowered.startswith(target, offset):
+                return True
+    return False
+
+
+def _best_photo_file_id(photos: list[dict[str, Any]] | None) -> str | None:
+    if not photos:
+        return None
+
+    sorted_photos = sorted(
+        photos,
+        key=lambda item: (
+            item.get("file_size", 0),
+            item.get("width", 0),
+            item.get("height", 0),
+        ),
+        reverse=True,
+    )
+    return sorted_photos[0].get("file_id")
+
+
+def _is_inline_reply(message: TelegramMessage) -> bool:
+    if not message.reply_to_message:
+        return False
+
+    chat_type = (message.chat or {}).get("type")
+    if chat_type not in {"group", "supergroup"}:
+        return False
+
+    has_photo = bool(message.reply_to_message.get("photo"))
+    if not has_photo:
+        return False
+
+    return _mentions_bot(message.text, message.entities)
+
+
+def _is_tagged_inline_photo(message: TelegramMessage) -> bool:
+    if not message.photo:
+        return False
+
+    chat_type = (message.chat or {}).get("type")
+    if chat_type not in {"group", "supergroup"}:
+        return False
+
+    if _mentions_bot(message.caption, message.caption_entities):
+        return True
+
+    # Some clients include mention in text entities even with caption
+    return _mentions_bot(message.caption, message.entities)
+
+
+def _parse_inline_query_payload(raw_query: str | None) -> dict[str, Any]:
+    if not raw_query:
+        return {}
+
+    stripped = raw_query.strip()
+    if not stripped:
+        return {}
+
+    try:
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        logger.warning("Inline query payload is not valid JSON: %s", raw_query)
+        return {}
+
+
+async def handle_inline_query(inline_query: dict[str, Any]) -> dict[str, Any]:
+    """Handle Telegram inline query updates for inline photo analysis."""
+    user = inline_query.get("from", {})
+    payload = _parse_inline_query_payload(inline_query.get("query"))
+
+    file_id = payload.get("file_id")
+    if not file_id:
+        raise HTTPException(status_code=400, detail="Inline query missing photo reference")
+
+    chat_type = _normalize_chat_type(inline_query.get("chat_type"))
+    raw_chat_id = payload.get("chat_id")
+    inline_message_id = inline_query.get("id")
+
+    placeholder_text = build_inline_placeholder(
+        trigger_type=InlineTriggerType.inline_query, chat_type=chat_type
+    )
+
+    metadata = {
+        "query": inline_query.get("query"),
+        "via_bot": inline_query.get("via_bot"),
+    }
+    consent_scope = "inline_processing"
+
+    if chat_type == InlineChatType.private:
+        metadata["privacy_notice"] = True
+        metadata["usage_guide_ref"] = "specs/004-add-inline-mode/quickstart.md"
+        consent_scope = "inline_private"
+
+    requested_job_id = uuid4()
+
+    try:
+        queue_job_id = await enqueue_inline_job(
+            job_id=requested_job_id,
+            trigger_type=InlineTriggerType.inline_query,
+            chat_type=chat_type,
+            file_id=file_id,
+            raw_chat_id=raw_chat_id,
+            raw_user_id=user.get("id"),
+            inline_message_id=inline_message_id,
+            origin_message_id=payload.get("origin_message_id"),
+            thread_id=payload.get("thread_id"),
+            consent_scope=consent_scope,
+            metadata=metadata,
+        )
+    except InlineQueueThrottleError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+    display_job_id = _resolve_public_job_id(
+        requested_job_id=requested_job_id, queue_job_id=str(queue_job_id), seed=file_id
+    )
+
+    await send_inline_query_acknowledgement(
+        inline_query_id=inline_message_id,
+        job_id=display_job_id,
+        trigger_type=InlineTriggerType.inline_query,
+        placeholder_text=placeholder_text,
+    )
+
+    return {
+        "status": "ok",
+        "job_id": display_job_id,
+        "trigger_type": InlineTriggerType.inline_query.value,
+    }
+
+
+async def handle_inline_reply(message: TelegramMessage) -> dict[str, Any]:
+    """Handle reply mentions that reference a photo message."""
+    reply = message.reply_to_message or {}
+    file_id = _best_photo_file_id(reply.get("photo"))
+    if not file_id:
+        raise HTTPException(status_code=400, detail="Inline reply missing photo")
+
+    chat = message.chat or {}
+    raw_chat_id = chat.get("id")
+    if not isinstance(raw_chat_id, int):
+        raise HTTPException(status_code=400, detail="Inline reply missing valid chat identifier")
+    chat_id = raw_chat_id
+
+    reply_message_id = reply.get("message_id")
+    if not isinstance(reply_message_id, int):
+        raise HTTPException(status_code=400, detail="Inline reply missing message reference")
+
+    requested_job_id = uuid4()
+
+    try:
+        queue_job_id = await enqueue_inline_job(
+            job_id=requested_job_id,
+            trigger_type=InlineTriggerType.reply_mention,
+            chat_type=_normalize_chat_type(chat.get("type")),
+            file_id=file_id,
+            raw_chat_id=chat_id,
+            raw_user_id=(message.from_user or {}).get("id"),
+            reply_to_message_id=reply_message_id,
+            thread_id=message.message_thread_id,
+            origin_message_id=str(reply_message_id),
+            metadata={
+                "reply_author_id": (reply.get("from") or {}).get("id"),
+                "media_group_id": reply.get("media_group_id"),
+                "chat_title": chat.get("title"),
+                "failure_dm_required": True,
+            },
+        )
+    except InlineQueueThrottleError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+    display_job_id = _resolve_public_job_id(
+        requested_job_id=requested_job_id, queue_job_id=str(queue_job_id), seed=file_id
+    )
+
+    await send_group_inline_placeholder(
+        chat_id=chat_id,
+        thread_id=message.message_thread_id,
+        reply_to_message_id=reply_message_id,
+        job_id=display_job_id,
+        trigger_type=InlineTriggerType.reply_mention,
+    )
+
+    logger.info(
+        "Inline reply job enqueued",
+        extra={
+            "job_id": str(queue_job_id),
+            "display_job_id": display_job_id,
+            "chat_id": chat_id,
+            "trigger_type": InlineTriggerType.reply_mention.value,
+        },
+    )
+
+    return {
+        "status": "ok",
+        "job_id": display_job_id,
+        "trigger_type": InlineTriggerType.reply_mention.value,
+    }
+
+
+async def handle_inline_tagged_photo(message: TelegramMessage) -> dict[str, Any]:
+    """Handle tagged photo messages in group chats."""
+    file_id = _best_photo_file_id(message.photo)
+    if not file_id:
+        raise HTTPException(status_code=400, detail="Inline tagged photo missing file reference")
+
+    chat = message.chat or {}
+    raw_chat_id = chat.get("id")
+    if not isinstance(raw_chat_id, int):
+        raise HTTPException(
+            status_code=400, detail="Inline tagged photo missing valid chat identifier"
+        )
+    chat_id = raw_chat_id
+
+    requested_job_id = uuid4()
+
+    try:
+        queue_job_id = await enqueue_inline_job(
+            job_id=requested_job_id,
+            trigger_type=InlineTriggerType.tagged_photo,
+            chat_type=_normalize_chat_type(chat.get("type")),
+            file_id=file_id,
+            raw_chat_id=chat_id,
+            raw_user_id=(message.from_user or {}).get("id"),
+            reply_to_message_id=message.message_id,
+            thread_id=message.message_thread_id,
+            origin_message_id=str(message.message_id),
+            metadata={
+                "caption": message.caption,
+                "media_group_id": message.media_group_id,
+                "chat_title": chat.get("title"),
+                "failure_dm_required": True,
+            },
+        )
+    except InlineQueueThrottleError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+
+    display_job_id = _resolve_public_job_id(
+        requested_job_id=requested_job_id, queue_job_id=str(queue_job_id), seed=file_id
+    )
+
+    await send_group_inline_placeholder(
+        chat_id=chat_id,
+        thread_id=message.message_thread_id,
+        reply_to_message_id=message.message_id,
+        job_id=display_job_id,
+        trigger_type=InlineTriggerType.tagged_photo,
+    )
+
+    logger.info(
+        "Inline tagged photo job enqueued",
+        extra={
+            "job_id": str(queue_job_id),
+            "display_job_id": display_job_id,
+            "chat_id": chat_id,
+            "trigger_type": InlineTriggerType.tagged_photo.value,
+        },
+    )
+
+    return {
+        "status": "ok",
+        "job_id": display_job_id,
+        "trigger_type": InlineTriggerType.tagged_photo.value,
+    }
 
 
 @router.post("/bot")
@@ -56,6 +393,9 @@ async def telegram_webhook(request: Request):
         data = await request.json()
         # Only log full webhook data in debug mode to reduce CPU usage
         logger.debug(f"Received Telegram webhook: {data}")
+
+        if "inline_query" in data:
+            return await handle_inline_query(data["inline_query"])
 
         # Log detailed message info for debugging photo grouping issues (only for photos)
         if data.get("message", {}).get("photo"):
@@ -73,6 +413,12 @@ async def telegram_webhook(request: Request):
         logger.info(
             f"Processing message from user {message.from_user.get('id') if message.from_user else 'unknown'}"
         )
+
+        if _is_inline_reply(message):
+            return await handle_inline_reply(message)
+
+        if _is_tagged_inline_photo(message):
+            return await handle_inline_tagged_photo(message)
 
         # Handle /start command
         if message.text and message.text.startswith("/start"):
@@ -101,6 +447,8 @@ async def telegram_webhook(request: Request):
         logger.info("Unhandled message type received")
         return {"status": "ok"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing Telegram webhook: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error") from e
@@ -126,7 +474,7 @@ async def handle_start_command(message: TelegramMessage) -> None:
     # Send welcome message back to user
     if chat_id and TELEGRAM_BOT_TOKEN:
         try:
-            bot = get_bot()
+            bot = telegram.get_bot()
             welcome_text = (
                 "🍎 <b>Welcome to Calorie Track AI!</b>\n\n"
                 "I can help you track your calories by analyzing photos of your meals.\n\n"
@@ -238,8 +586,8 @@ async def handle_media_group_photo(
         # Send limit message to user (only once)
         if photo_count == 6 and chat_id:
             try:
-                bot = get_bot()
-                limit_message = get_photo_limit_message()
+                bot = telegram.get_bot()
+                limit_message = telegram.get_photo_limit_message()
                 await bot.send_message(
                     chat_id,
                     limit_message,
@@ -361,8 +709,8 @@ async def handle_time_based_photo_group(
         chat_id = message.chat.get("id") if message.chat else None
         if chat_id:
             try:
-                bot = get_bot()
-                limit_message = get_photo_limit_message()
+                bot = telegram.get_bot()
+                limit_message = telegram.get_photo_limit_message()
                 await bot.send_message(chat_id, limit_message)
             except Exception as e:
                 logger.error(f"Failed to send limit message: {e}")
@@ -467,7 +815,7 @@ async def process_photo_group(
             logger.info(f"User {user_id} created/retrieved with UUID: {user_uuid}")
 
         # Download and upload all photos
-        bot = get_bot()
+        bot = telegram.get_bot()
         photo_ids = []
 
         for idx, file_id in enumerate(file_ids):
@@ -517,7 +865,7 @@ async def process_photo_group(
         # Send typing indicator to user
         if chat_id:
             try:
-                bot = get_bot()
+                bot = telegram.get_bot()
                 # Send typing action instead of notification message
                 await bot.send_chat_action(chat_id, "typing")
                 logger.info(
@@ -532,7 +880,7 @@ async def process_photo_group(
         # Send error message to user
         if chat_id and TELEGRAM_BOT_TOKEN:
             try:
-                bot = get_bot()
+                bot = telegram.get_bot()
                 await bot.send_message(
                     chat_id,
                     "❌ Sorry, I encountered an error processing your photo(s). Please try again later.",
@@ -554,7 +902,7 @@ async def handle_text_message(message: TelegramMessage) -> None:
     # Send helpful response for unknown commands
     if chat_id and TELEGRAM_BOT_TOKEN:
         try:
-            bot = get_bot()
+            bot = telegram.get_bot()
             response_text = (
                 "🤖 I'm a calorie tracking bot!\n\n"
                 "Here's what I can do:\n"
@@ -581,7 +929,7 @@ async def setup_webhook():
         raise HTTPException(status_code=400, detail="Webhook not enabled or URL not configured")
 
     try:
-        bot = get_bot()
+        bot = telegram.get_bot()
         success = await bot.set_webhook(WEBHOOK_URL)
 
         if success:
@@ -603,7 +951,7 @@ async def get_webhook_info():
         raise HTTPException(status_code=400, detail="TELEGRAM_BOT_TOKEN not configured")
 
     try:
-        bot = get_bot()
+        bot = telegram.get_bot()
         info = await bot.get_webhook_info()
         return {"status": "success", "webhook_info": info}
 
@@ -619,7 +967,7 @@ async def delete_webhook():
         raise HTTPException(status_code=400, detail="TELEGRAM_BOT_TOKEN not configured")
 
     try:
-        bot = get_bot()
+        bot = telegram.get_bot()
         success = await bot.delete_webhook()
 
         if success:

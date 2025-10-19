@@ -7,6 +7,8 @@ from supabase import create_client
 from supabase.lib.client_options import SyncClientOptions
 
 from ..schemas import (
+    InlineAnalyticsDaily,
+    InlineChatType,
     MealCreateFromEstimateRequest,
     MealCreateManualRequest,
     MealPhotoInfo,
@@ -1222,3 +1224,111 @@ async def db_get_meals_calendar_summary(
     except Exception as e:
         logger.error(f"Error getting calendar summary: {e}")
         raise
+
+
+# Inline analytics helpers
+
+
+def _inline_defaults(date_value: date, chat_type: InlineChatType) -> InlineAnalyticsDaily:
+    return InlineAnalyticsDaily(
+        id=uuid.uuid4(),
+        date=date_value,
+        chat_type=chat_type,
+        trigger_counts={},
+        request_count=0,
+        success_count=0,
+        failure_count=0,
+        permission_block_count=0,
+        avg_ack_latency_ms=0,
+        p95_result_latency_ms=0,
+        accuracy_within_tolerance_pct=0.0,
+        failure_reasons=[],
+        last_updated_at=datetime.now(UTC),
+    )
+
+
+def _to_inline_daily_model(row: dict[str, Any]) -> InlineAnalyticsDaily:
+    payload = {**row}
+    payload.setdefault("trigger_counts", {})
+    payload.setdefault("failure_reasons", [])
+    payload.setdefault("permission_block_count", 0)
+    payload.setdefault("request_count", 0)
+    payload.setdefault("success_count", 0)
+    payload.setdefault("failure_count", 0)
+    payload.setdefault("avg_ack_latency_ms", 0)
+    payload.setdefault("p95_result_latency_ms", 0)
+    payload.setdefault("accuracy_within_tolerance_pct", 0.0)
+    payload.setdefault("last_updated_at", datetime.now(UTC).isoformat())
+    return InlineAnalyticsDaily(**payload)
+
+
+def _inline_payload(daily: InlineAnalyticsDaily) -> dict[str, Any]:
+    payload = daily.model_dump(mode="json")
+    if payload.get("failure_reasons") is None:
+        payload["failure_reasons"] = []
+    if payload.get("trigger_counts") is None:
+        payload["trigger_counts"] = {}
+    return payload
+
+
+async def db_upsert_inline_analytics(daily: InlineAnalyticsDaily) -> InlineAnalyticsDaily:
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    payload = _inline_payload(daily)
+    response = (
+        sb.table("inline_analytics_daily").upsert(payload, on_conflict="date,chat_type").execute()
+    )
+
+    returned = response.data[0] if response.data else payload
+    return _to_inline_daily_model(returned)
+
+
+async def db_fetch_inline_analytics(
+    range_start: date, range_end: date, chat_type: str | None = None
+) -> list[InlineAnalyticsDaily]:
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    query = (
+        sb.table("inline_analytics_daily")
+        .select("*")
+        .gte("date", range_start.isoformat())
+        .lte("date", range_end.isoformat())
+        .order("date")
+    )
+
+    if chat_type:
+        query = query.eq("chat_type", chat_type)
+
+    response = query.execute()
+    rows = response.data or []
+    return [_to_inline_daily_model(row) for row in rows]
+
+
+async def db_increment_inline_permission_block(
+    *, date_value: date, chat_type: InlineChatType, increment: int = 1
+) -> InlineAnalyticsDaily:
+    if sb is None:
+        raise RuntimeError(
+            "Supabase configuration not available. Database functionality is disabled."
+        )
+
+    existing_rows = await db_fetch_inline_analytics(date_value, date_value, chat_type.value)
+    if existing_rows:
+        current = existing_rows[0]
+    else:
+        current = _inline_defaults(date_value, chat_type)
+
+    updated = current.model_copy(
+        update={
+            "permission_block_count": current.permission_block_count + increment,
+            "last_updated_at": datetime.now(UTC),
+        }
+    )
+
+    return await db_upsert_inline_analytics(updated)

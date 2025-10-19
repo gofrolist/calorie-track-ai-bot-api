@@ -215,6 +215,17 @@ sequenceDiagram
     FE-->>TEST: Upload test passed
 ```
 
+### 4. Inline Mode Scenarios
+
+Use these manual and automated checks when validating inline mode end-to-end. Each checklist item maps to automated coverage in `tests/api/v1/test_bot_inline.py` or `tests/integration/test_inline_*`.
+
+- [ ] **Inline query acknowledgement** — Trigger an inline query (`@CalorieTrackAI_bot`) in a private chat and confirm the placeholder message appears within 3 seconds while the JSON response echoes the same `job_id`.
+- [ ] **Private inline summary** — Select the inline result and verify the final message includes calories, macronutrients, confidence, and the privacy disclosure from the quickstart guide.
+- [ ] **Group reply mention** — Reply to a group photo with `@CalorieTrackAI_bot` and check that both the acknowledgement and result stay threaded via `reply_to_message_id`.
+- [ ] **Tagged caption flow** — Post a group photo tagging the bot in the caption; expect the bot to reply inline or DM a fallback with admin guidance if permissions block posting, incrementing `permission_block_count`.
+- [ ] **Analytics snapshot** — Query `/api/v1/analytics/inline-summary` and confirm the appropriate `trigger_counts` bucket increments for `inline_query`, `reply_mention`, or `tagged_photo`.
+- [ ] **Telemetry verification** — Inspect structured logs/metrics to ensure `trigger_type`, acknowledgement latency, and result latency events were emitted for each exercised flow.
+
 ## Test Commands
 
 ### Frontend Testing

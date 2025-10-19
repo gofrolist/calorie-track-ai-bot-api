@@ -92,6 +92,8 @@ class StructuredLoggingService:
         context: dict[str, Any] | None = None,
         module: str | None = None,
         function: str | None = None,
+        inline_trigger: str | None = None,
+        inline_stage: str | None = None,
     ) -> LogEntry:
         """
         Create a structured log entry.
@@ -104,6 +106,8 @@ class StructuredLoggingService:
             context: Optional context data
             module: Optional module name
             function: Optional function name
+            inline_trigger: Optional inline trigger tag (e.g., inline_query)
+            inline_stage: Optional inline processing stage tag
 
         Returns:
             LogEntry: Created log entry
@@ -113,6 +117,17 @@ class StructuredLoggingService:
 
         # Sanitize context data
         sanitized_context = self._sanitize_context(context or {})
+
+        inline_context = {
+            key: value
+            for key, value in {
+                "inline_trigger": inline_trigger,
+                "inline_stage": inline_stage,
+            }.items()
+            if value
+        }
+        if inline_context:
+            sanitized_context = {**inline_context, **sanitized_context}
 
         # Create log entry
         log_entry = LogEntry(
@@ -143,6 +158,10 @@ class StructuredLoggingService:
             "function": function,
             "context": sanitized_context,
         }
+        if inline_trigger:
+            log_data["inline_trigger"] = inline_trigger
+        if inline_stage:
+            log_data["inline_stage"] = inline_stage
 
         # Use appropriate log level
         if level == LogLevel.DEBUG:
@@ -175,6 +194,8 @@ class StructuredLoggingService:
             context=log_data.context,
             module=log_data.module,
             function=log_data.function,
+            inline_trigger=log_data.inline_trigger,
+            inline_stage=log_data.inline_stage,
         )
 
     async def get_log_entries(

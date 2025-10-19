@@ -1,16 +1,23 @@
 """Tests for db module."""
 
-from unittest.mock import Mock, patch
+from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 from postgrest.exceptions import APIError
 
+import calorie_track_ai_bot.services.db as db_module
+from calorie_track_ai_bot.schemas import InlineAnalyticsDaily, InlineChatType
 from calorie_track_ai_bot.services.db import (
     db_create_meal_from_estimate,
     db_create_meal_from_manual,
     db_create_photo,
+    db_fetch_inline_analytics,
     db_get_estimate,
+    db_increment_inline_permission_block,
     db_save_estimate,
+    db_upsert_inline_analytics,
 )
 
 
@@ -373,3 +380,159 @@ class TestDatabaseFunctions:
         assert "id" in call_args
         # Optional fields should be included if provided
         assert call_args.get("display_order") == 0  # Default value
+
+    @pytest.mark.asyncio
+    async def test_db_upsert_inline_analytics(self, monkeypatch):
+        daily = InlineAnalyticsDaily(
+            id=uuid4(),
+            date=date(2024, 1, 1),
+            chat_type=InlineChatType.group,
+            trigger_counts={"inline_query": 3},
+            request_count=3,
+            success_count=3,
+            failure_count=0,
+            permission_block_count=1,
+            avg_ack_latency_ms=120,
+            p95_result_latency_ms=480,
+            accuracy_within_tolerance_pct=95.0,
+            failure_reasons=[],
+            last_updated_at=datetime.now(UTC),
+        )
+
+        execute_response = Mock()
+        execute_response.data = [daily.model_dump(mode="json")]
+
+        upsert_query = Mock()
+        upsert_query.execute.return_value = execute_response
+
+        table_mock = Mock()
+        table_mock.upsert.return_value = upsert_query
+
+        mock_sb = Mock()
+        mock_sb.table.return_value = table_mock
+
+        monkeypatch.setattr(db_module, "sb", mock_sb)
+
+        result = await db_upsert_inline_analytics(daily)
+
+        mock_sb.table.assert_called_with("inline_analytics_daily")
+        table_mock.upsert.assert_called_once()
+        assert result.chat_type == InlineChatType.group
+        assert result.trigger_counts["inline_query"] == 3
+
+    @pytest.mark.asyncio
+    async def test_db_fetch_inline_analytics(self, monkeypatch):
+        daily = InlineAnalyticsDaily(
+            id=uuid4(),
+            date=date(2024, 2, 1),
+            chat_type=InlineChatType.private,
+            trigger_counts={},
+            request_count=0,
+            success_count=0,
+            failure_count=0,
+            permission_block_count=0,
+            avg_ack_latency_ms=0,
+            p95_result_latency_ms=0,
+            accuracy_within_tolerance_pct=0.0,
+            failure_reasons=[],
+            last_updated_at=datetime.now(UTC),
+        )
+
+        query = Mock()
+        query.gte.return_value = query
+        query.lte.return_value = query
+        query.order.return_value = query
+        query.eq.return_value = query
+        query.execute.return_value = Mock(data=[daily.model_dump(mode="json")])
+
+        table_mock = Mock()
+        table_mock.select.return_value = query
+
+        mock_sb = Mock()
+        mock_sb.table.return_value = table_mock
+        monkeypatch.setattr(db_module, "sb", mock_sb)
+
+        results = await db_fetch_inline_analytics(date(2024, 2, 1), date(2024, 2, 1), "private")
+
+        mock_sb.table.assert_called_with("inline_analytics_daily")
+        assert len(results) == 1
+        assert results[0].chat_type == InlineChatType.private
+
+    @pytest.mark.asyncio
+    async def test_db_increment_inline_permission_block_creates_default(self, monkeypatch):
+        saved_daily = InlineAnalyticsDaily(
+            id=uuid4(),
+            date=date(2024, 3, 1),
+            chat_type=InlineChatType.group,
+            trigger_counts={},
+            request_count=0,
+            success_count=0,
+            failure_count=0,
+            permission_block_count=1,
+            avg_ack_latency_ms=0,
+            p95_result_latency_ms=0,
+            accuracy_within_tolerance_pct=0.0,
+            failure_reasons=[],
+            last_updated_at=datetime.now(UTC),
+        )
+
+        monkeypatch.setattr(db_module, "sb", Mock())
+        monkeypatch.setattr(
+            db_module,
+            "db_fetch_inline_analytics",
+            AsyncMock(return_value=[]),
+        )
+        monkeypatch.setattr(
+            db_module,
+            "db_upsert_inline_analytics",
+            AsyncMock(return_value=saved_daily),
+        )
+
+        result = await db_increment_inline_permission_block(
+            date_value=date(2024, 3, 1), chat_type=InlineChatType.group
+        )
+
+        db_module.db_fetch_inline_analytics.assert_awaited_once()
+        db_module.db_upsert_inline_analytics.assert_awaited_once()
+        assert result.permission_block_count == 1
+
+    @pytest.mark.asyncio
+    async def test_db_increment_inline_permission_block_updates_existing(self, monkeypatch):
+        existing_daily = InlineAnalyticsDaily(
+            id=uuid4(),
+            date=date(2024, 4, 1),
+            chat_type=InlineChatType.group,
+            trigger_counts={},
+            request_count=0,
+            success_count=0,
+            failure_count=0,
+            permission_block_count=2,
+            avg_ack_latency_ms=0,
+            p95_result_latency_ms=0,
+            accuracy_within_tolerance_pct=0.0,
+            failure_reasons=[],
+            last_updated_at=datetime.now(UTC),
+        )
+
+        async def fake_upsert(daily: InlineAnalyticsDaily) -> InlineAnalyticsDaily:
+            return daily
+
+        monkeypatch.setattr(db_module, "sb", Mock())
+        monkeypatch.setattr(
+            db_module,
+            "db_fetch_inline_analytics",
+            AsyncMock(return_value=[existing_daily]),
+        )
+        monkeypatch.setattr(
+            db_module,
+            "db_upsert_inline_analytics",
+            AsyncMock(side_effect=fake_upsert),
+        )
+
+        result = await db_increment_inline_permission_block(
+            date_value=date(2024, 4, 1), chat_type=InlineChatType.group, increment=3
+        )
+
+        db_module.db_fetch_inline_analytics.assert_awaited_once()
+        db_module.db_upsert_inline_analytics.assert_awaited_once()
+        assert result.permission_block_count == 5

@@ -177,6 +177,64 @@ class TelegramUpdate(BaseModel):
     callback_query: TelegramCallbackQuery | None = None
 
 
+class InlineTriggerType(Enum):
+    inline_query = "inline_query"
+    reply_mention = "reply_mention"
+    tagged_photo = "tagged_photo"
+
+
+class InlineChatType(Enum):
+    private = "private"
+    group = "group"
+
+
+class InlineInteractionJob(BaseModel):
+    job_id: UUID
+    trigger_type: InlineTriggerType
+    chat_type: InlineChatType
+    chat_id: int | None = None
+    chat_id_hash: str | None = None
+    thread_id: int | None = None
+    reply_to_message_id: int | None = None
+    inline_message_id: str | None = None
+    file_id: str
+    origin_message_id: str | None = None
+    source_user_id: int | None = None
+    source_user_hash: str | None = None
+    requested_at: AwareDatetime
+
+    model_config = {"populate_by_name": True}
+
+
+class InlinePermissionNotification(BaseModel):
+    chat_id_hash: str
+    source_user_hash: str
+    last_notified_at: AwareDatetime
+
+
+class InlineFailureReason(BaseModel):
+    reason: str
+    count: int = Field(..., ge=0)
+
+
+class InlineAnalyticsDaily(BaseModel):
+    id: UUID
+    date: date
+    chat_type: InlineChatType
+    trigger_counts: dict[str, int] = Field(default_factory=dict)
+    request_count: int = Field(default=0, ge=0)
+    success_count: int = Field(default=0, ge=0)
+    failure_count: int = Field(default=0, ge=0)
+    permission_block_count: int = Field(default=0, ge=0)
+    avg_ack_latency_ms: int = Field(..., ge=0)
+    p95_result_latency_ms: int = Field(..., ge=0)
+    accuracy_within_tolerance_pct: float = Field(..., ge=0, le=100)
+    failure_reasons: list[InlineFailureReason] | None = None
+    last_updated_at: AwareDatetime
+
+    model_config = {"populate_by_name": True}
+
+
 # Additional schemas for configuration and logging
 class Environment(Enum):
     """Environment types for the application."""
@@ -310,6 +368,8 @@ class LogEntryCreate(BaseModel):
     module: str | None = Field(None, description="Module or component name")
     function: str | None = Field(None, description="Function name")
     context: dict[str, Any] | None = Field(None, description="Additional context data")
+    inline_trigger: str | None = Field(None, description="Inline trigger type, e.g. inline_query")
+    inline_stage: str | None = Field(None, description="Inline pipeline stage tag")
 
 
 class ConnectionStatus(Enum):

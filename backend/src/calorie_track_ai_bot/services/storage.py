@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import boto3
@@ -11,6 +12,7 @@ from .config import (
     AWS_REGION,
     AWS_SECRET_ACCESS_KEY,
     BUCKET_NAME,
+    logger,
 )
 
 # Initialize S3 client only if all required config is available
@@ -50,13 +52,16 @@ else:
     )
 
 
-async def tigris_presign_put(content_type: str) -> tuple[str, str]:
+async def tigris_presign_put(content_type: str, prefix: str = "photos") -> tuple[str, str]:
     if s3 is None or TIGRIS_BUCKET is None:
         raise RuntimeError(
             "TIGRIS configuration not available. Photo upload functionality is disabled."
         )
 
-    key = f"photos/{uuid.uuid4()}.jpg"
+    safe_prefix = prefix.strip("/ ")
+    if not safe_prefix:
+        safe_prefix = "photos"
+    key = f"{safe_prefix}/{uuid.uuid4()}.jpg"
     url = s3.generate_presigned_url(
         ClientMethod="put_object",
         Params={"Bucket": TIGRIS_BUCKET, "Key": key, "ContentType": content_type},
@@ -85,3 +90,65 @@ def generate_presigned_url(file_key: str, expiry: int = 3600) -> str:
         ExpiresIn=expiry,
     )
     return url
+
+
+def purge_transient_media(
+    prefixes: list[str] | None = None, retention_hours: int = 24
+) -> dict[str, list[str]]:
+    """Delete inline transient media older than the configured retention window.
+
+    Args:
+        prefixes: S3 key prefixes to scan for transient media.
+        retention_hours: Maximum age before deletion.
+
+    Returns:
+        Dict mapping prefixes to the list of deleted object keys.
+    """
+    if s3 is None or TIGRIS_BUCKET is None:
+        raise RuntimeError("TIGRIS configuration not available")
+
+    scan_prefixes = prefixes or ["inline/", "inline-temp/", "transient/inline/"]
+    cutoff = datetime.now(UTC) - timedelta(hours=retention_hours)
+    deleted: dict[str, list[str]] = {}
+
+    for prefix in scan_prefixes:
+        paginator = s3.get_paginator("list_objects_v2")
+        removed: list[str] = []
+
+        for page in paginator.paginate(Bucket=TIGRIS_BUCKET, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                key = obj.get("Key")
+                last_modified = obj.get("LastModified")
+                if not key or not last_modified:
+                    continue
+
+                if last_modified.tzinfo is None:
+                    last_modified = last_modified.replace(tzinfo=UTC)
+
+                if last_modified <= cutoff:
+                    s3.delete_object(Bucket=TIGRIS_BUCKET, Key=key)
+                    removed.append(key)
+                    logger.info(
+                        "inline.media.purged",
+                        extra={
+                            "key": key,
+                            "prefix": prefix,
+                            "last_modified": last_modified.isoformat(),
+                            "retention_hours": retention_hours,
+                        },
+                    )
+
+        if removed:
+            deleted[prefix] = removed
+
+    if deleted:
+        logger.info(
+            "inline.media.purge_summary",
+            extra={
+                "prefixes": list(deleted.keys()),
+                "deleted_count": sum(len(keys) for keys in deleted.values()),
+                "retention_hours": retention_hours,
+            },
+        )
+
+    return deleted
