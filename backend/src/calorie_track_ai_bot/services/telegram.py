@@ -318,6 +318,38 @@ class TelegramBot:
             logger.error(f"Error editing message: {exc}")
             raise
 
+    async def send_admin_notification(
+        self,
+        chat_id: int,
+        message: str,
+        parse_mode: str = "Markdown",
+    ) -> dict[str, Any] | None:
+        """Send notification to admin chat/channel.
+
+        Feature: 005-mini-app-improvements
+
+        Args:
+            chat_id: Telegram chat ID or channel ID (integer)
+            message: Notification message text
+            parse_mode: Message formatting mode (Markdown, HTML, or None)
+
+        Returns:
+            Message response dict if successful, None if failed
+        """
+        try:
+            response = await self.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode=parse_mode,
+            )
+            logger.info(
+                f"Admin notification sent to chat {chat_id}, message length: {len(message)}"
+            )
+            return response
+        except Exception as e:
+            logger.error(f"Failed to send admin notification to chat {chat_id}: {e}")
+            return None
+
 
 # Global bot instance
 bot: TelegramBot | None = None

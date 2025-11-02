@@ -92,7 +92,8 @@ export default defineConfig({
     timezoneId: 'America/New_York',
 
     // Permissions (for Telegram Mini App features)
-    permissions: ['camera', 'geolocation'],
+    // Note: 'camera' is not supported in Playwright context permissions
+    // permissions: ['geolocation'],
 
     // Extra HTTP headers for all requests
     extraHTTPHeaders: {
@@ -230,7 +231,18 @@ export default defineConfig({
         // Force reduced motion for accessibility testing
         reducedMotion: 'reduce',
       },
-      testMatch: ['**/accessibility-*.spec.ts'],
+      testMatch: ['**/accessibility-*.spec.ts', '**/accessibility.spec.ts'],
+    },
+
+    // =============================================================================
+    // UI/UX VALIDATION TESTING
+    // =============================================================================
+    {
+      name: 'UI-UX Validation',
+      use: {
+        ...devices['iPhone 14 Pro'],
+      },
+      testMatch: ['**/ui-ux-validation.spec.ts'],
     },
   ],
 });
