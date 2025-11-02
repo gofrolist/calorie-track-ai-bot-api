@@ -15,17 +15,17 @@ export const Stats: React.FC = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="main-content">
+    <div className="main-content" style={{ backgroundColor: 'var(--tg-bg-color)' }}>
       {/* Page Header */}
       <header style={{
         padding: '16px',
-        borderBottom: '1px solid var(--tg-hint-color, #ddd)',
+        borderBottom: '1px solid var(--tg-hint-color)',
       }}>
         <h1 style={{
           fontSize: '24px',
           fontWeight: '600',
           margin: 0,
-          color: 'var(--tg-text-color, #000)',
+          color: 'var(--tg-text-color)',
         }}>
           {t('statistics.title')}
         </h1>
