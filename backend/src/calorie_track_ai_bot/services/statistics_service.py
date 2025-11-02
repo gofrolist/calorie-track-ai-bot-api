@@ -77,9 +77,7 @@ class StatisticsService:
             if not result.data:
                 result = (
                     self.supabase.table("meals")
-                    .select(
-                        "created_at, estimated_calories, estimated_protein, estimated_fat, estimated_carbs"
-                    )
+                    .select("created_at, kcal_total, protein_grams, fats_grams, carbs_grams")
                     .eq("user_id", user_id)
                     .gte("created_at", start_date.isoformat())
                     .lt("created_at", end_date.isoformat())
@@ -91,14 +89,16 @@ class StatisticsService:
             else:
                 daily_data = result.data
 
-            # Get user's goal from user table
-            user_result = (
-                self.supabase.table("users")
-                .select("daily_calorie_goal")
-                .eq("id", user_id)
+            # Get user's goal from goals table
+            goal_result = (
+                self.supabase.table("goals")
+                .select("daily_kcal_target")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(1)
                 .execute()
             )
-            goal_calories = user_result.data[0]["daily_calorie_goal"] if user_result.data else None
+            goal_calories = goal_result.data[0]["daily_kcal_target"] if goal_result.data else None
 
             # Convert to data points
             data_points = []
@@ -207,7 +207,7 @@ class StatisticsService:
             # Query total macros for period
             result = (
                 self.supabase.table("meals")
-                .select("estimated_calories, estimated_protein, estimated_fat, estimated_carbs")
+                .select("kcal_total, protein_grams, fats_grams, carbs_grams")
                 .eq("user_id", user_id)
                 .gte("created_at", start_date.isoformat())
                 .lt("created_at", end_date.isoformat())
@@ -215,10 +215,10 @@ class StatisticsService:
             )
 
             # Calculate totals
-            total_protein = sum(float(m.get("estimated_protein", 0)) for m in result.data)
-            total_fat = sum(float(m.get("estimated_fat", 0)) for m in result.data)
-            total_carbs = sum(float(m.get("estimated_carbs", 0)) for m in result.data)
-            total_calories = sum(float(m.get("estimated_calories", 0)) for m in result.data)
+            total_protein = sum(float(m.get("protein_grams", 0) or 0) for m in result.data)
+            total_fat = sum(float(m.get("fats_grams", 0) or 0) for m in result.data)
+            total_carbs = sum(float(m.get("carbs_grams", 0) or 0) for m in result.data)
+            total_calories = sum(float(m.get("kcal_total", 0) or 0) for m in result.data)
 
             # Calculate percentages (macros to calories conversion)
             # Protein: 4 kcal/g, Fat: 9 kcal/g, Carbs: 4 kcal/g
@@ -291,10 +291,10 @@ class StatisticsService:
 
         for meal in meals:
             meal_date = meal["created_at"][:10]  # Extract YYYY-MM-DD
-            daily_data[meal_date]["total_calories"] += float(meal.get("estimated_calories", 0))
-            daily_data[meal_date]["total_protein"] += float(meal.get("estimated_protein", 0))
-            daily_data[meal_date]["total_fat"] += float(meal.get("estimated_fat", 0))
-            daily_data[meal_date]["total_carbs"] += float(meal.get("estimated_carbs", 0))
+            daily_data[meal_date]["total_calories"] += float(meal.get("kcal_total", 0) or 0)
+            daily_data[meal_date]["total_protein"] += float(meal.get("protein_grams", 0) or 0)
+            daily_data[meal_date]["total_fat"] += float(meal.get("fats_grams", 0) or 0)
+            daily_data[meal_date]["total_carbs"] += float(meal.get("carbs_grams", 0) or 0)
             daily_data[meal_date]["meal_count"] += 1
 
         # Convert to list format
