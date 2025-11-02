@@ -21,12 +21,14 @@ import { Skeleton } from '../components/Loading';
 import { MealCard } from '../components/MealCard';
 import { CalendarPicker } from '../components/CalendarPicker';
 import { MealEditor } from '../components/MealEditor';
-import { Navigation } from '../components/Navigation';
 import { useMealsPage, type Meal } from '../hooks/useMealsPage';
+import { useNavigate } from 'react-router-dom';
+import { Navigation } from '../components/Navigation';
 
 export const Meals: React.FC = () => {
   const { t } = useTranslation();
   const telegramContext = useContext(TelegramWebAppContext);
+  const navigate = useNavigate();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
@@ -312,6 +314,38 @@ export const Meals: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* Feedback Button at bottom */}
+        <div style={{ marginTop: '32px', marginBottom: '80px', textAlign: 'center' }}>
+          <button
+            onClick={() => navigate('/feedback')}
+            aria-label={t('feedback.title')}
+            style={{
+              padding: '14px 24px',
+              minHeight: '48px',
+              fontSize: '16px',
+              fontWeight: '500',
+              backgroundColor: 'transparent',
+              color: 'var(--tg-button-color, #0066cc)',
+              border: '2px solid var(--tg-button-color, #0066cc)',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              width: '100%',
+              maxWidth: '300px',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--tg-button-color, #0066cc)';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--tg-button-color, #0066cc)';
+            }}
+          >
+            💬 {t('feedback.cta')}
+          </button>
+        </div>
       </div>
 
       {/* Meal Editor Modal */}

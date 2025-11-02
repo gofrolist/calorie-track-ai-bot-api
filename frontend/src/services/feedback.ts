@@ -10,7 +10,7 @@ import { api } from './api';
 /**
  * Feedback message type
  */
-export type FeedbackMessageType = 'feedback' | 'bug' | 'question' | 'support';
+export type FeedbackMessageType = 'feedback' | 'bug' | 'question' | 'support' | 'other';
 
 /**
  * Feedback submission request
