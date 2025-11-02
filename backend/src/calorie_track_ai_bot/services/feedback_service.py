@@ -5,7 +5,7 @@ Handles storage and notification of user feedback, bugs, questions, and support 
 """
 
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from ..schemas import (
@@ -54,7 +54,7 @@ class FeedbackService:
         """
         # Generate feedback ID
         feedback_id = uuid4()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         # Prepare feedback record
         feedback_data = {
