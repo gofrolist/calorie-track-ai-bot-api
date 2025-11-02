@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date as Date
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -53,14 +53,14 @@ class MultiPhotoResponse(BaseModel):
 
 
 class MealCreateManualRequest(BaseModel):
-    meal_date: date
+    meal_date: Date
     meal_type: MealType
     kcal_total: float
     macros: dict[str, Any] | None = None
 
 
 class MealCreateFromEstimateRequest(BaseModel):
-    meal_date: date
+    meal_date: Date
     meal_type: MealType
     estimate_id: str
     overrides: dict[str, Any] | None = None
@@ -219,7 +219,7 @@ class InlineFailureReason(BaseModel):
 
 class InlineAnalyticsDaily(BaseModel):
     id: UUID
-    date: date
+    date: Date
     chat_type: InlineChatType
     trigger_counts: dict[str, int] = Field(default_factory=dict)
     request_count: int = Field(default=0, ge=0)
@@ -485,7 +485,7 @@ class MealUpdate(BaseModel):
 class MealCalendarDay(BaseModel):
     """Daily meal summary for calendar view."""
 
-    meal_date: date = Field(..., description="Date")
+    meal_date: Date = Field(..., description="Date")
     meal_count: int = Field(..., ge=0, description="Number of meals")
     total_calories: float = Field(..., ge=0, description="Total calories for the day")
     total_protein: float = Field(..., ge=0, description="Total protein in grams")
@@ -504,3 +504,131 @@ class MealsCalendarResponse(BaseModel):
     """Response for GET /api/v1/meals/calendar."""
 
     dates: list[MealCalendarDay] = Field(..., description="Daily summaries")
+
+
+# =============================================================================
+# FEEDBACK & SUPPORT SCHEMAS (Feature 005)
+# =============================================================================
+
+
+class FeedbackMessageType(Enum):
+    """Type of feedback submission."""
+
+    feedback = "feedback"
+    bug = "bug"
+    question = "question"
+    support = "support"
+
+
+class FeedbackStatus(Enum):
+    """Status of feedback submission tracking."""
+
+    new = "new"
+    reviewed = "reviewed"
+    resolved = "resolved"
+
+
+class FeedbackSubmissionRequest(BaseModel):
+    """Request body for submitting user feedback."""
+
+    message_type: FeedbackMessageType = Field(..., description="Category of feedback submission")
+    message_content: str = Field(
+        ...,
+        min_length=1,
+        max_length=5000,
+        description="User's feedback message",
+    )
+    user_context: dict[str, Any] | None = Field(
+        None,
+        description="Optional metadata about user environment (page, device info, app version)",
+    )
+
+
+class FeedbackSubmissionResponse(BaseModel):
+    """Response after submitting feedback."""
+
+    id: UUID = Field(..., description="Unique feedback submission identifier")
+    status: FeedbackStatus = Field(..., description="Current status of feedback")
+    created_at: AwareDatetime = Field(..., description="Submission timestamp (ISO 8601)")
+    message: str = Field(..., description="Success message to display to user")
+
+
+class FeedbackSubmission(BaseModel):
+    """Complete feedback submission record (admin view)."""
+
+    id: UUID = Field(..., description="Unique feedback submission identifier")
+    user_id: str = Field(..., description="Hashed Telegram user ID")
+    message_type: FeedbackMessageType = Field(..., description="Category of feedback submission")
+    message_content: str = Field(..., description="User's feedback message")
+    user_context: dict[str, Any] | None = Field(
+        None, description="Optional metadata about user environment"
+    )
+    status: FeedbackStatus = Field(..., description="Current tracking status")
+    admin_notes: str | None = Field(None, description="Internal notes from support team")
+    created_at: AwareDatetime = Field(..., description="Submission timestamp")
+    updated_at: AwareDatetime = Field(..., description="Last modification timestamp")
+
+
+# =============================================================================
+# STATISTICS & VISUALIZATION SCHEMAS (Feature 005)
+# =============================================================================
+
+
+class DailyDataPoint(BaseModel):
+    """Single day's aggregated nutrition data for visualization."""
+
+    date: Date = Field(..., description="Calendar date for this data point")
+    total_calories: float = Field(
+        ..., ge=0, description="Sum of calories for all meals on this date"
+    )
+    total_protein: float = Field(..., ge=0, description="Sum of protein grams for all meals")
+    total_fat: float = Field(..., ge=0, description="Sum of fat grams for all meals")
+    total_carbs: float = Field(..., ge=0, description="Sum of carbohydrate grams for all meals")
+    meal_count: int = Field(..., ge=0, description="Number of meals logged on this date")
+    goal_calories: float | None = Field(None, ge=0, description="User's daily calorie goal")
+    goal_achievement: float | None = Field(
+        None, description="Percentage of goal achieved (total_calories / goal_calories * 100)"
+    )
+
+
+class StatisticsPeriod(BaseModel):
+    """Time period for statistics query."""
+
+    start_date: Date = Field(..., description="Query start date (inclusive)")
+    end_date: Date = Field(..., description="Query end date (exclusive)")
+    total_days: int = Field(..., ge=1, description="Number of days in range")
+
+
+class StatisticsSummary(BaseModel):
+    """Aggregated summary across the entire period."""
+
+    total_meals: int = Field(..., ge=0, description="Total meals logged in period")
+    average_daily_calories: float = Field(..., ge=0, description="Average calories per day")
+    average_goal_achievement: float | None = Field(
+        None, description="Average goal achievement percentage"
+    )
+
+
+class DailyStatisticsResponse(BaseModel):
+    """Response for GET /api/v1/statistics/daily."""
+
+    data: list[DailyDataPoint] = Field(..., description="Array of daily nutrition data points")
+    period: StatisticsPeriod = Field(..., description="Queried time period")
+    summary: StatisticsSummary = Field(..., description="Aggregated summary statistics")
+
+
+class MacroStatisticsResponse(BaseModel):
+    """Response for GET /api/v1/statistics/macros."""
+
+    protein_percent: float = Field(
+        ..., ge=0, le=100, description="Protein percentage of total calories"
+    )
+    fat_percent: float = Field(..., ge=0, le=100, description="Fat percentage of total calories")
+    carbs_percent: float = Field(
+        ..., ge=0, le=100, description="Carbs percentage of total calories"
+    )
+    protein_grams: float = Field(..., ge=0, description="Total protein grams in period")
+    fat_grams: float = Field(..., ge=0, description="Total fat grams in period")
+    carbs_grams: float = Field(..., ge=0, description="Total carbs grams in period")
+    total_calories: float = Field(..., ge=0, description="Total calories in period")
+    period: StatisticsPeriod = Field(..., description="Queried time period")

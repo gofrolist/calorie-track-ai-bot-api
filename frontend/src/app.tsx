@@ -15,6 +15,7 @@ import { config } from './config';
 const Meals = lazy(() => import('./pages/Meals').then(module => ({ default: module.Meals })));
 const Stats = lazy(() => import('./pages/stats').then(module => ({ default: module.Stats })));
 const Goals = lazy(() => import('./pages/goals').then(module => ({ default: module.Goals })));
+const Feedback = lazy(() => import('./pages/feedback').then(module => ({ default: module.Feedback })));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -100,6 +101,14 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={<LoadingFallback />}>
         <Goals />
+      </Suspense>
+    )
+  },
+  {
+    path: '/feedback',
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <Feedback />
       </Suspense>
     )
   },

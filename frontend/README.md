@@ -29,10 +29,18 @@ The app will be available at `http://localhost:5173`
 ### Core Functionality
 - **Today View**: Real-time meal tracking with daily summaries
 - **Meal Details**: Edit and correct AI-estimated calories and macros
-- **Statistics**: Weekly and monthly progress charts
+- **Statistics Dashboard**: Interactive data visualization with Recharts
+  - Time-series calorie trends (last 7/30/90 days)
+  - Macronutrient breakdown pie charts
+  - Goal achievement progress bars
+  - Touch-friendly tooltips and responsive design
 - **Goals**: Set and track daily calorie targets
+- **Feedback & Support**: In-app feedback submission with Telegram notifications
+  - Bug reports, feature requests, and general feedback
+  - Auto-save drafts to prevent data loss
+  - Admin notifications via Telegram bot
 - **Share**: Share progress via Telegram Stories
-- **Internationalization**: English and Russian support
+- **Internationalization**: Full English and Russian support with 180+ translation keys
 
 ### User Experience
 - **Mobile-First**: Optimized for Telegram's mobile interface
@@ -65,6 +73,7 @@ npm run lint             # Run ESLint
 npm run lint:fix         # Fix ESLint issues
 npm run type-check       # Run TypeScript type checking
 npm run format           # Format code with Prettier
+npm run i18n:validate    # Validate translation key consistency (EN/RU)
 
 # Utilities
 npm run clean            # Clean build artifacts
@@ -78,16 +87,23 @@ frontend/
 │   ├── components/          # Reusable UI components
 │   │   ├── ErrorBoundary.tsx
 │   │   ├── Loading.tsx
+│   │   ├── Navigation.tsx   # ✨ NEW: Menu with feedback access
+│   │   ├── FeedbackForm.tsx # ✨ NEW: Feedback submission form
+│   │   ├── StatsCharts.tsx  # ✨ NEW: Statistics visualization
 │   │   └── share.tsx
 │   ├── pages/              # Route components
 │   │   ├── today.tsx
 │   │   ├── meal-detail.tsx
-│   │   ├── stats.tsx
-│   │   └── goals.tsx
+│   │   ├── stats.tsx       # ♻️ UPDATED: Enhanced with charts
+│   │   ├── goals.tsx
+│   │   └── feedback.tsx    # ✨ NEW: Feedback page
 │   ├── services/           # API and external services
-│   │   └── api.ts
+│   │   ├── api.ts
+│   │   ├── feedback.ts     # ✨ NEW: Feedback API client
+│   │   └── statistics.ts   # ✨ NEW: Statistics API client
 │   ├── i18n/              # Internationalization
-│   │   └── index.ts
+│   │   ├── index.ts        # ♻️ UPDATED: 180+ keys (EN/RU)
+│   │   └── validate-keys.mjs # ✨ NEW: Translation validator
 │   ├── tests/             # Test files
 │   │   ├── contracts/
 │   │   └── i18n.test.ts

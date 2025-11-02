@@ -65,6 +65,14 @@ uv run pyright
 - `GET /api/v1/estimates/{id}` → fetch estimate
 - `POST /api/v1/meals` → create from estimate or manual kcal
 
+### Statistics Endpoints (✨ NEW)
+- `GET /api/v1/statistics/daily` → Daily nutrition aggregates (last 7/30/90 days)
+- `GET /api/v1/statistics/macros` → Macronutrient breakdown by percentage
+
+### Feedback Endpoints (✨ NEW)
+- `POST /api/v1/feedback` → Submit user feedback (bug reports, feature requests)
+- `GET /api/v1/feedback/{id}` → Retrieve feedback submission (admin only)
+
 ### Telegram Bot Endpoints
 - `POST /bot` → Telegram webhook handler (receives messages from Telegram)
 - `POST /bot/setup` → Setup Telegram webhook
@@ -73,6 +81,11 @@ uv run pyright
 
 OpenAPI JSON: `GET /openapi.json`.
 Complete API documentation: `specs/openapi.yaml`
+
+### New Features in v2.0
+- **Interactive Statistics**: Real-time data aggregation with date range filtering
+- **User Feedback System**: In-app feedback collection with admin Telegram notifications
+- **Enhanced Localization**: 180+ translation keys fully synchronized (EN/RU)
 
 ## Logging and Debugging
 
@@ -124,6 +137,8 @@ The application requires the following environment variables:
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 - `APP_ENV`: Application environment (dev, prod)
 - `WEBHOOK_URL`: Telegram webhook URL (auto-configured in production)
+- `ADMIN_NOTIFICATION_CHAT_ID`: Telegram chat ID for admin feedback notifications
+- `FEEDBACK_NOTIFICATIONS_ENABLED`: Enable/disable feedback Telegram notifications (true/false)
 
 ### Common Issues
 - **Silent bot responses**: Check webhook URL configuration and endpoint accessibility
