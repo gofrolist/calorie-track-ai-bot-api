@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import {
   submitFeedback,
   buildUserContext,
-  type FeedbackMessageType,
   type FeedbackSubmissionRequest,
 } from '../services/feedback';
 
@@ -21,7 +20,6 @@ const MAX_MESSAGE_LENGTH = 5000;
 export function FeedbackForm() {
   const { t, i18n } = useTranslation();
 
-  const [messageType, setMessageType] = useState<FeedbackMessageType>('feedback');
   const [messageContent, setMessageContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -34,10 +32,9 @@ export function FeedbackForm() {
     if (draft) {
       try {
         const parsed = JSON.parse(draft);
-        setMessageType(parsed.messageType || 'feedback');
         setMessageContent(parsed.messageContent || '');
         setCharacterCount(parsed.messageContent?.length || 0);
-      } catch (e) {
+      } catch {
         // Invalid draft, ignore
         localStorage.removeItem(DRAFT_STORAGE_KEY);
       }
@@ -46,15 +43,14 @@ export function FeedbackForm() {
 
   // Auto-save draft to localStorage
   useEffect(() => {
-    if (messageContent || messageType !== 'feedback') {
+    if (messageContent) {
       const draft = {
-        messageType,
         messageContent,
         savedAt: new Date().toISOString(),
       };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
     }
-  }, [messageType, messageContent]);
+  }, [messageContent]);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -83,7 +79,7 @@ export function FeedbackForm() {
       setIsSubmitting(true);
 
       const request: FeedbackSubmissionRequest = {
-        message_type: messageType,
+        message_type: 'other', // Default type since user doesn't select
         message_content: trimmedContent,
         user_context: buildUserContext(i18n.language),
       };
@@ -92,7 +88,6 @@ export function FeedbackForm() {
 
       // Clear form and draft on success
       setMessageContent('');
-      setMessageType('feedback');
       setCharacterCount(0);
       localStorage.removeItem(DRAFT_STORAGE_KEY);
 
@@ -155,57 +150,6 @@ export function FeedbackForm() {
       )}
 
       <form onSubmit={handleSubmit}>
-        {/* Message Type Selector - Touch-friendly buttons */}
-        <div className="form-group" style={{ marginBottom: '24px' }}>
-          <label
-            htmlFor="message-type"
-            style={{
-              display: 'block',
-              marginBottom: '12px',
-              fontSize: '16px',
-              fontWeight: '500',
-            }}
-          >
-            {t('feedback.messageType')} *
-          </label>
-          <div
-            className="message-type-selector"
-            role="radiogroup"
-            aria-label={t('feedback.messageType')}
-            style={{
-              display: 'flex',
-              gap: '8px',
-              flexWrap: 'wrap',
-            }}
-          >
-            {(['feedback', 'bug', 'question', 'support'] as FeedbackMessageType[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                role="radio"
-                aria-checked={messageType === type}
-                onClick={() => setMessageType(type)}
-                style={{
-                  flex: '1 1 auto',
-                  minWidth: '80px',
-                  minHeight: '44px', // CHK001: Minimum 44x44px touch target
-                  padding: '12px 16px',
-                  fontSize: '16px',
-                  fontWeight: messageType === type ? '600' : '400',
-                backgroundColor: messageType === type ? 'var(--tg-button-color, #0066cc)' : '#f0f0f0',
-                color: messageType === type ? 'white' : 'var(--tg-text-color, #333)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {t(`feedback.types.${type}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Message Content Textarea */}
         <div className="form-group" style={{ marginBottom: '24px' }}>
           <label
