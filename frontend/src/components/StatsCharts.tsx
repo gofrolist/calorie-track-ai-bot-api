@@ -86,7 +86,7 @@ export function StatsCharts({ className }: StatsChartsProps) {
         role="region"
         aria-label={t('statistics.title')}
         aria-busy="true"
-        style={{ padding: '16px', backgroundColor: '#ffffff', minHeight: '200px' }}
+        style={{ padding: '16px', backgroundColor: 'var(--tg-bg-color)', minHeight: '200px' }}
       >
         {/* Skeleton Screen - matches actual chart layout */}
         <div role="status" aria-live="polite" aria-label={t('statistics.loading')}>
@@ -99,7 +99,7 @@ export function StatsCharts({ className }: StatsChartsProps) {
                 style={{
                   width: '80px',
                   height: '44px',
-                  backgroundColor: '#e0e0e0',
+                  backgroundColor: 'var(--chart-skeleton)',
                   borderRadius: '8px',
                   animation: 'pulse 1.5s ease-in-out infinite',
                 }}
@@ -109,13 +109,13 @@ export function StatsCharts({ className }: StatsChartsProps) {
 
           {/* Line Chart Skeleton */}
           <div style={{ marginBottom: '32px' }}>
-            <div className="skeleton-pulse" style={{ width: '200px', height: '24px', backgroundColor: '#e0e0e0', borderRadius: '4px', marginBottom: '16px' }} />
-            <div style={{ height: '250px', backgroundColor: '#f5f5f5', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
+            <div className="skeleton-pulse" style={{ width: '200px', height: '24px', backgroundColor: 'var(--chart-skeleton)', borderRadius: '4px', marginBottom: '16px' }} />
+            <div style={{ height: '250px', backgroundColor: 'var(--tg-secondary-bg-color)', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
               {/* Chart lines skeleton */}
               <svg width="100%" height="100%" style={{ position: 'absolute' }}>
                 <path
                   d="M 10 200 Q 100 150 200 180 T 390 160"
-                  stroke="#e0e0e0"
+                  stroke="var(--chart-skeleton)"
                   strokeWidth="2"
                   fill="none"
                   className="skeleton-pulse"
@@ -126,14 +126,14 @@ export function StatsCharts({ className }: StatsChartsProps) {
 
           {/* Pie Chart Skeleton */}
           <div style={{ marginBottom: '32px' }}>
-            <div className="skeleton-pulse" style={{ width: '200px', height: '24px', backgroundColor: '#e0e0e0', borderRadius: '4px', marginBottom: '16px' }} />
+            <div className="skeleton-pulse" style={{ width: '200px', height: '24px', backgroundColor: 'var(--chart-skeleton)', borderRadius: '4px', marginBottom: '16px' }} />
             <div style={{ display: 'flex', justifyContent: 'center', height: '200px' }}>
               <div
                 className="skeleton-pulse"
                 style={{
                   width: '160px',
                   height: '160px',
-                  backgroundColor: '#e0e0e0',
+                  backgroundColor: 'var(--chart-skeleton)',
                   borderRadius: '50%',
                 }}
               />
@@ -142,8 +142,8 @@ export function StatsCharts({ className }: StatsChartsProps) {
 
           {/* Bar Chart Skeleton */}
           <div style={{ marginBottom: '32px' }}>
-            <div className="skeleton-pulse" style={{ width: '200px', height: '24px', backgroundColor: '#e0e0e0', borderRadius: '4px', marginBottom: '16px' }} />
-            <div style={{ height: '200px', backgroundColor: '#f5f5f5', borderRadius: '8px', padding: '20px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+            <div className="skeleton-pulse" style={{ width: '200px', height: '24px', backgroundColor: 'var(--chart-skeleton)', borderRadius: '4px', marginBottom: '16px' }} />
+            <div style={{ height: '200px', backgroundColor: 'var(--tg-secondary-bg-color)', borderRadius: '8px', padding: '20px', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
               {[1, 2, 3, 4, 5, 6, 7].map((i) => (
                 <div
                   key={i}
@@ -151,7 +151,7 @@ export function StatsCharts({ className }: StatsChartsProps) {
                   style={{
                     flex: 1,
                     height: `${Math.random() * 80 + 20}%`,
-                    backgroundColor: '#e0e0e0',
+                    backgroundColor: 'var(--chart-skeleton)',
                     borderRadius: '4px',
                   }}
                 />
@@ -160,13 +160,13 @@ export function StatsCharts({ className }: StatsChartsProps) {
           </div>
 
           {/* Summary Statistics Skeleton */}
-          <div style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px', marginTop: '24px' }}>
-            <div className="skeleton-pulse" style={{ width: '150px', height: '20px', backgroundColor: '#e0e0e0', borderRadius: '4px', marginBottom: '12px' }} />
+          <div style={{ padding: '16px', backgroundColor: 'var(--tg-secondary-bg-color)', borderRadius: '8px', marginTop: '24px' }}>
+            <div className="skeleton-pulse" style={{ width: '150px', height: '20px', backgroundColor: 'var(--chart-skeleton)', borderRadius: '4px', marginBottom: '12px' }} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               {[1, 2].map((i) => (
                 <div key={i}>
-                  <div className="skeleton-pulse" style={{ width: '100px', height: '14px', backgroundColor: '#e0e0e0', borderRadius: '4px', marginBottom: '8px' }} />
-                  <div className="skeleton-pulse" style={{ width: '80px', height: '24px', backgroundColor: '#e0e0e0', borderRadius: '4px' }} />
+                  <div className="skeleton-pulse" style={{ width: '100px', height: '14px', backgroundColor: 'var(--chart-skeleton)', borderRadius: '4px', marginBottom: '8px' }} />
+                  <div className="skeleton-pulse" style={{ width: '80px', height: '24px', backgroundColor: 'var(--chart-skeleton)', borderRadius: '4px' }} />
                 </div>
               ))}
             </div>
@@ -194,13 +194,13 @@ export function StatsCharts({ className }: StatsChartsProps) {
         data-testid="stats-charts"
         role="region"
         aria-label={t('statistics.title')}
-        style={{ padding: '16px', backgroundColor: '#ffffff', minHeight: '200px' }}
+        style={{ padding: '16px', backgroundColor: 'var(--tg-bg-color)', minHeight: '200px' }}
       >
         <div style={{ textAlign: 'center', padding: '32px 0' }}>
           <p
             role="alert"
             aria-live="assertive"
-            style={{ color: '#d32f2f', marginBottom: '16px' }}
+            style={{ color: '#ff3b30', marginBottom: '16px' }}
           >
             {error}
           </p>
@@ -211,8 +211,8 @@ export function StatsCharts({ className }: StatsChartsProps) {
               padding: '12px 24px',
               minHeight: '44px',
               fontSize: '16px',
-              backgroundColor: 'var(--tg-button-color, #0066cc)',
-              color: 'white',
+              backgroundColor: 'var(--tg-button-color)',
+              color: 'var(--tg-button-text-color)',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -232,12 +232,12 @@ export function StatsCharts({ className }: StatsChartsProps) {
         data-testid="stats-charts"
         role="region"
         aria-label={t('statistics.title')}
-        style={{ padding: '16px', backgroundColor: '#ffffff', minHeight: '200px' }}
+        style={{ padding: '16px', backgroundColor: 'var(--tg-bg-color)', minHeight: '200px' }}
       >
         <div style={{ textAlign: 'center', padding: '48px 16px' }}>
           <div role="img" aria-label="Chart icon" style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-          <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>{t('statistics.emptyState.title')}</h3>
-          <p style={{ color: 'var(--tg-hint-color, #6b6b6b)', marginBottom: '24px' }}>{t('statistics.emptyState.message')}</p>
+          <h3 style={{ fontSize: '20px', marginBottom: '8px', color: 'var(--tg-text-color)' }}>{t('statistics.emptyState.title')}</h3>
+          <p style={{ color: 'var(--tg-hint-color)', marginBottom: '24px' }}>{t('statistics.emptyState.message')}</p>
           <button
             onClick={() => window.location.href = '/'}
             aria-label={t('statistics.emptyState.action')}
@@ -245,8 +245,8 @@ export function StatsCharts({ className }: StatsChartsProps) {
               padding: '12px 24px',
               minHeight: '44px',
               fontSize: '16px',
-              backgroundColor: 'var(--tg-button-color, #0066cc)',
-              color: 'white',
+              backgroundColor: 'var(--tg-button-color)',
+              color: 'var(--tg-button-text-color)',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -272,11 +272,11 @@ export function StatsCharts({ className }: StatsChartsProps) {
     achievement: dp.goal_achievement,
   }));
 
-  // Macro pie chart data
+  // Macro pie chart data - use CSS variables for consistent theming
   const macroData = macroStats ? [
-    { name: t('statistics.chart.protein'), value: macroStats.protein_percent, grams: macroStats.protein_grams, color: '#4CAF50' },
-    { name: t('statistics.chart.fat'), value: macroStats.fat_percent, grams: macroStats.fat_grams, color: '#FF9800' },
-    { name: t('statistics.chart.carbs'), value: macroStats.carbs_percent, grams: macroStats.carbs_grams, color: '#2196F3' },
+    { name: t('statistics.chart.protein'), value: macroStats.protein_percent, grams: macroStats.protein_grams, color: 'var(--chart-success)' },
+    { name: t('statistics.chart.fat'), value: macroStats.fat_percent, grams: macroStats.fat_grams, color: 'var(--chart-warning)' },
+    { name: t('statistics.chart.carbs'), value: macroStats.carbs_percent, grams: macroStats.carbs_grams, color: 'var(--chart-info)' },
   ] : [];
 
   return (
@@ -289,7 +289,7 @@ export function StatsCharts({ className }: StatsChartsProps) {
       style={{
         padding: '16px',
         paddingBottom: '80px',
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--tg-bg-color)',
         minHeight: '200px'
       }}
     >
@@ -320,8 +320,8 @@ export function StatsCharts({ className }: StatsChartsProps) {
                 padding: '10px 16px',
                 fontSize: '16px',
                 fontWeight: selectedRange === range ? '600' : '400',
-                backgroundColor: selectedRange === range ? 'var(--tg-button-color, #0066cc)' : '#f0f0f0',
-                color: selectedRange === range ? 'white' : 'var(--tg-text-color, #333)',
+                backgroundColor: selectedRange === range ? 'var(--tg-button-color)' : 'var(--tg-secondary-bg-color)',
+                color: selectedRange === range ? 'var(--tg-button-text-color)' : 'var(--tg-text-color)',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
@@ -336,32 +336,33 @@ export function StatsCharts({ className }: StatsChartsProps) {
 
       {/* Primary Visualization: Time-Series Calorie Trend (CHK020) */}
       <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--tg-text-color)' }}>
           {t('statistics.caloriesOverTime')}
         </h3>
-        <div role="img" aria-label={t('statistics.caloriesOverTime')} style={{ width: '100%', backgroundColor: 'var(--tg-bg-color, #fff)' }}>
+        <div role="img" aria-label={t('statistics.caloriesOverTime')} style={{ width: '100%', backgroundColor: 'var(--tg-bg-color)' }}>
           <ResponsiveContainer width="100%" height={250}>
           <LineChart
             data={chartData}
             margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12 }}
-              stroke="#666"
+              tick={{ fontSize: 12, fill: 'var(--chart-axis)' }}
+              stroke="var(--chart-axis)"
             />
             <YAxis
-              tick={{ fontSize: 12 }}
-              stroke="#666"
-              label={{ value: t('statistics.chart.calories'), angle: -90, position: 'insideLeft', style: { fontSize: 12 } }}
+              tick={{ fontSize: 12, fill: 'var(--chart-axis)' }}
+              stroke="var(--chart-axis)"
+              label={{ value: t('statistics.chart.calories'), angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: 'var(--chart-axis)' } }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                border: '1px solid #ddd',
+                backgroundColor: 'var(--chart-tooltip-bg)',
+                border: '1px solid var(--chart-tooltip-border)',
                 borderRadius: '8px',
                 padding: '12px',
+                color: 'var(--tg-text-color)',
               }}
               formatter={(value: number, name: string) => [
                 `${Math.round(value)} ${name === 'calories' ? 'kcal' : ''}`,
@@ -379,7 +380,7 @@ export function StatsCharts({ className }: StatsChartsProps) {
               <Line
                 type="monotone"
                 dataKey="goal"
-                stroke="#FF9800"
+                stroke="var(--chart-warning)"
                 strokeDasharray="5 5"
                 name={t('statistics.chart.goal')}
                 dot={false}
@@ -388,7 +389,7 @@ export function StatsCharts({ className }: StatsChartsProps) {
             <Line
               type="monotone"
               dataKey="calories"
-              stroke="var(--tg-button-color, #0066cc)"
+              stroke="var(--chart-primary)"
               strokeWidth={2}
               name={t('statistics.chart.calories')}
               activeDot={{ r: 6 }}
@@ -401,11 +402,11 @@ export function StatsCharts({ className }: StatsChartsProps) {
       {/* Supporting Visualization: Macronutrient Breakdown (CHK021) */}
       {macroStats && macroStats.total_calories > 0 && (
         <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--tg-text-color)' }}>
             {t('statistics.macroBreakdown')}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div role="img" aria-label={t('statistics.macroBreakdown')} style={{ width: '100%', backgroundColor: 'var(--tg-bg-color, #fff)' }}>
+            <div role="img" aria-label={t('statistics.macroBreakdown')} style={{ width: '100%', backgroundColor: 'var(--tg-bg-color)' }}>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
@@ -418,11 +419,21 @@ export function StatsCharts({ className }: StatsChartsProps) {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {macroData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
+                  {macroData.map((entry, index) => {
+                    // Resolve CSS variable to actual color for the pie slice
+                    const style = getComputedStyle(document.documentElement);
+                    const color = style.getPropertyValue(entry.color.replace('var(', '').replace(')', '')).trim();
+                    return <Cell key={`cell-${index}`} fill={color} />;
+                  })}
                 </Pie>
                 <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--chart-tooltip-bg)',
+                    border: '1px solid var(--chart-tooltip-border)',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    color: 'var(--tg-text-color)',
+                  }}
                   formatter={(value: number, name: string, props: any) => [
                     `${value.toFixed(1)}% (${Math.round(props.payload.grams)}g)`,
                     name
@@ -434,32 +445,38 @@ export function StatsCharts({ className }: StatsChartsProps) {
 
             {/* Macro details */}
             <div style={{ width: '100%', marginTop: '16px' }}>
-              {macroData.map((macro) => (
-                <div
-                  key={macro.name}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    backgroundColor: '#f5f5f5',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        backgroundColor: macro.color,
-                        borderRadius: '2px',
-                      }}
-                    />
-                    <span style={{ fontWeight: '500' }}>{macro.name}</span>
+              {macroData.map((macro) => {
+                // Resolve CSS variable to actual color
+                const style = getComputedStyle(document.documentElement);
+                const color = style.getPropertyValue(macro.color.replace('var(', '').replace(')', '')).trim();
+                return (
+                  <div
+                    key={macro.name}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '8px 16px',
+                      borderRadius: '4px',
+                      backgroundColor: 'var(--tg-secondary-bg-color)',
+                      marginBottom: '8px',
+                      color: 'var(--tg-text-color)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div
+                        style={{
+                          width: '12px',
+                          height: '12px',
+                          backgroundColor: color,
+                          borderRadius: '2px',
+                        }}
+                      />
+                      <span style={{ fontWeight: '500' }}>{macro.name}</span>
+                    </div>
+                    <span>{macro.value.toFixed(1)}% ({Math.round(macro.grams)}g)</span>
                   </div>
-                  <span>{macro.value.toFixed(1)}% ({Math.round(macro.grams)}g)</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -468,63 +485,69 @@ export function StatsCharts({ className }: StatsChartsProps) {
       {/* Supporting Visualization: Goal Achievement (CHK021) */}
       {dailyStats.data.some(d => d.goal_achievement) && (
         <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'var(--tg-text-color)' }}>
             {t('statistics.goalTracking')}
           </h3>
-          <div role="img" aria-label={t('statistics.goalTracking')} style={{ width: '100%', backgroundColor: 'var(--tg-bg-color, #fff)' }}>
+          <div role="img" aria-label={t('statistics.goalTracking')} style={{ width: '100%', backgroundColor: 'var(--tg-bg-color)' }}>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart
               data={chartData.filter(d => d.achievement !== null)}
               margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12 }}
-                stroke="#666"
+                tick={{ fontSize: 12, fill: 'var(--chart-axis)' }}
+                stroke="var(--chart-axis)"
               />
               <YAxis
-                tick={{ fontSize: 12 }}
-                stroke="#666"
-                label={{ value: '%', angle: 0, position: 'insideTopLeft', style: { fontSize: 12 } }}
+                tick={{ fontSize: 12, fill: 'var(--chart-axis)' }}
+                stroke="var(--chart-axis)"
+                label={{ value: '%', angle: 0, position: 'insideTopLeft', style: { fontSize: 12, fill: 'var(--chart-axis)' } }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #ddd',
+                  backgroundColor: 'var(--chart-tooltip-bg)',
+                  border: '1px solid var(--chart-tooltip-border)',
                   borderRadius: '8px',
                   padding: '12px',
+                  color: 'var(--tg-text-color)',
                 }}
                 formatter={(value: number) => [`${Math.round(value)}%`, t('statistics.goalTracking')]}
               />
               <Bar
                 dataKey="achievement"
-                fill="#4CAF50"
                 name={t('statistics.goalTracking')}
                 radius={[4, 4, 0, 0]}
               >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.achievement && entry.achievement > 100 ? '#FF9800' : '#4CAF50'}
-                  />
-                ))}
+                {chartData.map((entry, index) => {
+                  // Resolve CSS variables to actual colors
+                  const style = getComputedStyle(document.documentElement);
+                  const successColor = style.getPropertyValue('--chart-success').trim();
+                  const warningColor = style.getPropertyValue('--chart-warning').trim();
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.achievement && entry.achievement > 100 ? warningColor : successColor}
+                    />
+                  );
+                })}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
           </div>
 
           {/* Achievement summary */}
-          <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+          <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'var(--tg-secondary-bg-color)', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ color: 'var(--tg-text-color, #000)' }}>{t('statistics.summary.avgAchievement')}:</span>
-              <span style={{ fontWeight: '600', color: 'var(--tg-text-color, #000)' }}>
+              <span style={{ color: 'var(--tg-text-color)' }}>{t('statistics.summary.avgAchievement')}:</span>
+              <span style={{ fontWeight: '600', color: 'var(--tg-text-color)' }}>
                 {dailyStats.summary.average_goal_achievement?.toFixed(1) || 'N/A'}%
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--tg-text-color, #000)' }}>{t('statistics.summary.daysOverGoal')}:</span>
-              <span style={{ fontWeight: '600', color: 'var(--tg-text-color, #000)' }}>
+              <span style={{ color: 'var(--tg-text-color)' }}>{t('statistics.summary.daysOverGoal')}:</span>
+              <span style={{ fontWeight: '600', color: 'var(--tg-text-color)' }}>
                 {chartData.filter(d => d.achievement && d.achievement > 100).length}
               </span>
             </div>
@@ -533,24 +556,24 @@ export function StatsCharts({ className }: StatsChartsProps) {
       )}
 
       {/* Summary Statistics */}
-      <div id="stats-summary" style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
+      <div id="stats-summary" style={{ marginTop: '24px', padding: '16px', backgroundColor: 'var(--tg-secondary-bg-color)', borderRadius: '8px' }}>
+        <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'var(--tg-text-color)' }}>
           {t('statistics.summary.title')}
         </h4>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--tg-hint-color, #6b6b6b)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--tg-hint-color)', marginBottom: '4px' }}>
               {t('statistics.summary.totalMeals')}
             </div>
-            <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--tg-text-color, #000)' }}>
+            <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--tg-text-color)' }}>
               {dailyStats.summary.total_meals}
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--tg-hint-color, #6b6b6b)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--tg-hint-color)', marginBottom: '4px' }}>
               {t('statistics.summary.avgDaily')}
             </div>
-            <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--tg-text-color, #000)' }}>
+            <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--tg-text-color)' }}>
               {Math.round(dailyStats.summary.average_daily_calories)} kcal
             </div>
           </div>
