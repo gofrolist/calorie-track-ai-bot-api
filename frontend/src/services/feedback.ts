@@ -9,8 +9,9 @@ import { api } from './api';
 
 /**
  * Feedback message type
+ * Must match backend enum values
  */
-export type FeedbackMessageType = 'feedback' | 'bug' | 'question' | 'support' | 'other';
+export type FeedbackMessageType = 'feedback' | 'bug' | 'question' | 'support';
 
 /**
  * Feedback submission request

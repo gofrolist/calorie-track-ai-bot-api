@@ -75,11 +75,19 @@ export function FeedbackForm() {
       return;
     }
 
+    // Check if user ID is available before submitting
+    const userId = getUserId();
+    if (!userId) {
+      setError('Unable to submit feedback: User authentication not available. Please make sure you opened this app from Telegram.');
+      console.error('User ID not found - Telegram WebApp may not be initialized');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
       const request: FeedbackSubmissionRequest = {
-        message_type: 'other', // Default type since user doesn't select
+        message_type: 'feedback', // Default to 'feedback' since user doesn't select type
         message_content: trimmedContent,
         user_context: buildUserContext(i18n.language),
       };
@@ -95,12 +103,63 @@ export function FeedbackForm() {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 5000); // Auto-dismiss after 5 seconds
 
-    } catch (err) {
-      setError(t('feedback.error'));
+    } catch (err: any) {
+      // More specific error messages based on the error type
+      if (err?.response?.status === 401) {
+        setError('Authentication required. Please make sure you opened this app from Telegram.');
+      } else if (err?.response?.data?.detail) {
+        setError(`Failed to send: ${err.response.data.detail}`);
+      } else if (err?.message) {
+        setError(`Failed to send: ${err.message}`);
+      } else {
+        setError(t('feedback.error'));
+      }
       console.error('Failed to submit feedback:', err);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper function to get user ID from various sources
+  const getUserId = (): string | null => {
+    // Try Telegram WebApp first
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+      return window.Telegram.WebApp.initDataUnsafe.user.id.toString();
+    }
+
+    // Try URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    let userId = urlParams.get('user_id') ||
+                urlParams.get('tg_user_id') ||
+                urlParams.get('user') ||
+                urlParams.get('id');
+
+    if (userId) return userId;
+
+    // Try hash parameters
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      userId = hashParams.get('user_id') ||
+              hashParams.get('tg_user_id') ||
+              hashParams.get('user') ||
+              hashParams.get('id');
+      if (userId) return userId;
+    }
+
+    // Try localStorage
+    try {
+      const storedUser = localStorage.getItem('telegram_user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        if (userData.id) {
+          return userData.id.toString();
+        }
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+
+    return null;
   };
 
   const isFormValid = messageContent.trim().length > 0 && messageContent.length <= MAX_MESSAGE_LENGTH;
