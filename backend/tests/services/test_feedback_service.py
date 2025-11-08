@@ -26,14 +26,39 @@ class TestFeedbackServiceSubmission:
     def mock_supabase(self):
         """Create a mock Supabase client."""
         mock_sb = Mock()
-        mock_table = Mock()
+
+        # Mock for feedback_submissions table (insert)
+        mock_feedback_table = Mock()
         mock_insert = Mock()
         mock_execute = Mock()
 
         mock_execute.execute.return_value = Mock(data=[])
         mock_insert.return_value = mock_execute
-        mock_table.insert = mock_insert
-        mock_sb.table.return_value = mock_table
+        mock_feedback_table.insert = mock_insert
+
+        # Mock for users table (select)
+        mock_users_table = Mock()
+        mock_select = Mock()
+        mock_eq = Mock()
+        mock_users_execute = Mock()
+
+        # Default: return user with handle
+        mock_users_execute.execute.return_value = Mock(
+            data=[{"handle": "testuser", "telegram_id": 123456789}]
+        )
+        mock_eq.return_value = mock_users_execute
+        mock_select.eq = mock_eq
+        mock_users_table.select = Mock(return_value=mock_select)
+
+        # Configure table() to return appropriate mock based on table name
+        def table_side_effect(table_name):
+            if table_name == "feedback_submissions":
+                return mock_feedback_table
+            elif table_name == "users":
+                return mock_users_table
+            return Mock()
+
+        mock_sb.table = Mock(side_effect=table_side_effect)
 
         return mock_sb
 
@@ -103,9 +128,20 @@ class TestFeedbackServiceSubmission:
 
         await feedback_service.submit_feedback(user_id, request)
 
-        # Verify database insert was called
-        mock_supabase.table.assert_called_with("feedback_submissions")
-        insert_call = mock_supabase.table.return_value.insert.call_args
+        # Verify database insert was called (should be called with feedback_submissions)
+        mock_supabase.table.assert_any_call("feedback_submissions")
+
+        # Get the feedback_submissions table mock and check the insert call
+        feedback_table_calls = [
+            call
+            for call in mock_supabase.table.call_args_list
+            if call[0][0] == "feedback_submissions"
+        ]
+        assert len(feedback_table_calls) > 0
+
+        # Get the insert call by checking the side_effect result
+        feedback_table_mock = mock_supabase.table("feedback_submissions")
+        insert_call = feedback_table_mock.insert.call_args
 
         # Validate inserted data
         assert insert_call is not None
@@ -154,8 +190,12 @@ class TestFeedbackServiceSubmission:
 
         assert call_args[1]["chat_id"] == 123456
         assert "New Feedback Received" in call_args[1]["message"]
-        assert "SUPPORT" in call_args[1]["message"]
+        assert "@testuser" in call_args[1]["message"]  # User handle should be in message
         assert "I need help with my account" in call_args[1]["message"]
+        # Type, Context, and Status fields should NOT be in message
+        assert "Type:" not in call_args[1]["message"]
+        assert "Context:" not in call_args[1]["message"]
+        assert "Status:" not in call_args[1]["message"]
 
     @pytest.mark.anyio
     async def test_submit_feedback_handles_all_message_types(self, feedback_service):
@@ -215,7 +255,7 @@ class TestFeedbackServiceSubmission:
         assert response.status == FeedbackStatus.new
 
         # Verify database insert was still called
-        mock_supabase.table.assert_called_with("feedback_submissions")
+        mock_supabase.table.assert_any_call("feedback_submissions")
 
     @pytest.mark.anyio
     async def test_submit_feedback_with_notifications_disabled(self, mock_supabase, mock_bot):
@@ -335,3 +375,119 @@ class TestFeedbackServiceRetrieval:
         result = await feedback_service.get_feedback(feedback_id)
 
         assert result is None
+
+    @pytest.mark.anyio
+    async def test_user_display_with_handle(self, feedback_service, mock_supabase):
+        """Test that user display shows handle when available."""
+        user_id = str(uuid.uuid4())
+
+        # Mock Supabase to return user with handle
+        mock_users_table = Mock()
+        mock_select = Mock()
+        mock_eq = Mock()
+        mock_execute = Mock()
+        mock_execute.execute.return_value = Mock(
+            data=[{"handle": "john_doe", "telegram_id": 123456789}]
+        )
+        mock_eq.return_value = mock_execute
+        mock_select.eq = mock_eq
+        mock_users_table.select = Mock(return_value=mock_select)
+
+        # Update table mock for this test
+        def table_side_effect(table_name):
+            if table_name == "users":
+                return mock_users_table
+            return mock_supabase.table(table_name)
+
+        mock_supabase.table = Mock(side_effect=table_side_effect)
+
+        # Test the user display method
+        user_display = await feedback_service._get_user_display(user_id)
+
+        assert user_display == "@john\\_doe"  # Handle with escaped underscore
+
+    @pytest.mark.anyio
+    async def test_user_display_without_handle(self, feedback_service, mock_supabase):
+        """Test that user display shows telegram_id when handle is not available."""
+        user_id = str(uuid.uuid4())
+
+        # Mock Supabase to return user without handle
+        mock_users_table = Mock()
+        mock_select = Mock()
+        mock_eq = Mock()
+        mock_execute = Mock()
+        mock_execute.execute.return_value = Mock(data=[{"handle": None, "telegram_id": 987654321}])
+        mock_eq.return_value = mock_execute
+        mock_select.eq = mock_eq
+        mock_users_table.select = Mock(return_value=mock_select)
+
+        # Update table mock for this test
+        def table_side_effect(table_name):
+            if table_name == "users":
+                return mock_users_table
+            return mock_supabase.table(table_name)
+
+        mock_supabase.table = Mock(side_effect=table_side_effect)
+
+        # Test the user display method
+        user_display = await feedback_service._get_user_display(user_id)
+
+        assert user_display == "987654321"  # Just the telegram_id
+
+    @pytest.mark.anyio
+    async def test_user_display_user_not_found(self, feedback_service, mock_supabase):
+        """Test that user display falls back to user_id when user not found."""
+        user_id = str(uuid.uuid4())
+
+        # Mock Supabase to return empty data
+        mock_users_table = Mock()
+        mock_select = Mock()
+        mock_eq = Mock()
+        mock_execute = Mock()
+        mock_execute.execute.return_value = Mock(data=[])
+        mock_eq.return_value = mock_execute
+        mock_select.eq = mock_eq
+        mock_users_table.select = Mock(return_value=mock_select)
+
+        # Update table mock for this test
+        def table_side_effect(table_name):
+            if table_name == "users":
+                return mock_users_table
+            return mock_supabase.table(table_name)
+
+        mock_supabase.table = Mock(side_effect=table_side_effect)
+
+        # Test the user display method
+        user_display = await feedback_service._get_user_display(user_id)
+
+        assert user_display == f"User \\#{user_id[:8]}"  # Fallback to user_id
+
+    @pytest.mark.anyio
+    async def test_user_display_handles_special_characters(self, feedback_service, mock_supabase):
+        """Test that user display properly escapes markdown special characters."""
+        user_id = str(uuid.uuid4())
+
+        # Mock Supabase to return user with special characters in handle
+        mock_users_table = Mock()
+        mock_select = Mock()
+        mock_eq = Mock()
+        mock_execute = Mock()
+        mock_execute.execute.return_value = Mock(
+            data=[{"handle": "test_user*bold*", "telegram_id": 123456789}]
+        )
+        mock_eq.return_value = mock_execute
+        mock_select.eq = mock_eq
+        mock_users_table.select = Mock(return_value=mock_select)
+
+        # Update table mock for this test
+        def table_side_effect(table_name):
+            if table_name == "users":
+                return mock_users_table
+            return mock_supabase.table(table_name)
+
+        mock_supabase.table = Mock(side_effect=table_side_effect)
+
+        # Test the user display method
+        user_display = await feedback_service._get_user_display(user_id)
+
+        assert user_display == "@test\\_user\\*bold\\*"  # Escaped markdown characters

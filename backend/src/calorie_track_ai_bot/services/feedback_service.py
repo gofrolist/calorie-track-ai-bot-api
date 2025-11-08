@@ -122,7 +122,7 @@ class FeedbackService:
 
         Args:
             feedback_id: Feedback submission UUID
-            user_id: Hashed user identifier
+            user_id: User UUID from users table
             message_type: Type of feedback
             message_content: User's message
             user_context: Optional user environment context
@@ -135,28 +135,18 @@ class FeedbackService:
         try:
             chat_id = int(self.admin_chat_id)
 
+            # Get user details from database
+            user_display = await self._get_user_display(user_id)
+
             # Format notification message
-            type_emoji = {
-                FeedbackMessageType.feedback: "💬",
-                FeedbackMessageType.bug: "🐛",
-                FeedbackMessageType.question: "❓",
-                FeedbackMessageType.support: "🆘",
-            }
-
-            emoji = type_emoji.get(message_type, "📬")
-
             message = f"""🔔 *New Feedback Received*
 
-{emoji} *Type:* {message_type.value.upper()}
-👤 *From:* User \\#{user_id[:8]}
+👤 *From:* {user_display}
 🕒 *Time:* {created_at.strftime("%Y-%m-%d %H:%M:%S UTC")}
 
 *Message:*
 {message_content}
 
-*Context:* {user_context if user_context else "N/A"}
-
-*Status:* NEW
 *ID:* `{feedback_id}`
 """
 
@@ -183,6 +173,48 @@ class FeedbackService:
                 extra={"feedback_id": str(feedback_id), "error": str(e)},
                 exc_info=True,
             )
+
+    async def _get_user_display(self, user_id: str) -> str:
+        """Get user display name from database.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            User handle (if exists) or telegram_id, formatted with proper escaping
+        """
+        try:
+            result = (
+                self.supabase.table("users")
+                .select("handle, telegram_id")
+                .eq("id", user_id)
+                .execute()
+            )
+
+            if result.data and len(result.data) > 0:
+                user_data = result.data[0]
+                handle = user_data.get("handle")
+                telegram_id = user_data.get("telegram_id")
+
+                if handle:
+                    # Escape markdown special characters in handle
+                    escaped_handle = (
+                        handle.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
+                    )
+                    return f"@{escaped_handle}"
+                elif telegram_id:
+                    return str(telegram_id)
+
+            # Fallback to user_id if user not found
+            return f"User \\#{user_id[:8]}"
+
+        except Exception as e:
+            logger.error(
+                f"Failed to get user display for {user_id}: {e}",
+                extra={"user_id": user_id, "error": str(e)},
+            )
+            # Fallback to user_id on error
+            return f"User \\#{user_id[:8]}"
 
     async def get_feedback(self, feedback_id: UUID) -> FeedbackSubmission | None:
         """Retrieve feedback submission by ID (admin only).
