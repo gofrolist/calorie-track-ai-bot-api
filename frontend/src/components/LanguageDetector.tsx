@@ -245,7 +245,7 @@ export const LanguageDetector: React.FC<LanguageDetectorProps> = ({
       if (debugMode) {
         console.log('LanguageDetector: Accessibility announcement made', languageName);
       }
-    } catch (error) {
+    } catch {
       reportError({
         type: 'detection_error',
         message: 'Failed to announce language change for accessibility',
@@ -325,7 +325,7 @@ export const LanguageDetector: React.FC<LanguageDetectorProps> = ({
           supportedLanguages
         });
       }
-    } catch (error) {
+    } catch {
       reportError({
         type: 'detection_error',
         message: 'Failed to detect browser languages',
@@ -417,7 +417,7 @@ export const LanguageDetector: React.FC<LanguageDetectorProps> = ({
       }
 
       return {};
-    } catch (error) {
+    } catch {
       reportError({
         type: 'detection_error',
         message: 'Failed to detect Telegram language',
@@ -429,7 +429,7 @@ export const LanguageDetector: React.FC<LanguageDetectorProps> = ({
       });
       return {};
     }
-  }, [validateLanguageCode, isLanguageSupported, debugMode, reportError]);
+  }, [validateLanguageCode, isLanguageSupported, debugMode, reportError, supportedLanguages]);
 
   /**
    * Enhanced language detection with confidence scoring
@@ -555,7 +555,7 @@ export const LanguageDetector: React.FC<LanguageDetectorProps> = ({
         if (onLanguageChange) {
           onLanguageChange(languageData);
         }
-      } catch (error) {
+      } catch {
         reportError({
           type: 'detection_error',
           message: 'Failed to handle language change',
@@ -613,7 +613,7 @@ export const LanguageDetector: React.FC<LanguageDetectorProps> = ({
         if (mountedRef.current) {
           setIsInitialized(true);
         }
-      } catch (error) {
+      } catch {
         reportError({
           type: 'detection_error',
           message: 'Failed to initialize language detection',
@@ -630,11 +630,13 @@ export const LanguageDetector: React.FC<LanguageDetectorProps> = ({
     };
 
     initializeLanguageDetection();
-  }, [enableAutoDetection]);
+  }, [enableAutoDetection, applyLanguage, debugMode, handleLanguageChange, isLanguageSupported, onLanguageChange, reportError, secureStorageGet]);
 
   /**
    * Enhanced public method to manually set language
+   * Note: This method is available but not currently used externally
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const setLanguage = useCallback((language: string) => {
     if (!mountedRef.current) return;
 

@@ -332,7 +332,7 @@ export const useConnectivity = (options: { autoStart?: boolean } = {}) => {
 
   React.useEffect(() => {
     // Subscribe to connectivity changes
-    const unsubscribe = connectivityService.addListener((event) => {
+    const unsubscribe = connectivityService.addListener(() => {
       setConnectivityState(connectivityService.getState());
     });
 

@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
 // Types based on data-model.md
@@ -269,7 +269,7 @@ api.interceptors.request.use((config) => {
         const userData = JSON.parse(storedUser);
         userId = userData.id?.toString();
       }
-    } catch (e) {
+    } catch {
       // Ignore parsing errors
     }
   }

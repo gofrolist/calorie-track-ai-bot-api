@@ -126,7 +126,7 @@ export function calculateDateRange(preset: DateRangePreset): { start_date: strin
   const endDate = new Date(today);
   endDate.setDate(endDate.getDate() + 1); // End date exclusive (tomorrow)
 
-  let startDate = new Date(today);
+  const startDate = new Date(today);
 
   switch (preset) {
     case '7days':

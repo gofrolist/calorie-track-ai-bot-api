@@ -1,6 +1,5 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { TelegramWebAppContext } from '../app';
 
 interface ShareProps {
   shareData?: {
@@ -19,7 +18,6 @@ export const Share: React.FC<ShareProps> = ({
   style = {}
 }) => {
   const { t } = useTranslation();
-  const telegramContext = useContext(TelegramWebAppContext);
 
   const handleShare = () => {
     try {

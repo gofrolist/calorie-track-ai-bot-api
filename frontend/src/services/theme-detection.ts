@@ -99,7 +99,7 @@ export class ThemeDetectionService {
         this.currentSource = data.theme_source || 'telegram';
         return { theme: data.theme, source: this.currentSource };
       }
-    } catch (error) {
+    } catch {
       console.log('Failed to detect theme from API, falling back to local detection');
     }
 

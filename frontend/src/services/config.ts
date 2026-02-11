@@ -14,7 +14,7 @@ import {
 } from './config-minimal';
 
 // Simple legacy compatibility wrappers
-export const getConfiguration = async (userId: string): Promise<UIConfiguration> => {
+export const getConfiguration = async (_userId: string): Promise<UIConfiguration> => {
   return configurationService.getUIConfiguration();
 };
 
@@ -47,15 +47,15 @@ export const clearCacheEntry = (key: string): void => {
 };
 
 // Simple utilities
-export const isFeatureEnabled = (featureName: string): boolean => {
+export const isFeatureEnabled = (_featureName: string): boolean => {
   return config.features?.enableDebugLogging || false;
 };
 
-export const getFeatureValue = (featureName: string): any => {
+export const getFeatureValue = (_featureName: string): any => {
   return false;
 };
 
-export const getSafeAreaValue = (side: string): number => {
+export const getSafeAreaValue = (_side: string): number => {
   return 0;
 };
 

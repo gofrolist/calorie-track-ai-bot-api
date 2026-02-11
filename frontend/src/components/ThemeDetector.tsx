@@ -127,9 +127,9 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
     }
 
     if (debugMode) {
-      console.error('ThemeDetector: Error occurred', error);
+      console.error('ThemeDetector: Error occurred');
     }
-  }, [enableAnalytics, debugMode]);
+  }, [enableAnalytics, debugMode, onError]);
 
   /**
    * Enhanced localStorage operations with error reporting
@@ -208,7 +208,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
       if (debugMode) {
         console.log('ThemeDetector: Accessibility announcement made', themeName);
       }
-    } catch (error) {
+    } catch {
       reportError({
         type: 'detection_error',
         message: 'Failed to announce theme change for accessibility',
@@ -239,7 +239,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
           return { prefersDark: false, confidence: 'medium' };
         }
       }
-    } catch (error) {
+    } catch {
       reportError({
         type: 'detection_error',
         message: 'Failed to detect system theme',
@@ -296,7 +296,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
       }
 
       return {};
-    } catch (error) {
+    } catch {
       reportError({
         type: 'detection_error',
         message: 'Failed to detect Telegram theme',
@@ -341,7 +341,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
           }
         };
       }
-    } catch (error) {
+    } catch {
       reportError({
         type: 'detection_error',
         message: 'Failed to set up Telegram theme listener',
@@ -354,7 +354,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
     }
 
     return null;
-  }, [enableTelegramListener, debugMode, reportError]);
+  }, [enableTelegramListener, debugMode, reportError, handleThemeChange]);
 
   /**
    * Enhanced theme detection with confidence scoring
@@ -492,7 +492,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
         if (onThemeChangeRef.current) {
           onThemeChangeRef.current(themeData);
         }
-      } catch (error) {
+      } catch {
         reportError({
           type: 'detection_error',
           message: 'Failed to handle theme change',
@@ -500,7 +500,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
         });
       }
     }, debounceMs);
-  }, [performThemeDetection, applyTheme, onThemeChange, debounceMs, reportError]);
+  }, [performThemeDetection, applyTheme, debounceMs, reportError]);
 
 
   /**
@@ -561,7 +561,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
         if (mountedRef.current) {
           setIsInitialized(true);
         }
-      } catch (error) {
+      } catch {
         reportError({
           type: 'detection_error',
           message: 'Failed to initialize theme detection',
@@ -578,7 +578,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
     };
 
     initializeThemeDetection();
-  }, []);
+  }, [applyTheme, debugMode, enableAutoDetection, handleThemeChange, reportError, secureStorageGet, setupTelegramListener]);
 
   /**
    * Enhanced system theme change listener with debouncing
@@ -624,7 +624,7 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
             }
           };
         }
-      } catch (error) {
+      } catch {
         reportError({
           type: 'detection_error',
           message: 'Failed to set up system theme listener',

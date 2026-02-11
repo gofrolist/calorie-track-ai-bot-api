@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
 // CSS animations as inline styles
 const spinKeyframes = `
@@ -31,7 +30,6 @@ export const Loading: React.FC<LoadingProps> = ({
   className = '',
   style = {}
 }) => {
-  const { t } = useTranslation();
 
   const sizeStyles = {
     small: { width: '16px', height: '16px', borderWidth: '2px' },

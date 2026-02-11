@@ -155,7 +155,7 @@ export function FeedbackForm() {
           return userData.id.toString();
         }
       }
-    } catch (e) {
+    } catch {
       // Ignore parsing errors
     }
 

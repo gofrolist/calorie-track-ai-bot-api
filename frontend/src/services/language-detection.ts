@@ -1,5 +1,5 @@
 import React from 'react';
-import { configurationService as configService, LanguageDetectionResponse } from './config';
+import { configurationService as configService } from './config';
 
 export type LanguageSource = 'telegram' | 'browser' | 'manual' | 'fallback';
 
@@ -370,7 +370,7 @@ export const useLanguageDetection = () => {
     languageDetectionService.initialize();
 
     // Subscribe to language changes
-    const unsubscribe = languageDetectionService.addListener((event) => {
+    const unsubscribe = languageDetectionService.addListener(() => {
       setLanguageState(languageDetectionService.getLanguageState());
     });
 

@@ -252,7 +252,7 @@ const SafeAreaWrapper: React.FC<SafeAreaWrapperProps> = ({
     isInTelegram,
     deviceHasSafeAreas,
     isDetecting,
-    telegramContext?.theme
+    telegramContext
   ]);
 
   /**
@@ -323,8 +323,6 @@ export const useSafeArea = (): {
   isDetecting: boolean;
   refresh: () => Promise<void>;
 } => {
-  const telegramContext = useContext(TelegramWebAppContext) as TelegramWebAppContextType;
-
   const detectionResult = useSafeAreaDetection({
     enableAutoDetection: true,
     debugMode: false

@@ -6,7 +6,7 @@
  * Implements UI/UX best practices for mobile-first design
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   LineChart,
@@ -46,12 +46,7 @@ export function StatsCharts({ className }: StatsChartsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load statistics data
-  useEffect(() => {
-    loadStatistics();
-  }, [selectedRange]);
-
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -72,7 +67,12 @@ export function StatsCharts({ className }: StatsChartsProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedRange, t]);
+
+  // Load statistics data
+  useEffect(() => {
+    loadStatistics();
+  }, [loadStatistics]);
 
   const handleRangeChange = (range: DateRangePreset) => {
     setSelectedRange(range);

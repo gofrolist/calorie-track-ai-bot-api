@@ -129,7 +129,7 @@ const App: React.FC = () => {
   });
 
   // Theme switching function
-  const handleSetTheme = async (newTheme: 'light' | 'dark' | 'auto') => {
+  const handleSetTheme = useCallback(async (newTheme: 'light' | 'dark' | 'auto') => {
     try {
       await loggingApi.logInfo('Theme change requested', {
         newTheme,
@@ -166,10 +166,10 @@ const App: React.FC = () => {
         requestedTheme: newTheme
       });
     }
-  };
+  }, [telegramContext.theme]);
 
   // Language switching function
-  const handleSetLanguage = async (newLanguage: string) => {
+  const handleSetLanguage = useCallback(async (newLanguage: string) => {
     try {
       // Validate language is supported
       if (!config.ui.supportedLanguages.includes(newLanguage as 'en' | 'ru')) {
@@ -211,7 +211,7 @@ const App: React.FC = () => {
         requestedLanguage: newLanguage
       });
     }
-  };
+  }, [telegramContext.language]);
 
   // Apply theme to document
   const applyThemeToDocument = (theme: 'light' | 'dark' | 'auto') => {
@@ -424,7 +424,7 @@ const App: React.FC = () => {
     };
 
     initializeApp();
-  }, []);
+  }, [handleSetLanguage, handleSetTheme]);
 
   return (
     <TelegramWebAppContext.Provider value={telegramContext}>

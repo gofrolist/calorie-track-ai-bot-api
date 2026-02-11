@@ -10,7 +10,6 @@ import {
   SafeAreaValues,
   calculateSafeAreaValues,
   createDebouncedSafeAreaDetection,
-  detectSafeAreaSupport,
   deviceLikelyHasSafeAreas,
   getFallbackSafeAreaValues,
   testCssEnvSupport,

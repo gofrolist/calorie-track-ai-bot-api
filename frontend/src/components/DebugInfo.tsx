@@ -28,7 +28,7 @@ const DebugInfo: React.FC = () => {
         try {
           const info = JSON.parse(stored);
           setDebugInfo(info);
-        } catch (_e) {
+        } catch {
           // Ignore parsing errors
         }
       }
