@@ -294,7 +294,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
 
   describe('Theme State Management', () => {
     it('should maintain consistent state across operations', async () => {
-      themeDetectionService.initialize();
+      await themeDetectionService.detectAndUpdateTheme();
 
       const initialState = themeDetectionService.getThemeState();
       expect(initialState).toMatchObject({
