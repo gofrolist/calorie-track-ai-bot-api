@@ -36,7 +36,7 @@ setup-frontend: ## Setup frontend dependencies
 dev: ## Start both backend and frontend in development mode
 	@echo "Starting development servers..."
 	@echo "Backend: http://localhost:8000"
-	@echo "Frontend: http://localhost:5173"
+	@echo "Frontend: http://localhost:3000"
 	@echo "Press Ctrl+C to stop both servers"
 	@$(MAKE) -j2 dev-backend dev-frontend
 
@@ -46,7 +46,7 @@ dev-hybrid: ## Start backend services in Docker, frontend locally (best for fron
 	@echo "Backend services (Redis, MinIO, Backend, Worker) in Docker"
 	@echo "Frontend running locally for better IDE integration"
 	@echo "Backend: http://localhost:8000"
-	@echo "Frontend: http://localhost:5173"
+	@echo "Frontend: http://localhost:3000"
 	@echo "Supabase API: http://localhost:54321"
 	@echo ""
 	@echo "Starting Supabase database..."
@@ -276,7 +276,7 @@ quick-start: check-deps install-deps ## Quick start for new developers
 	@echo "1. Create backend/.env with your service credentials"
 	@echo "2. Run 'make dev' to start development servers"
 	@echo "3. Visit http://localhost:8000/docs for API docs"
-	@echo "4. Visit http://localhost:5173 for the frontend"
+	@echo "4. Visit http://localhost:3000 for the frontend"
 
 .PHONY: restart
 restart: ## Restart development servers

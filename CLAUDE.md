@@ -15,7 +15,7 @@ Deployed: frontend on Vercel, backend on Fly.io.
 
 ### Root-level (orchestrates both)
 ```bash
-make dev              # Start both backend (port 8000) and frontend (port 5173)
+make dev              # Start both backend (port 8000) and frontend (port 3000)
 make test             # Run all tests (backend + frontend)
 make lint             # Lint both
 make docker-dev       # Full stack via Docker Compose (requires supabase start first)
@@ -90,7 +90,7 @@ supabase db reset     # Reset local database
 
 **Key components:** `ThemeDetector`, `LanguageDetector`, `SafeAreaWrapper` handle Telegram environment integration (theme, locale, device safe areas).
 
-**Services:** `src/services/api.ts` — Axios instance with Telegram headers (`x-user-id`, `x-telegram-color-scheme`, `x-telegram-language-code`).
+**Services:** `src/services/api.ts` — Axios instance with request interceptors that attach `X-Correlation-ID` (UUID per session), `x-user-id` (Telegram user ID), and `Authorization: Bearer` token if session exists.
 
 **i18n:** EN and RU translations in `src/i18n/`. Validate key parity with `npm run i18n:validate`.
 
