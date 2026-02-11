@@ -8,7 +8,7 @@
  * @module LanguageDetectionContractTests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { languageDetectionService } from '../../src/services/language-detection';
@@ -34,52 +34,54 @@ const mockNavigator = {
   languages: ['en-US', 'en', 'ru']
 };
 
-// Mock server setup
-const server = setupServer();
+// Default handlers
+const defaultHandlers = [
+  http.get('http://localhost:8000/api/v1/config/language', () => {
+    return HttpResponse.json({
+      language: 'en',
+      language_source: 'browser',
+      telegram_language: 'en',
+      browser_language: 'en',
+      supported_languages: ['en', 'ru'],
+      detected_at: '2023-01-01T00:00:00Z'
+    });
+  }),
+  http.put('http://localhost:8000/api/v1/config/ui', async ({ request }) => {
+    const body = await request.json();
+    return HttpResponse.json({
+      id: 'test-config',
+      language: body.language,
+      language_source: body.language_source,
+      updated_at: new Date().toISOString()
+    });
+  })
+];
 
-// Global mocks
-Object.defineProperty(window, 'Telegram', {
-  value: { WebApp: mockTelegramWebApp },
-  writable: true
-});
-
-Object.defineProperty(window, 'navigator', {
-  value: mockNavigator,
-  writable: true
-});
-
-// Mock global navigator for tests that need it
-Object.defineProperty(global, 'navigator', {
-  value: mockNavigator,
-  writable: true,
-  configurable: true
-});
+// Mock server setup - configure handlers upfront
+const server = setupServer(...defaultHandlers);
 
 describe('Frontend Contract Tests - Language Detection', () => {
   beforeAll(() => {
-    // Set up default handlers for all tests
-    server.use(
-      http.get('http://localhost:8000/api/v1/config/language', () => {
-        return HttpResponse.json({
-          language: 'en',
-          language_source: 'browser',
-          telegram_language: 'en',
-          browser_language: 'en',
-          supported_languages: ['en', 'ru'],
-          detected_at: '2023-01-01T00:00:00Z'
-        });
-      }),
-      http.put('http://localhost:8000/api/v1/config/ui', async ({ request }) => {
-        const body = await request.json();
-        return HttpResponse.json({
-          id: 'test-config',
-          language: body.language,
-          language_source: body.language_source,
-          updated_at: new Date().toISOString()
-        });
-      })
-    );
-    server.listen();
+    // Global mocks
+    Object.defineProperty(window, 'Telegram', {
+      value: { WebApp: mockTelegramWebApp },
+      writable: true,
+      configurable: true
+    });
+
+    Object.defineProperty(window, 'navigator', {
+      value: mockNavigator,
+      writable: true,
+      configurable: true
+    });
+
+    Object.defineProperty(global, 'navigator', {
+      value: mockNavigator,
+      writable: true,
+      configurable: true
+    });
+
+    server.listen({ onUnhandledRequest: 'bypass' });
   });
 
   afterAll(() => {
@@ -88,13 +90,30 @@ describe('Frontend Contract Tests - Language Detection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    server.resetHandlers();
+
+    // Restore navigator mock
+    mockNavigator.language = 'en-US';
+    mockNavigator.languages = ['en-US', 'en', 'ru'];
+    Object.defineProperty(window, 'navigator', {
+      value: mockNavigator,
+      writable: true,
+      configurable: true
+    });
+
+    // Restore Telegram mock
+    mockTelegramWebApp.initDataUnsafe.user.language_code = 'en';
+    Object.defineProperty(window, 'Telegram', {
+      value: { WebApp: mockTelegramWebApp },
+      writable: true,
+      configurable: true
+    });
 
     // Reset language detection service state
     languageDetectionService.dispose();
   });
 
   afterEach(() => {
-    // Ensure service is properly reset after each test
     languageDetectionService.dispose();
   });
 
@@ -252,7 +271,7 @@ describe('Frontend Contract Tests - Language Detection', () => {
       expect(browserLanguage).toBeNull();
     });
 
-    it.skip('should extract primary language from locale', async () => {
+    it('should extract primary language from locale', async () => {
       const testCases = [
         { input: 'en-US', expected: 'en' },
         { input: 'ru-RU', expected: 'ru' },
@@ -261,15 +280,14 @@ describe('Frontend Contract Tests - Language Detection', () => {
       ];
 
       testCases.forEach(({ input, expected }) => {
-        // Mock navigator.language for this test
-        const originalLanguage = window.navigator.language;
-        window.navigator.language = input;
+        Object.defineProperty(window, 'navigator', {
+          value: { language: input, languages: [input] },
+          writable: true,
+          configurable: true
+        });
 
         const result = languageDetectionService.getBrowserLanguage();
         expect(result).toBe(expected);
-
-        // Restore original value
-        window.navigator.language = originalLanguage;
       });
     });
   });
@@ -424,24 +442,24 @@ describe('Frontend Contract Tests - Language Detection', () => {
   });
 
   describe('Language Change Detection', () => {
-    it.skip('should respond to browser language changes', async () => {
+    it('should respond to browser language changes', async () => {
       const listener = vi.fn();
       languageDetectionService.addListener(listener);
 
       await languageDetectionService.initialize();
 
+      // Update navigator mock to simulate language change
+      Object.defineProperty(window, 'navigator', {
+        value: { language: 'ru-RU', languages: ['ru-RU', 'ru'] },
+        writable: true,
+        configurable: true
+      });
+
       // Simulate browser language change event
       const languageChangeEvent = new Event('languagechange');
-      const originalLanguage = window.navigator.language;
-      window.navigator.language = 'ru-RU';
-
       window.dispatchEvent(languageChangeEvent);
 
-      // Restore original value
-      window.navigator.language = originalLanguage;
-
-      // Note: The actual language change handling depends on the service implementation
-      // This test verifies the event listener setup
+      // The event listener setup should be in place
       expect(window.addEventListener).toBeDefined();
     });
   });

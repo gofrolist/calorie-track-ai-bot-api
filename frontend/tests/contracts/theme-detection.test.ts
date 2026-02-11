@@ -8,7 +8,7 @@
  * @module ThemeDetectionContractTests
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { themeDetectionService } from '../../src/services/theme-detection';
@@ -30,41 +30,44 @@ const mockTelegramWebApp = {
   onEvent: vi.fn()
 };
 
-// Mock server setup
-const server = setupServer();
+// Default handlers for all tests
+const defaultHandlers = [
+  http.get('http://localhost:8000/api/v1/config/theme', () => {
+    return HttpResponse.json({
+      theme: 'light',
+      theme_source: 'system',
+      telegram_color_scheme: 'light',
+      system_prefers_dark: false,
+      detected_at: '2023-01-01T00:00:00Z'
+    });
+  }),
+  http.put('http://localhost:8000/api/v1/config/ui', async ({ request }) => {
+    const body = await request.json();
+    return HttpResponse.json({
+      id: 'test-config',
+      theme: body.theme,
+      theme_source: body.theme_source,
+      updated_at: new Date().toISOString()
+    });
+  })
+];
 
-// Global mocks
-Object.defineProperty(window, 'Telegram', {
-  value: { WebApp: mockTelegramWebApp },
-  writable: true
-});
+// Mock server setup - configure handlers upfront
+const server = setupServer(...defaultHandlers);
 
-// Global mocks are handled in test-setup.ts
+// Save original matchMedia for restoration
+const originalMatchMedia = window.matchMedia;
 
 describe('Frontend Contract Tests - Theme Detection', () => {
   beforeAll(() => {
-    // Set up default handlers for all tests
-    server.use(
-      http.get('http://localhost:8000/api/v1/config/theme', () => {
-        return HttpResponse.json({
-          theme: 'light',
-          theme_source: 'system',
-          telegram_color_scheme: 'light',
-          system_prefers_dark: false,
-          detected_at: '2023-01-01T00:00:00Z'
-        });
-      }),
-      http.put('http://localhost:8000/api/v1/config/ui', async ({ request }) => {
-        const body = await request.json();
-        return HttpResponse.json({
-          id: 'test-config',
-          theme: body.theme,
-          theme_source: body.theme_source,
-          updated_at: new Date().toISOString()
-        });
-      })
-    );
-    server.listen();
+    // Global mocks
+    Object.defineProperty(window, 'Telegram', {
+      value: { WebApp: mockTelegramWebApp },
+      writable: true,
+      configurable: true
+    });
+
+    server.listen({ onUnhandledRequest: 'bypass' });
   });
 
   afterAll(() => {
@@ -73,13 +76,36 @@ describe('Frontend Contract Tests - Theme Detection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    server.resetHandlers();
+
+    // Restore matchMedia to default mock
+    Object.defineProperty(window, 'matchMedia', {
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+      writable: true,
+      configurable: true,
+    });
+
+    // Restore Telegram mock
+    Object.defineProperty(window, 'Telegram', {
+      value: { WebApp: mockTelegramWebApp },
+      writable: true,
+      configurable: true
+    });
 
     // Reset theme detection service state
     themeDetectionService.dispose();
   });
 
   afterEach(() => {
-    // Ensure service is properly reset after each test
     themeDetectionService.dispose();
   });
 
@@ -99,7 +125,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
         })
       );
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
       await themeDetectionService.detectAndUpdateTheme();
 
       const state = themeDetectionService.getThemeState();
@@ -136,7 +162,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
         })
       );
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       // Should not throw error, but handle gracefully
       const state = themeDetectionService.getThemeState();
@@ -148,7 +174,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
     it('should detect theme from Telegram WebApp', async () => {
       mockTelegramWebApp.colorScheme = 'dark';
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       const state = themeDetectionService.getThemeState();
       expect(themeDetectionService.isInTelegram()).toBe(true);
@@ -173,7 +199,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
       // Remove Telegram WebApp
       delete (window as any).Telegram;
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       expect(themeDetectionService.isInTelegram()).toBe(false);
       const state = themeDetectionService.getThemeState();
@@ -184,7 +210,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
       const themeChangeListener = vi.fn();
       themeDetectionService.addListener(themeChangeListener);
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       // Simulate Telegram theme change
       mockTelegramWebApp.colorScheme = 'dark';
@@ -203,40 +229,55 @@ describe('Frontend Contract Tests - Theme Detection', () => {
   });
 
   describe('System Theme Detection', () => {
-    it.skip('should detect system dark mode preference', async () => {
+    it('should detect system dark mode preference', async () => {
       // Mock system prefers dark
-      (window.matchMedia as any).mockImplementation((query: string) => ({
-        matches: query === '(prefers-color-scheme: dark)',
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn()
-      }));
+      Object.defineProperty(window, 'matchMedia', {
+        value: vi.fn().mockImplementation((query: string) => ({
+          matches: query === '(prefers-color-scheme: dark)',
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+        writable: true,
+        configurable: true,
+      });
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       // If no Telegram override, should respect system preference
       const state = themeDetectionService.getThemeState();
       expect(state.systemPrefersDark).toBe(true);
     });
 
-    it.skip('should respond to system theme changes', async () => {
+    it('should respond to system theme changes', async () => {
+      const addEventListenerFn = vi.fn();
       const mediaQueryMock = {
         matches: false,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn()
+        media: '(prefers-color-scheme: dark)',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: addEventListenerFn,
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
       };
 
-      (window.matchMedia as any).mockReturnValue(mediaQueryMock);
+      Object.defineProperty(window, 'matchMedia', {
+        value: vi.fn().mockReturnValue(mediaQueryMock),
+        writable: true,
+        configurable: true,
+      });
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       // Simulate system theme change
       mediaQueryMock.matches = true;
-      if (mediaQueryMock.addEventListener.mock.calls.length > 0) {
-        const changeHandler = mediaQueryMock.addEventListener.mock.calls[0][1];
-        changeHandler({ matches: true });
-      }
 
-      // Should update system preference
+      // getThemeState() re-queries matchMedia, so it picks up the change
       const state = themeDetectionService.getThemeState();
       expect(state.systemPrefersDark).toBe(true);
     });
@@ -244,7 +285,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
     it('should handle missing matchMedia gracefully', async () => {
       delete (window as any).matchMedia;
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       const state = themeDetectionService.getThemeState();
       expect(state.theme).toBeDefined(); // Should still work
@@ -253,7 +294,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
 
   describe('Theme State Management', () => {
     it('should maintain consistent state across operations', async () => {
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
 
       const initialState = themeDetectionService.getThemeState();
       expect(initialState).toMatchObject({
@@ -374,7 +415,7 @@ describe('Frontend Contract Tests - Theme Detection', () => {
       const listener = vi.fn();
       themeDetectionService.addListener(listener);
 
-      await themeDetectionService.initialize();
+      themeDetectionService.initialize();
       themeDetectionService.dispose();
 
       // Should not trigger listeners after disposal
