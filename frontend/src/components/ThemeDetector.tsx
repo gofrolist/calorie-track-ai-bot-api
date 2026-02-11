@@ -311,52 +311,6 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
   }, [debugMode, reportError]);
 
   /**
-   * Set up Telegram theme change listener
-   */
-  const setupTelegramListener = useCallback(() => {
-    if (!enableTelegramListener || typeof window === 'undefined' || !window.Telegram?.WebApp?.onEvent) {
-      return null;
-    }
-
-    try {
-      const webApp = window.Telegram.WebApp;
-
-      const handleTelegramThemeChange = () => {
-        if (debugMode) {
-          console.log('ThemeDetector: Telegram theme change event received');
-        }
-
-        // Debounced theme change detection
-        handleThemeChange();
-      };
-
-      // Set up Telegram theme change listener
-      if (typeof webApp.onEvent === 'function') {
-        webApp.onEvent('themeChanged', handleTelegramThemeChange);
-
-        // Return cleanup function
-        return () => {
-          if (typeof webApp.offEvent === 'function') {
-            webApp.offEvent('themeChanged', handleTelegramThemeChange);
-          }
-        };
-      }
-    } catch {
-      reportError({
-        type: 'detection_error',
-        message: 'Failed to set up Telegram theme listener',
-        context: {
-          enableTelegramListener,
-          hasOnEvent: typeof window?.Telegram?.WebApp?.onEvent !== 'undefined',
-          hasOffEvent: typeof window?.Telegram?.WebApp?.offEvent !== 'undefined'
-        }
-      });
-    }
-
-    return null;
-  }, [enableTelegramListener, debugMode, reportError, handleThemeChange]);
-
-  /**
    * Enhanced theme detection with confidence scoring
    */
   const performThemeDetection = useCallback((): ThemeDetectionData => {
@@ -502,6 +456,51 @@ export const ThemeDetector: React.FC<ThemeDetectorProps> = ({
     }, debounceMs);
   }, [performThemeDetection, applyTheme, debounceMs, reportError]);
 
+  /**
+   * Set up Telegram theme change listener
+   */
+  const setupTelegramListener = useCallback(() => {
+    if (!enableTelegramListener || typeof window === 'undefined' || !window.Telegram?.WebApp?.onEvent) {
+      return null;
+    }
+
+    try {
+      const webApp = window.Telegram.WebApp;
+
+      const handleTelegramThemeChange = () => {
+        if (debugMode) {
+          console.log('ThemeDetector: Telegram theme change event received');
+        }
+
+        // Debounced theme change detection
+        handleThemeChange();
+      };
+
+      // Set up Telegram theme change listener
+      if (typeof webApp.onEvent === 'function') {
+        webApp.onEvent('themeChanged', handleTelegramThemeChange);
+
+        // Return cleanup function
+        return () => {
+          if (typeof webApp.offEvent === 'function') {
+            webApp.offEvent('themeChanged', handleTelegramThemeChange);
+          }
+        };
+      }
+    } catch {
+      reportError({
+        type: 'detection_error',
+        message: 'Failed to set up Telegram theme listener',
+        context: {
+          enableTelegramListener,
+          hasOnEvent: typeof window?.Telegram?.WebApp?.onEvent !== 'undefined',
+          hasOffEvent: typeof window?.Telegram?.WebApp?.offEvent !== 'undefined'
+        }
+      });
+    }
+
+    return null;
+  }, [enableTelegramListener, debugMode, reportError, handleThemeChange]);
 
   /**
    * Enhanced initialization with Telegram listener and stored preferences

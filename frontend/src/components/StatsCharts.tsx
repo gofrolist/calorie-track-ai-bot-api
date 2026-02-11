@@ -6,7 +6,7 @@
  * Implements UI/UX best practices for mobile-first design
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   LineChart,
@@ -364,11 +364,14 @@ export function StatsCharts({ className }: StatsChartsProps) {
                 padding: '12px',
                 color: 'var(--tg-text-color)',
               }}
-              formatter={(value: number, name: string) => [
-                `${Math.round(value)} ${name === 'calories' ? 'kcal' : ''}`,
-                name === 'calories' ? t('statistics.chart.calories') : name
-              ]}
-              labelFormatter={(label: string, payload: any) => {
+              formatter={(value: number | undefined, name: string | undefined) => {
+                if (value === undefined || name === undefined) return ['', ''];
+                return [
+                  `${Math.round(value)} ${name === 'calories' ? 'kcal' : ''}`,
+                  name === 'calories' ? t('statistics.chart.calories') : name
+                ];
+              }}
+              labelFormatter={(label: ReactNode, payload: any) => {
                 if (payload && payload.length > 0) {
                   return payload[0].payload.fullDate;
                 }
@@ -434,10 +437,13 @@ export function StatsCharts({ className }: StatsChartsProps) {
                     padding: '12px',
                     color: 'var(--tg-text-color)',
                   }}
-                  formatter={(value: number, name: string, props: any) => [
-                    `${value.toFixed(1)}% (${Math.round(props.payload.grams)}g)`,
-                    name
-                  ]}
+                  formatter={(value: number | undefined, name: string | undefined, props: any) => {
+                    if (value === undefined || name === undefined) return ['', ''];
+                    return [
+                      `${value.toFixed(1)}% (${Math.round(props.payload.grams)}g)`,
+                      name
+                    ];
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -513,7 +519,10 @@ export function StatsCharts({ className }: StatsChartsProps) {
                   padding: '12px',
                   color: 'var(--tg-text-color)',
                 }}
-                formatter={(value: number) => [`${Math.round(value)}%`, t('statistics.goalTracking')]}
+                formatter={(value: number | undefined) => {
+                  if (value === undefined) return ['', ''];
+                  return [`${Math.round(value)}%`, t('statistics.goalTracking')];
+                }}
               />
               <Bar
                 dataKey="achievement"
