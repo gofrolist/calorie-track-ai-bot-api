@@ -2,6 +2,8 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+from psycopg.types.json import Json
+
 from ..schemas import (
     InlineAnalyticsDaily,
     InlineChatType,
@@ -102,9 +104,9 @@ async def db_save_estimate(
         est.get("kcal_min"),
         est.get("kcal_max"),
         est.get("confidence"),
-        est.get("items"),
+        Json(est["items"]) if est.get("items") is not None else None,
         est.get("status", "done"),
-        est.get("macronutrients"),
+        Json(est["macronutrients"]) if est.get("macronutrients") is not None else None,
         est.get("photo_count"),
     ]
 
@@ -609,7 +611,7 @@ async def db_create_ui_configuration(user_id: str, config: UIConfiguration) -> d
         "theme_source": config.theme_source,
         "language": config.language,
         "language_source": config.language_source,
-        "features": config.features,
+        "features": Json(config.features) if config.features is not None else None,
         "created_at": config.created_at.isoformat(),
         "updated_at": config.updated_at.isoformat(),
     }
@@ -654,7 +656,7 @@ async def db_update_ui_configuration(
     if updates.language_source is not None:
         update_data["language_source"] = updates.language_source
     if updates.features is not None:
-        update_data["features"] = updates.features
+        update_data["features"] = Json(updates.features)
 
     update_data["updated_at"] = datetime.now(UTC).isoformat()
 
@@ -1105,6 +1107,12 @@ async def db_upsert_inline_analytics(daily: InlineAnalyticsDaily) -> InlineAnaly
 
     payload = _inline_payload(daily)
 
+    # Wrap jsonb columns with Json()
+    jsonb_keys = {"trigger_counts", "failure_reasons"}
+    adapted_values = [
+        Json(v) if k in jsonb_keys and v is not None else v for k, v in payload.items()
+    ]
+
     columns = ", ".join(payload.keys())
     placeholders = ", ".join(["%s"] * len(payload))
     update_set = ", ".join(f"{k} = EXCLUDED.{k}" for k in payload if k not in ("id",))
@@ -1114,7 +1122,7 @@ async def db_upsert_inline_analytics(daily: InlineAnalyticsDaily) -> InlineAnaly
             f"""INSERT INTO inline_analytics_daily ({columns}) VALUES ({placeholders})
                 ON CONFLICT (date, chat_type) DO UPDATE SET {update_set}
                 RETURNING *""",  # type: ignore[arg-type]
-            tuple(payload.values()),
+            tuple(adapted_values),
         )
         row = await cur.fetchone()
 

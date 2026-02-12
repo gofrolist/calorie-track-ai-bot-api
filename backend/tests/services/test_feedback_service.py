@@ -141,7 +141,10 @@ class TestFeedbackServiceSubmission:
         assert params[1] == user_id
         assert params[2] == "bug"
         assert params[3] == "Found a bug in the app"
-        assert params[4] == {"page": "/meals", "language": "en"}
+        from psycopg.types.json import Json
+
+        assert isinstance(params[4], Json)
+        assert params[4].obj == {"page": "/meals", "language": "en"}
         assert params[5] == "new"
 
     @pytest.mark.anyio

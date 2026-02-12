@@ -8,6 +8,8 @@ import os
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from psycopg.types.json import Json
+
 from ..schemas import (
     FeedbackMessageType,
     FeedbackStatus,
@@ -44,7 +46,9 @@ class FeedbackService:
             "user_id": user_id,
             "message_type": request.message_type.value,
             "message_content": request.message_content,
-            "user_context": request.user_context,
+            "user_context": Json(request.user_context)
+            if request.user_context is not None
+            else None,
             "status": FeedbackStatus.new.value,
             "admin_notes": None,
             "created_at": now.isoformat(),
