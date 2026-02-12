@@ -3,15 +3,13 @@
 import asyncio
 import os
 from collections.abc import Generator
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 # Set test environment variables at module level (before any imports)
 test_env_vars = {
-    "SUPABASE_URL": "https://test.supabase.co",
-    "SUPABASE_KEY": "test-supabase-key",
-    "SUPABASE_SERVICE_ROLE_KEY": "test-supabase-service-role-key",
+    "DATABASE_URL": "postgresql://test:test@localhost:5432/testdb",
     "OPENAI_API_KEY": "test-openai-key",
     "REDIS_URL": "redis://localhost:6379",
     "AWS_ENDPOINT_URL_S3": "https://test.tigris.com",
@@ -19,6 +17,7 @@ test_env_vars = {
     "AWS_SECRET_ACCESS_KEY": "test-secret-key",
     "BUCKET_NAME": "test-bucket",
     "AWS_REGION": "auto",
+    "APP_ENV": "dev",
 }
 
 # Set environment variables immediately
@@ -30,7 +29,7 @@ with (
     patch("boto3.Session") as mock_session,
     patch("redis.asyncio.from_url") as mock_redis,
     patch("openai.OpenAI") as mock_openai,
-    patch("supabase.create_client") as mock_supabase,
+    patch("psycopg_pool.AsyncConnectionPool") as mock_pool_cls,
 ):
     # Configure mocks
     mock_s3_client = Mock()
@@ -54,14 +53,8 @@ with (
     )
     mock_openai.return_value = mock_openai_instance
 
-    mock_supabase_instance = Mock()
-    mock_supabase_instance.table.return_value.insert.return_value.execute.return_value = Mock(
-        data=[]
-    )
-    mock_supabase_instance.table.return_value.select.return_value.eq.return_value.execute.return_value = Mock(
-        data=[]
-    )
-    mock_supabase.return_value = mock_supabase_instance
+    mock_pool_instance = AsyncMock()
+    mock_pool_cls.return_value = mock_pool_instance
 
 # Also mock the Redis client at the service level
 with patch("calorie_track_ai_bot.services.queue.r") as mock_queue_redis:
@@ -72,10 +65,8 @@ with patch("calorie_track_ai_bot.services.queue.r") as mock_queue_redis:
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_env():
     """Set up test environment variables."""
-    # Environment variables are already set at module level
     yield
 
-    # Clean up - remove test environment variables
     for key in test_env_vars.keys():
         if key in os.environ:
             del os.environ[key]
@@ -100,24 +91,69 @@ def anyio_backend():
 # =============================================================================
 
 
+def _make_mock_conn():
+    """Create a mock async connection with cursor support."""
+    mock_conn = AsyncMock()
+    mock_cursor = AsyncMock()
+    mock_cursor.fetchone = AsyncMock(return_value=None)
+    mock_cursor.fetchall = AsyncMock(return_value=[])
+    mock_conn.execute = AsyncMock(return_value=mock_cursor)
+    return mock_conn
+
+
+def _make_mock_pool():
+    """Create a mock async connection pool.
+
+    pool.connection() is synchronous in psycopg_pool (returns an async context manager),
+    so the pool itself must be a regular Mock, not AsyncMock.
+    """
+    mock_pool = Mock()
+    mock_conn = _make_mock_conn()
+
+    # Wire up: pool.connection() -> async context manager -> mock_conn
+    ctx = AsyncMock()
+    ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    ctx.__aexit__ = AsyncMock(return_value=False)
+    mock_pool.connection.return_value = ctx
+
+    return mock_pool, mock_conn
+
+
+@pytest.fixture
+def mock_db_pool():
+    """Mock database connection pool for testing."""
+    mock_pool, mock_conn = _make_mock_pool()
+
+    with patch(
+        "calorie_track_ai_bot.services.database.get_pool", new_callable=AsyncMock
+    ) as mock_get_pool:
+        mock_get_pool.return_value = mock_pool
+        # Also patch get_pool in db.py since it's imported there
+        with patch(
+            "calorie_track_ai_bot.services.db.get_pool", new_callable=AsyncMock
+        ) as mock_db_get_pool:
+            mock_db_get_pool.return_value = mock_pool
+            yield mock_pool, mock_conn
+
+
 @pytest.fixture
 def mock_supabase_client():
-    """Mock Supabase client for testing."""
-    with patch("calorie_track_ai_bot.services.db.sb") as mock_sb:
-        # Configure basic responses
-        mock_sb.table.return_value.select.return_value.eq.return_value.execute.return_value = Mock(
-            data=[]
-        )
-        mock_sb.table.return_value.insert.return_value.execute.return_value = Mock(
-            data=[{"id": "test-id"}]
-        )
-        mock_sb.table.return_value.update.return_value.eq.return_value.execute.return_value = Mock(
-            data=[{"id": "test-id"}]
-        )
-        mock_sb.table.return_value.delete.return_value.eq.return_value.execute.return_value = Mock(
-            data=[{"id": "test-id"}]
-        )
-        yield mock_sb
+    """Backward-compat alias: mock database pool for testing.
+
+    Returns the pool and connection mock as a tuple.
+    Tests that previously used mock_supabase_client should migrate to mock_db_pool.
+    """
+    mock_pool, mock_conn = _make_mock_pool()
+
+    with patch(
+        "calorie_track_ai_bot.services.database.get_pool", new_callable=AsyncMock
+    ) as mock_get_pool:
+        mock_get_pool.return_value = mock_pool
+        with patch(
+            "calorie_track_ai_bot.services.db.get_pool", new_callable=AsyncMock
+        ) as mock_db_get_pool:
+            mock_db_get_pool.return_value = mock_pool
+            yield mock_pool, mock_conn
 
 
 @pytest.fixture
@@ -335,21 +371,18 @@ def telegram_headers():
 @pytest.fixture
 def db_transaction():
     """Database transaction that rolls back after test."""
-    # This would typically use real database transactions in integration tests
-    # For now, we'll use mocks
     yield
-    # Rollback would happen here
 
 
 @pytest.fixture
-def populate_test_data(mock_supabase_client, test_user_data, test_photo_data, test_estimate_data):
+def populate_test_data(mock_db_pool, test_user_data, test_photo_data, test_estimate_data):
     """Populate database with test data."""
-    # Configure mock responses with test data
-    mock_supabase_client.table.return_value.select.return_value.eq.return_value.execute.return_value = Mock(
-        data=[test_user_data]
-    )
+    _mock_pool, mock_conn = mock_db_pool
+    mock_cursor = AsyncMock()
+    mock_cursor.fetchone = AsyncMock(return_value=test_user_data)
+    mock_cursor.fetchall = AsyncMock(return_value=[test_user_data])
+    mock_conn.execute = AsyncMock(return_value=mock_cursor)
     yield
-    # Cleanup would happen here
 
 
 # =============================================================================
@@ -362,7 +395,7 @@ def performance_monitor():
     """Performance monitor for testing."""
     from calorie_track_ai_bot.services.monitoring import PerformanceMonitor
 
-    monitor = PerformanceMonitor(collection_interval=1.0)  # Fast collection for tests
+    monitor = PerformanceMonitor(collection_interval=1.0)
     yield monitor
 
 
@@ -383,16 +416,17 @@ def benchmark_context():
 
 
 @pytest.fixture
-def simulate_database_error(mock_supabase_client):
+def simulate_database_error(mock_db_pool):
     """Simulate database errors."""
+    _mock_pool, mock_conn = mock_db_pool
 
     def _simulate_error(error_type: str = "connection_error"):
         if error_type == "connection_error":
-            mock_supabase_client.table.side_effect = ConnectionError("Database connection failed")
+            mock_conn.execute.side_effect = ConnectionError("Database connection failed")
         elif error_type == "timeout":
-            mock_supabase_client.table.side_effect = TimeoutError("Database timeout")
+            mock_conn.execute.side_effect = TimeoutError("Database timeout")
         else:
-            mock_supabase_client.table.side_effect = Exception(f"Database error: {error_type}")
+            mock_conn.execute.side_effect = Exception(f"Database error: {error_type}")
 
     return _simulate_error
 
@@ -494,5 +528,3 @@ def assert_valid_uuid(uuid_str: str):
 def cleanup_after_test():
     """Cleanup after each test."""
     yield
-    # Cleanup any global state, reset mocks, etc.
-    # This runs after each test automatically

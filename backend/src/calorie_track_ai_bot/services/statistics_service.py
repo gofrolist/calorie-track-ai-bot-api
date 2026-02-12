@@ -15,18 +15,11 @@ from ..schemas import (
     StatisticsSummary,
 )
 from .config import logger
-from .db import sb
+from .database import get_pool
 
 
 class StatisticsService:
     """Service for aggregating and computing nutrition statistics."""
-
-    def __init__(self):
-        if sb is None:
-            raise RuntimeError(
-                "Supabase configuration not available. Database functionality is disabled."
-            )
-        self.supabase = sb
 
     async def get_daily_statistics(
         self,
@@ -34,21 +27,7 @@ class StatisticsService:
         start_date: date,
         end_date: date,
     ) -> DailyStatisticsResponse:
-        """Get daily nutrition statistics for a date range.
-
-        Args:
-            user_id: User identifier
-            start_date: Start date (inclusive)
-            end_date: End date (exclusive)
-
-        Returns:
-            Daily statistics response with data points and summary
-
-        Raises:
-            ValueError: If date range invalid
-            Exception: If query fails
-        """
-        # Validate date range
+        """Get daily nutrition statistics for a date range."""
         if start_date >= end_date:
             raise ValueError("Start date must be before end date")
 
@@ -56,49 +35,35 @@ class StatisticsService:
             raise ValueError("Date range cannot exceed 365 days")
 
         try:
-            # Query meals grouped by date
-            # Note: RPC function would use this SQL query for better performance:
-            # SELECT DATE(created_at) as meal_date, SUM(estimated_calories) as total_calories,
-            # SUM(estimated_protein) as total_protein, SUM(estimated_fat) as total_fat,
-            # SUM(estimated_carbs) as total_carbs, COUNT(*) as meal_count
-            # FROM meals WHERE user_id = p_user_id AND created_at >= p_start_date
-            # AND created_at < p_end_date GROUP BY DATE(created_at) ORDER BY DATE(created_at) ASC
+            pool = await get_pool()
 
-            result = self.supabase.rpc(
-                "query_daily_statistics",
-                {
-                    "p_user_id": user_id,
-                    "p_start_date": start_date.isoformat(),
-                    "p_end_date": end_date.isoformat(),
-                },
-            ).execute()
-
-            # If RPC not available, use table query as fallback
-            if not result.data:
-                result = (
-                    self.supabase.table("meals")
-                    .select("created_at, kcal_total, protein_grams, fats_grams, carbs_grams")
-                    .eq("user_id", user_id)
-                    .gte("created_at", start_date.isoformat())
-                    .lt("created_at", end_date.isoformat())
-                    .execute()
+            async with pool.connection() as conn:
+                # Try RPC function first
+                cur = await conn.execute(
+                    "SELECT * FROM query_daily_statistics(%s, %s, %s)",
+                    (user_id, start_date.isoformat(), end_date.isoformat()),
                 )
+                daily_data = [dict(r) for r in await cur.fetchall()]
 
-                # Group data by date in Python
-                daily_data = self._group_by_date(result.data)
-            else:
-                daily_data = result.data
+                if not daily_data:
+                    # Fallback: query raw meals and group in Python
+                    cur = await conn.execute(
+                        """SELECT created_at, kcal_total, protein_grams, fats_grams, carbs_grams
+                           FROM meals
+                           WHERE user_id = %s AND created_at >= %s AND created_at < %s""",
+                        (user_id, start_date.isoformat(), end_date.isoformat()),
+                    )
+                    raw_meals = [dict(r) for r in await cur.fetchall()]
+                    daily_data = self._group_by_date(raw_meals)
 
-            # Get user's goal from goals table
-            goal_result = (
-                self.supabase.table("goals")
-                .select("daily_kcal_target")
-                .eq("user_id", user_id)
-                .order("created_at", desc=True)
-                .limit(1)
-                .execute()
-            )
-            goal_calories = goal_result.data[0]["daily_kcal_target"] if goal_result.data else None
+                # Get user's goal
+                cur = await conn.execute(
+                    """SELECT daily_kcal_target FROM goals
+                       WHERE user_id = %s ORDER BY created_at DESC LIMIT 1""",
+                    (user_id,),
+                )
+                goal_row = await cur.fetchone()
+                goal_calories = dict(goal_row)["daily_kcal_target"] if goal_row else None
 
             # Convert to data points
             data_points = []
@@ -122,11 +87,9 @@ class StatisticsService:
                     )
                 )
 
-            # Calculate summary statistics
             total_days = (end_date - start_date).days
             total_meals = sum(dp.meal_count for dp in data_points)
             total_calories = sum(dp.total_calories for dp in data_points)
-
             average_daily_calories = total_calories / total_days if total_days > 0 else 0
 
             average_goal_achievement = None
@@ -160,11 +123,7 @@ class StatisticsService:
                 },
             )
 
-            return DailyStatisticsResponse(
-                data=data_points,
-                period=period,
-                summary=summary,
-            )
+            return DailyStatisticsResponse(data=data_points, period=period, summary=summary)
 
         except ValueError:
             raise
@@ -182,21 +141,7 @@ class StatisticsService:
         start_date: date,
         end_date: date,
     ) -> MacroStatisticsResponse:
-        """Get macronutrient breakdown for a date range.
-
-        Args:
-            user_id: User identifier
-            start_date: Start date (inclusive)
-            end_date: End date (exclusive)
-
-        Returns:
-            Macronutrient breakdown response
-
-        Raises:
-            ValueError: If date range invalid
-            Exception: If query fails
-        """
-        # Validate date range
+        """Get macronutrient breakdown for a date range."""
         if start_date >= end_date:
             raise ValueError("Start date must be before end date")
 
@@ -204,24 +149,22 @@ class StatisticsService:
             raise ValueError("Date range cannot exceed 365 days")
 
         try:
-            # Query total macros for period
-            result = (
-                self.supabase.table("meals")
-                .select("kcal_total, protein_grams, fats_grams, carbs_grams")
-                .eq("user_id", user_id)
-                .gte("created_at", start_date.isoformat())
-                .lt("created_at", end_date.isoformat())
-                .execute()
-            )
+            pool = await get_pool()
 
-            # Calculate totals
-            total_protein = sum(float(m.get("protein_grams", 0) or 0) for m in result.data)
-            total_fat = sum(float(m.get("fats_grams", 0) or 0) for m in result.data)
-            total_carbs = sum(float(m.get("carbs_grams", 0) or 0) for m in result.data)
-            total_calories = sum(float(m.get("kcal_total", 0) or 0) for m in result.data)
+            async with pool.connection() as conn:
+                cur = await conn.execute(
+                    """SELECT kcal_total, protein_grams, fats_grams, carbs_grams
+                       FROM meals
+                       WHERE user_id = %s AND created_at >= %s AND created_at < %s""",
+                    (user_id, start_date.isoformat(), end_date.isoformat()),
+                )
+                rows = [dict(r) for r in await cur.fetchall()]
 
-            # Calculate percentages (macros to calories conversion)
-            # Protein: 4 kcal/g, Fat: 9 kcal/g, Carbs: 4 kcal/g
+            total_protein = sum(float(m.get("protein_grams", 0) or 0) for m in rows)
+            total_fat = sum(float(m.get("fats_grams", 0) or 0) for m in rows)
+            total_carbs = sum(float(m.get("carbs_grams", 0) or 0) for m in rows)
+            total_calories = sum(float(m.get("kcal_total", 0) or 0) for m in rows)
+
             protein_percent = 0.0
             fat_percent = 0.0
             carbs_percent = 0.0
@@ -243,7 +186,7 @@ class StatisticsService:
                     "user_id": user_id,
                     "start_date": start_date.isoformat(),
                     "end_date": end_date.isoformat(),
-                    "total_meals": len(result.data),
+                    "total_meals": len(rows),
                 },
             )
 
@@ -269,14 +212,7 @@ class StatisticsService:
             raise
 
     def _group_by_date(self, meals: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Group meals by date and aggregate nutrition data.
-
-        Args:
-            meals: List of meal records
-
-        Returns:
-            List of daily aggregates
-        """
+        """Group meals by date and aggregate nutrition data."""
         from collections import defaultdict
 
         daily_data: dict[str, dict[str, float]] = defaultdict(
@@ -290,21 +226,14 @@ class StatisticsService:
         )
 
         for meal in meals:
-            meal_date = meal["created_at"][:10]  # Extract YYYY-MM-DD
+            meal_date = str(meal["created_at"])[:10]
             daily_data[meal_date]["total_calories"] += float(meal.get("kcal_total", 0) or 0)
             daily_data[meal_date]["total_protein"] += float(meal.get("protein_grams", 0) or 0)
             daily_data[meal_date]["total_fat"] += float(meal.get("fats_grams", 0) or 0)
             daily_data[meal_date]["total_carbs"] += float(meal.get("carbs_grams", 0) or 0)
             daily_data[meal_date]["meal_count"] += 1
 
-        # Convert to list format
-        return [
-            {
-                "meal_date": meal_date,
-                **data,
-            }
-            for meal_date, data in sorted(daily_data.items())
-        ]
+        return [{"meal_date": meal_date, **data} for meal_date, data in sorted(daily_data.items())]
 
 
 # Global service instance

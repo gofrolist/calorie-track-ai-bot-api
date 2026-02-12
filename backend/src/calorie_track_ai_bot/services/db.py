@@ -2,10 +2,6 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-import httpx
-from supabase import create_client
-from supabase.lib.client_options import SyncClientOptions
-
 from ..schemas import (
     InlineAnalyticsDaily,
     InlineChatType,
@@ -15,32 +11,14 @@ from ..schemas import (
     UIConfiguration,
     UIConfigurationUpdate,
 )
-from .config import APP_ENV, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, logger
+from .config import logger
+from .database import get_pool
 from .storage import BUCKET_NAME, s3
 
 # User ID cache to reduce database queries
 _user_id_cache: dict[str, str] = {}
 _user_cache_ttl: dict[str, datetime] = {}
 CACHE_TTL_SECONDS = 300  # 5 minutes
-
-# Initialize Supabase client only if configuration is available
-sb: Any | None = None
-
-if SUPABASE_URL is not None and SUPABASE_SERVICE_ROLE_KEY is not None:
-    # Create a custom httpx client to avoid deprecation warnings
-    httpx_client = httpx.Client(timeout=httpx.Timeout(120.0))
-
-    # Create Supabase client with service role key to bypass RLS
-    options = SyncClientOptions(httpx_client=httpx_client)
-    sb = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, options)
-elif APP_ENV == "dev":
-    # In development mode, allow missing Supabase config
-    print("WARNING: Supabase configuration not set. Database functionality will be disabled.")
-    print("To enable database operations, set the following environment variables:")
-    print("- SUPABASE_URL")
-    print("- SUPABASE_SERVICE_ROLE_KEY")
-else:
-    raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
 
 
 async def db_create_photo(
@@ -49,21 +27,8 @@ async def db_create_photo(
     display_order: int = 0,
     media_group_id: str | None = None,
 ) -> str:
-    """Create a photo record in the database.
-
-    Args:
-        tigris_key: Storage key for the photo
-        user_id: UUID of the user who owns the photo
-        display_order: Position in carousel (0-4)
-        media_group_id: Telegram media group ID for grouped photos
-
-    Returns:
-        Photo ID (UUID)
-    """
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    """Create a photo record in the database."""
+    pool = await get_pool()
 
     logger.debug(
         f"Creating photo record: tigris_key={tigris_key}, user_id={user_id}, "
@@ -71,157 +36,140 @@ async def db_create_photo(
     )
     pid = str(uuid.uuid4())
 
-    # Build photo data with fallback for missing columns
-    photo_data: dict[str, Any] = {"id": pid, "tigris_key": tigris_key}
+    async with pool.connection() as conn:
+        await conn.execute(
+            """INSERT INTO photos (id, tigris_key, user_id, display_order, media_group_id)
+               VALUES (%s, %s, %s, %s, %s)""",
+            (pid, tigris_key, user_id, display_order, media_group_id),
+        )
 
-    # Only include columns that exist in the current schema
-    try:
-        # Try with display_order first (new schema)
-        photo_data["display_order"] = display_order
-        if user_id:
-            photo_data["user_id"] = user_id
-        if media_group_id:
-            photo_data["media_group_id"] = media_group_id
-
-        sb.table("photos").insert(photo_data).execute()
-        logger.info(f"Photo record created with ID: {pid}")
-        return pid
-
-    except Exception as e:
-        # If display_order column doesn't exist, retry without it
-        if "display_order" in str(e) or "PGRST204" in str(e):
-            logger.warning("display_order column not found, falling back to legacy schema")
-            photo_data = {"id": pid, "tigris_key": tigris_key}
-            if user_id:
-                photo_data["user_id"] = user_id
-
-            sb.table("photos").insert(photo_data).execute()
-            logger.info(f"Photo record created with ID: {pid} (legacy schema)")
-            return pid
-        else:
-            # Re-raise other errors
-            raise
+    logger.info(f"Photo record created with ID: {pid}")
+    return pid
 
 
 async def db_get_or_create_user(
     telegram_id: int, handle: str | None = None, locale: str = "en"
 ) -> str:
     """Get existing user or create new one based on telegram_id."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
     logger.debug(f"Looking up user with telegram_id: {telegram_id}")
 
-    # Try to find existing user
-    res = sb.table("users").select("*").eq("telegram_id", telegram_id).execute()
+    async with pool.connection() as conn:
+        row = await conn.execute("SELECT * FROM users WHERE telegram_id = %s", (telegram_id,))
+        result = await row.fetchone()
+        user = dict(result) if result else None
 
-    if res.data:
-        user_id = res.data[0]["id"]
-        logger.info(f"Found existing user with ID: {user_id}")
+        if user:
+            user_id = str(user["id"])
+            logger.info(f"Found existing user with ID: {user_id}")
+            return user_id
+
+        # Create new user
+        user_id = str(uuid.uuid4())
+        logger.info(f"Creating new user with ID: {user_id}, telegram_id: {telegram_id}")
+        await conn.execute(
+            "INSERT INTO users (id, telegram_id, handle, locale) VALUES (%s, %s, %s, %s)",
+            (user_id, telegram_id, handle, locale),
+        )
         return user_id
-
-    # Create new user
-    user_id = str(uuid.uuid4())
-    user_data = {"id": user_id, "telegram_id": telegram_id, "handle": handle, "locale": locale}
-
-    logger.info(f"Creating new user with ID: {user_id}, telegram_id: {telegram_id}")
-    sb.table("users").insert(user_data).execute()
-    return user_id
 
 
 async def db_save_estimate(
     photo_id: str, est: dict[str, Any], photo_ids: list[str] | None = None
 ) -> str:
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
     eid = str(uuid.uuid4())
 
-    # Insert estimate data directly - database now has 'items' column
-    estimate_data = {"id": eid, "photo_id": photo_id, **est}
+    # Build columns and values dynamically
+    columns = [
+        "id",
+        "photo_id",
+        "kcal_mean",
+        "kcal_min",
+        "kcal_max",
+        "confidence",
+        "items",
+        "status",
+        "macronutrients",
+        "photo_count",
+    ]
+    values: list[Any] = [
+        eid,
+        photo_id,
+        est.get("kcal_mean"),
+        est.get("kcal_min"),
+        est.get("kcal_max"),
+        est.get("confidence"),
+        est.get("items"),
+        est.get("status", "done"),
+        est.get("macronutrients"),
+        est.get("photo_count"),
+    ]
 
-    # Add photo_ids array if provided (for multi-photo estimates)
-    # Try to include photo_ids, but handle gracefully if column doesn't exist
     if photo_ids:
-        estimate_data["photo_ids"] = photo_ids
+        columns.append("photo_ids")
+        values.append(photo_ids)
 
-    try:
-        sb.table("estimates").insert(estimate_data).execute()
-        return eid
-    except Exception as e:
-        # If photo_ids column doesn't exist, retry without it
-        if "photo_ids" in str(e) and "column" in str(e).lower():
-            logger.warning(f"photo_ids column not available, saving estimate without it: {e}")
-            estimate_data.pop("photo_ids", None)
-            sb.table("estimates").insert(estimate_data).execute()
-            return eid
-        else:
-            # Re-raise if it's a different error
-            raise
+    placeholders = ", ".join(["%s"] * len(values))
+    col_names = ", ".join(columns)
+
+    async with pool.connection() as conn:
+        await conn.execute(
+            f"INSERT INTO estimates ({col_names}) VALUES ({placeholders})",  # type: ignore[arg-type]
+            tuple(values),
+        )
+
+    return eid
 
 
 async def db_get_estimate(estimate_id: str) -> dict[str, Any] | None:
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = sb.table("estimates").select("*").eq("id", estimate_id).execute()
-    return res.data[0] if res.data else None
+    async with pool.connection() as conn:
+        cur = await conn.execute("SELECT * FROM estimates WHERE id = %s", (estimate_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
 
 
 async def db_get_photo(photo_id: str) -> dict[str, Any] | None:
     """Get photo record by ID."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = sb.table("photos").select("*").eq("id", photo_id).execute()
-    return res.data[0] if res.data else None
+    async with pool.connection() as conn:
+        cur = await conn.execute("SELECT * FROM photos WHERE id = %s", (photo_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
 
 
 async def db_get_user(user_id: str) -> dict[str, Any] | None:
     """Get user record by ID."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = sb.table("users").select("*").eq("id", user_id).execute()
-    return res.data[0] if res.data else None
+    async with pool.connection() as conn:
+        cur = await conn.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
 
 
 async def db_create_meal_from_manual(data: MealCreateManualRequest) -> dict[str, str]:
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
     mid = str(uuid.uuid4())
-    payload = {
-        "id": mid,
-        "user_id": None,
-        "meal_date": data.meal_date.isoformat(),
-        "meal_type": data.meal_type.value,
-        "kcal_total": data.kcal_total,
-        "source": "manual",
-    }
-    sb.table("meals").insert(payload).execute()
+    async with pool.connection() as conn:
+        await conn.execute(
+            """INSERT INTO meals (id, user_id, meal_date, meal_type, kcal_total, source)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (mid, None, data.meal_date, data.meal_type.value, data.kcal_total, "manual"),
+        )
     return {"meal_id": mid}
 
 
 async def db_create_meal_from_estimate(
     data: MealCreateFromEstimateRequest, user_id: str
 ) -> dict[str, str]:
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
     mid = str(uuid.uuid4())
 
@@ -236,7 +184,7 @@ async def db_create_meal_from_estimate(
         kcal_total = data.overrides.get("kcal_total", kcal_total)
 
     # Extract macronutrients from estimate
-    macronutrients = estimate.get("macronutrients", {})
+    macronutrients = estimate.get("macronutrients") or {}
     protein_grams = macronutrients.get("protein", 0)
     carbs_grams = macronutrients.get("carbs", 0)
     fats_grams = macronutrients.get("fats", 0)
@@ -247,38 +195,42 @@ async def db_create_meal_from_estimate(
         carbs_grams = data.overrides.get("carbs_grams", carbs_grams)
         fats_grams = data.overrides.get("fats_grams", fats_grams)
 
-    payload = {
-        "id": mid,
-        "user_id": user_id,
-        "meal_date": data.meal_date.isoformat(),
-        "meal_type": data.meal_type.value,
-        "kcal_total": kcal_total,
-        "protein_grams": protein_grams,
-        "carbs_grams": carbs_grams,
-        "fats_grams": fats_grams,
-        "source": "photo",
-        "estimate_id": data.estimate_id,
-    }
-    sb.table("meals").insert(payload).execute()
+    async with pool.connection() as conn:
+        await conn.execute(
+            """INSERT INTO meals (id, user_id, meal_date, meal_type, kcal_total,
+                                  protein_grams, carbs_grams, fats_grams, source, estimate_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (
+                mid,
+                user_id,
+                data.meal_date,
+                data.meal_type.value,
+                kcal_total,
+                protein_grams,
+                carbs_grams,
+                fats_grams,
+                "photo",
+                data.estimate_id,
+            ),
+        )
 
-    # Link photos to the meal by updating their meal_id
-    # The estimate should contain photo_ids array for multi-photo estimates
-    photo_ids = estimate.get("photo_ids", [])
-    if not photo_ids:
-        # Fallback: use single photo_id if photo_ids array is not available
-        single_photo_id = estimate.get("photo_id")
-        if single_photo_id:
-            photo_ids = [single_photo_id]
+        # Link photos to the meal
+        photo_ids = estimate.get("photo_ids") or []
+        if not photo_ids:
+            single_photo_id = estimate.get("photo_id")
+            if single_photo_id:
+                photo_ids = [str(single_photo_id)]
 
-    if photo_ids:
-        # Update photos with meal_id and display_order
-        for i, photo_id in enumerate(photo_ids[:5]):  # Max 5 photos
-            sb.table("photos").update({"meal_id": mid, "display_order": i}).eq(
-                "id", photo_id
-            ).execute()
-        logger.info(f"Linked {len(photo_ids)} photos to meal {mid}")
-    else:
-        logger.warning(f"No photo_ids found in estimate {data.estimate_id}")
+        for i, photo_id in enumerate(photo_ids[:5]):
+            await conn.execute(
+                "UPDATE photos SET meal_id = %s, display_order = %s WHERE id = %s",
+                (mid, i, photo_id),
+            )
+
+        if photo_ids:
+            logger.info(f"Linked {len(photo_ids)} photos to meal {mid}")
+        else:
+            logger.warning(f"No photo_ids found in estimate {data.estimate_id}")
 
     return {"meal_id": mid}
 
@@ -292,7 +244,6 @@ def _generate_meal_description(estimate: dict[str, Any]) -> str:
     if not items or not isinstance(items, list):
         return "No description available"
 
-    # Generate description from food items
     descriptions = []
     for item in items:
         if isinstance(item, dict) and "label" in item:
@@ -312,35 +263,21 @@ def _generate_meal_description(estimate: dict[str, Any]) -> str:
 async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
     """Enhance meal data with related estimate and photo information."""
     if not meal.get("estimate_id"):
-        # No estimate to fetch - this is a manual meal
-
-        # Add default macros if not present
         if "macros" not in meal:
             meal["macros"] = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
-
-        # Add default description for manual meals
         if "description" not in meal:
             meal["description"] = "Manual entry"
-
-        # Add default corrected status
         if "corrected" not in meal:
             meal["corrected"] = False
-
-        # Ensure updated_at exists for manual meals
         if "updated_at" not in meal and "created_at" in meal:
             meal["updated_at"] = meal["created_at"]
         elif "updated_at" not in meal:
-            # If no timestamps exist, create them from current time
-            from datetime import datetime
-
             now = datetime.now(UTC).isoformat()
             meal["created_at"] = now
             meal["updated_at"] = now
-
         return
 
-    # Fetch related estimate and photo data
-    estimate = await db_get_estimate(meal["estimate_id"])
+    estimate = await db_get_estimate(str(meal["estimate_id"]))
     if not estimate:
         logger.warning(f"Estimate {meal['estimate_id']} not found for meal {meal['id']}")
         meal["photo_url"] = None
@@ -349,23 +286,18 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
         if "updated_at" not in meal and "created_at" in meal:
             meal["updated_at"] = meal["created_at"]
         elif "updated_at" not in meal:
-            # If no timestamps exist, create them from current time
-            from datetime import datetime
-
             now = datetime.now(UTC).isoformat()
             meal["created_at"] = now
             meal["updated_at"] = now
         return
 
-    # Get photo data from estimate
-    photo = await db_get_photo(estimate["photo_id"])
+    photo = await db_get_photo(str(estimate["photo_id"]))
     if photo and s3:
         try:
-            # Generate presigned URL for the photo
             photo_url = s3.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": BUCKET_NAME, "Key": photo["tigris_key"]},
-                ExpiresIn=3600,  # 1 hour
+                ExpiresIn=3600,
             )
             meal["photo_url"] = photo_url
         except Exception as e:
@@ -374,26 +306,17 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
     else:
         meal["photo_url"] = None
 
-    # Add macros from database (already stored during meal creation)
     meal["macros"] = {
         "protein_g": meal.get("protein_grams", 0) or 0,
         "fat_g": meal.get("fats_grams", 0) or 0,
         "carbs_g": meal.get("carbs_grams", 0) or 0,
     }
-
-    # Generate description from AI estimate items
     meal["description"] = _generate_meal_description(estimate)
+    meal["corrected"] = False
 
-    # Add corrected status
-    meal["corrected"] = False  # Meals from estimates are not corrected by user
-
-    # Ensure updated_at exists
     if "updated_at" not in meal and "created_at" in meal:
         meal["updated_at"] = meal["created_at"]
     elif "updated_at" not in meal:
-        # If no timestamps exist, create them from current time
-        from datetime import datetime
-
         now = datetime.now(UTC).isoformat()
         meal["created_at"] = now
         meal["updated_at"] = now
@@ -405,13 +328,10 @@ async def resolve_user_id(telegram_user_id: str | None) -> str | None:
         return None
 
     try:
-        # Clean up expired cache entries periodically
         _cleanup_user_cache()
 
-        # Check cache first
         current_time = datetime.now(UTC)
         if telegram_user_id in _user_id_cache:
-            # Check if cache entry is still valid
             if (
                 telegram_user_id in _user_cache_ttl
                 and _user_cache_ttl[telegram_user_id] > current_time
@@ -419,16 +339,12 @@ async def resolve_user_id(telegram_user_id: str | None) -> str | None:
                 logger.debug(f"User ID cache hit for telegram_id: {telegram_user_id}")
                 return _user_id_cache[telegram_user_id]
             else:
-                # Cache expired, remove it
                 _user_id_cache.pop(telegram_user_id, None)
                 _user_cache_ttl.pop(telegram_user_id, None)
 
-        # Convert string to int for telegram_id lookup
         telegram_id_int = int(telegram_user_id)
-        # Get or create user and return the UUID
         user_id = await db_get_or_create_user(telegram_id_int)
 
-        # Cache the result
         if user_id:
             _user_id_cache[telegram_user_id] = user_id
             _user_cache_ttl[telegram_user_id] = current_time + timedelta(seconds=CACHE_TTL_SECONDS)
@@ -436,7 +352,6 @@ async def resolve_user_id(telegram_user_id: str | None) -> str | None:
 
         return user_id
     except (ValueError, TypeError):
-        # If conversion fails, return None
         logger.warning(f"Invalid telegram_user_id format: {telegram_user_id}")
         return None
 
@@ -458,22 +373,21 @@ async def db_get_meals_by_date(
     meal_date: str, telegram_user_id: str | None = None
 ) -> list[dict[str, Any]]:
     """Get meals for a specific date with related data."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    # Resolve Telegram user ID to database UUID
     user_id = await resolve_user_id(telegram_user_id)
 
-    query = sb.table("meals").select("*").eq("meal_date", meal_date)
-    if user_id:
-        query = query.eq("user_id", user_id)
+    async with pool.connection() as conn:
+        if user_id:
+            cur = await conn.execute(
+                "SELECT * FROM meals WHERE meal_date = %s AND user_id = %s",
+                (meal_date, user_id),
+            )
+        else:
+            cur = await conn.execute("SELECT * FROM meals WHERE meal_date = %s", (meal_date,))
+        rows = await cur.fetchall()
+        meals = [dict(r) for r in rows]
 
-    res = query.execute()
-    meals = res.data if res.data else []
-
-    # Enhance each meal with related data
     for meal in meals:
         await _enhance_meal_with_related_data(meal)
 
@@ -482,68 +396,73 @@ async def db_get_meals_by_date(
 
 async def db_get_meal(meal_id: str) -> dict[str, Any] | None:
     """Get a specific meal by ID with related data."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = sb.table("meals").select("*").eq("id", meal_id).execute()
-    if not res.data:
+    async with pool.connection() as conn:
+        cur = await conn.execute("SELECT * FROM meals WHERE id = %s", (meal_id,))
+        row = await cur.fetchone()
+
+    if not row:
         return None
 
-    meal = res.data[0]
-
-    # Enhance meal data with related information
+    meal = dict(row)
     await _enhance_meal_with_related_data(meal)
-
     return meal
 
 
 async def db_update_meal(meal_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
     """Update a meal with the given updates."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = sb.table("meals").update(updates).eq("id", meal_id).execute()
-    return res.data[0] if res.data else None
+    if not updates:
+        return None
+
+    set_clauses = []
+    values: list[Any] = []
+    for key, val in updates.items():
+        set_clauses.append(f"{key} = %s")
+        values.append(val)
+    values.append(meal_id)
+
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            f"UPDATE meals SET {', '.join(set_clauses)} WHERE id = %s RETURNING *",
+            tuple(values),
+        )
+        row = await cur.fetchone()
+        return dict(row) if row else None
 
 
 async def db_delete_meal(meal_id: str) -> bool:
     """Delete a meal by ID."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = sb.table("meals").delete().eq("id", meal_id).execute()
-    return len(res.data) > 0 if res.data else False
+    async with pool.connection() as conn:
+        cur = await conn.execute("DELETE FROM meals WHERE id = %s RETURNING id", (meal_id,))
+        row = await cur.fetchone()
+        return row is not None
 
 
 async def db_get_daily_summary(
     date: str, telegram_user_id: str | None = None
 ) -> dict[str, Any] | None:
     """Get daily summary for a specific date."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    # Resolve Telegram user ID to database UUID
     user_id = await resolve_user_id(telegram_user_id)
 
-    query = sb.table("meals").select("kcal_total").eq("meal_date", date)
-    if user_id:
-        query = query.eq("user_id", user_id)
+    async with pool.connection() as conn:
+        if user_id:
+            cur = await conn.execute(
+                "SELECT kcal_total FROM meals WHERE meal_date = %s AND user_id = %s",
+                (date, user_id),
+            )
+        else:
+            cur = await conn.execute("SELECT kcal_total FROM meals WHERE meal_date = %s", (date,))
+        rows = await cur.fetchall()
 
-    res = query.execute()
-    meals = res.data if res.data else []
-
-    # Calculate totals
+    meals = [dict(r) for r in rows]
     total_kcal = sum(meal.get("kcal_total", 0) for meal in meals)
-
-    # Since macros column doesn't exist in the current schema, return zeros
     macro_totals = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
 
     return {
@@ -556,128 +475,107 @@ async def db_get_daily_summary(
 
 async def db_get_goal(telegram_user_id: str) -> dict[str, Any] | None:
     """Get user's goal."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    # Resolve Telegram user ID to database UUID
     user_id = await resolve_user_id(telegram_user_id)
     if not user_id:
         return None
 
-    res = sb.table("goals").select("*").eq("user_id", user_id).execute()
-    return res.data[0] if res.data else None
+    async with pool.connection() as conn:
+        cur = await conn.execute("SELECT * FROM goals WHERE user_id = %s", (user_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
 
 
 async def db_create_or_update_goal(telegram_user_id: str, daily_kcal_target: int) -> dict[str, Any]:
     """Create or update user's goal."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    # Resolve Telegram user ID to database UUID
     user_id = await resolve_user_id(telegram_user_id)
     if not user_id:
         raise ValueError(f"Could not resolve user ID for telegram_user_id: {telegram_user_id}")
 
-    # Try to find existing goal
     existing = await db_get_goal(telegram_user_id)
 
-    if existing:
-        # Update existing goal
-        res = (
-            sb.table("goals")
-            .update({"daily_kcal_target": daily_kcal_target, "updated_at": "now()"})
-            .eq("id", existing["id"])
-            .execute()
-        )
-        if res.data:
-            return res.data[0]
-        else:
-            # Fallback to creating new goal if update failed
-            goal_id = str(uuid.uuid4())
-            goal_data = {"id": goal_id, "user_id": user_id, "daily_kcal_target": daily_kcal_target}
-            sb.table("goals").insert(goal_data).execute()
-            return goal_data
-    else:
+    async with pool.connection() as conn:
+        if existing:
+            cur = await conn.execute(
+                "UPDATE goals SET daily_kcal_target = %s, updated_at = NOW() WHERE id = %s RETURNING *",
+                (daily_kcal_target, existing["id"]),
+            )
+            row = await cur.fetchone()
+            if row:
+                return dict(row)
+
         # Create new goal
         goal_id = str(uuid.uuid4())
-        goal_data = {"id": goal_id, "user_id": user_id, "daily_kcal_target": daily_kcal_target}
-        sb.table("goals").insert(goal_data).execute()
-        return goal_data
+        await conn.execute(
+            "INSERT INTO goals (id, user_id, daily_kcal_target) VALUES (%s, %s, %s)",
+            (goal_id, user_id, daily_kcal_target),
+        )
+        return {"id": goal_id, "user_id": user_id, "daily_kcal_target": daily_kcal_target}
 
 
 async def db_get_summaries_by_date_range(
     start_date: str, end_date: str, telegram_user_id: str | None = None
 ) -> dict[str, dict[str, Any]]:
     """Get summaries for a date range in a single query."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    # Resolve Telegram user ID to database UUID
     user_id = await resolve_user_id(telegram_user_id)
 
-    query = (
-        sb.table("meals")
-        .select("meal_date, kcal_total")
-        .gte("meal_date", start_date)
-        .lte("meal_date", end_date)
-    )
-    if user_id:
-        query = query.eq("user_id", user_id)
+    async with pool.connection() as conn:
+        if user_id:
+            cur = await conn.execute(
+                """SELECT meal_date, kcal_total FROM meals
+                   WHERE meal_date >= %s AND meal_date <= %s AND user_id = %s""",
+                (start_date, end_date, user_id),
+            )
+        else:
+            cur = await conn.execute(
+                "SELECT meal_date, kcal_total FROM meals WHERE meal_date >= %s AND meal_date <= %s",
+                (start_date, end_date),
+            )
+        rows = await cur.fetchall()
 
-    res = query.execute()
-    meals = res.data if res.data else []
-
-    # Group meals by date and calculate summaries
-    summaries = {}
+    meals = [dict(r) for r in rows]
+    summaries: dict[str, dict[str, Any]] = {}
     for meal in meals:
-        date = meal["meal_date"]
-        if date not in summaries:
-            summaries[date] = {
+        d = str(meal["meal_date"])
+        if d not in summaries:
+            summaries[d] = {
                 "user_id": user_id,
-                "date": date,
+                "date": d,
                 "kcal_total": 0,
                 "macros_totals": {"protein_g": 0, "fat_g": 0, "carbs_g": 0},
             }
-
-        summaries[date]["kcal_total"] += meal.get("kcal_total", 0)
+        summaries[d]["kcal_total"] += meal.get("kcal_total", 0)
 
     return summaries
 
 
 async def db_get_today_data(date: str, telegram_user_id: str | None = None) -> dict[str, Any]:
     """Get all data needed for the Today page in a single query."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    # Resolve Telegram user ID to database UUID
     user_id = await resolve_user_id(telegram_user_id)
 
-    # Get all meals for the date
-    query = sb.table("meals").select("*").eq("meal_date", date)
-    if user_id:
-        query = query.eq("user_id", user_id)
+    async with pool.connection() as conn:
+        if user_id:
+            cur = await conn.execute(
+                "SELECT * FROM meals WHERE meal_date = %s AND user_id = %s",
+                (date, user_id),
+            )
+        else:
+            cur = await conn.execute("SELECT * FROM meals WHERE meal_date = %s", (date,))
+        rows = await cur.fetchall()
 
-    res = query.execute()
-    meals = res.data if res.data else []
-
-    # Calculate daily summary
+    meals = [dict(r) for r in rows]
     daily_summary = {
         "user_id": user_id,
         "date": date,
         "kcal_total": sum(meal.get("kcal_total", 0) for meal in meals),
-        "macros_totals": {
-            "protein_g": 0,  # Will be calculated when macros column exists
-            "fat_g": 0,
-            "carbs_g": 0,
-        },
+        "macros_totals": {"protein_g": 0, "fat_g": 0, "carbs_g": 0},
     }
 
     return {"meals": meals, "daily_summary": daily_summary}
@@ -686,24 +584,20 @@ async def db_get_today_data(date: str, telegram_user_id: str | None = None) -> d
 # UI Configuration Database Functions
 async def db_get_ui_configuration(user_id: str) -> dict[str, Any] | None:
     """Get UI configuration for a user."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = sb.table("ui_configurations").select("*").eq("user_id", user_id).execute()
-    return res.data[0] if res.data else None
+    async with pool.connection() as conn:
+        cur = await conn.execute("SELECT * FROM ui_configurations WHERE user_id = %s", (user_id,))
+        row = await cur.fetchone()
+        return dict(row) if row else None
 
 
 async def db_create_ui_configuration(user_id: str, config: UIConfiguration) -> dict[str, Any]:
     """Create a new UI configuration for a user."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
     config_data = {
-        "id": config.id,
+        "id": str(config.id),
         "user_id": user_id,
         "environment": config.environment,
         "api_base_url": config.api_base_url,
@@ -720,22 +614,25 @@ async def db_create_ui_configuration(user_id: str, config: UIConfiguration) -> d
         "updated_at": config.updated_at.isoformat(),
     }
 
-    res = sb.table("ui_configurations").insert(config_data).execute()
-    return res.data[0] if res.data else config_data
+    columns = ", ".join(config_data.keys())
+    placeholders = ", ".join(["%s"] * len(config_data))
+
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            f"INSERT INTO ui_configurations ({columns}) VALUES ({placeholders}) RETURNING *",  # type: ignore[arg-type]
+            tuple(config_data.values()),
+        )
+        row = await cur.fetchone()
+        return dict(row) if row else config_data
 
 
 async def db_update_ui_configuration(
     user_id: str, config_id: str, updates: UIConfigurationUpdate
 ) -> dict[str, Any] | None:
     """Update an existing UI configuration."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    # Build update data from non-None fields
-    update_data = {}
-
+    update_data: dict[str, Any] = {}
     if updates.environment is not None:
         update_data["environment"] = updates.environment
     if updates.api_base_url is not None:
@@ -759,136 +656,104 @@ async def db_update_ui_configuration(
     if updates.features is not None:
         update_data["features"] = updates.features
 
-    # Always update the updated_at timestamp
-    from datetime import datetime
-
     update_data["updated_at"] = datetime.now(UTC).isoformat()
 
-    res = (
-        sb.table("ui_configurations")
-        .update(update_data)
-        .eq("id", config_id)
-        .eq("user_id", user_id)  # Ensure user can only update their own config
-        .execute()
-    )
+    set_clauses = [f"{k} = %s" for k in update_data]
+    values = [*list(update_data.values()), config_id, user_id]
 
-    return res.data[0] if res.data else None
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            f"UPDATE ui_configurations SET {', '.join(set_clauses)} WHERE id = %s AND user_id = %s RETURNING *",  # type: ignore[arg-type]
+            tuple(values),
+        )
+        row = await cur.fetchone()
+        return dict(row) if row else None
 
 
 async def db_delete_ui_configuration(user_id: str, config_id: str) -> bool:
     """Delete a UI configuration."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
+    pool = await get_pool()
+
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            "DELETE FROM ui_configurations WHERE id = %s AND user_id = %s RETURNING id",
+            (config_id, user_id),
         )
-
-    res = (
-        sb.table("ui_configurations")
-        .delete()
-        .eq("id", config_id)
-        .eq("user_id", user_id)  # Ensure user can only delete their own config
-        .execute()
-    )
-
-    return len(res.data) > 0 if res.data else False
+        row = await cur.fetchone()
+        return row is not None
 
 
 async def db_get_ui_configurations_by_user(user_id: str) -> list[dict[str, Any]]:
     """Get all UI configurations for a user."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    res = (
-        sb.table("ui_configurations")
-        .select("*")
-        .eq("user_id", user_id)
-        .order("updated_at", desc=True)
-        .execute()
-    )
-    return res.data if res.data else []
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            "SELECT * FROM ui_configurations WHERE user_id = %s ORDER BY updated_at DESC",
+            (user_id,),
+        )
+        rows = await cur.fetchall()
+        return [dict(r) for r in rows]
 
 
 async def db_cleanup_old_ui_configurations(user_id: str, keep_count: int = 5) -> int:
     """Clean up old UI configurations, keeping only the most recent ones."""
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
-
-    # Get all configurations for the user, ordered by updated_at desc
     all_configs = await db_get_ui_configurations_by_user(user_id)
 
     if len(all_configs) <= keep_count:
-        return 0  # Nothing to clean up
+        return 0
 
-    # Get IDs of configurations to delete (all except the most recent keep_count)
     configs_to_delete = all_configs[keep_count:]
     delete_ids = [config["id"] for config in configs_to_delete]
 
     if not delete_ids:
         return 0
 
-    # Delete old configurations
-    res = (
-        sb.table("ui_configurations")
-        .delete()
-        .in_("id", delete_ids)
-        .eq("user_id", user_id)  # Safety check
-        .execute()
-    )
+    pool = await get_pool()
 
-    deleted_count = len(res.data) if res.data else 0
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            "DELETE FROM ui_configurations WHERE id = ANY(%s) AND user_id = %s RETURNING id",
+            (delete_ids, user_id),
+        )
+        rows = await cur.fetchall()
+        deleted_count = len(rows)
+
     logger.info(f"Cleaned up {deleted_count} old UI configurations for user {user_id}")
-
     return deleted_count
 
 
-# Multi-Photo Meals Support (Feature: 003-update-logic-for)
+# Multi-Photo Meals Support
 
 
 async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
-    """Get meal with associated photos and macronutrients.
-
-    Args:
-        meal_id: Meal UUID
-
-    Returns:
-        MealWithPhotos object or None if not found
-    """
-    if sb is None:
-        raise RuntimeError("Supabase configuration not available")
+    """Get meal with associated photos and macronutrients."""
+    pool = await get_pool()
 
     from ..schemas import Macronutrients, MealWithPhotos
 
     try:
-        # Get meal
-        meal_res = sb.table("meals").select("*").eq("id", str(meal_id)).execute()
-        if not meal_res.data:
-            return None
+        async with pool.connection() as conn:
+            cur = await conn.execute("SELECT * FROM meals WHERE id = %s", (str(meal_id),))
+            meal_data = await cur.fetchone()
+            if not meal_data:
+                return None
+            meal_data = dict(meal_data)
 
-        meal_data = meal_res.data[0]
+            cur = await conn.execute(
+                """SELECT id, tigris_key, display_order FROM photos
+                   WHERE meal_id = %s ORDER BY display_order""",
+                (str(meal_id),),
+            )
+            photo_rows: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
 
-        # Get associated photos
-        photos_res = (
-            sb.table("photos")
-            .select("id, tigris_key, display_order")
-            .eq("meal_id", str(meal_id))
-            .order("display_order")
-            .execute()
-        )
-
-        # Build photo list with presigned URLs
         photos = []
-        for photo in photos_res.data if photos_res.data else []:
+        for photo in photo_rows:
             try:
-                # Generate presigned URLs (1 hour expiry)
                 from .storage import generate_presigned_url
 
                 thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
                 full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-
                 photos.append(
                     MealPhotoInfo(
                         id=photo["id"],
@@ -899,7 +764,6 @@ async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
                 )
             except Exception as e:
                 logger.warning(f"Failed to generate photo URLs for meal {meal_id}: {e}")
-                # Still add the photo info but with placeholder URLs
                 photos.append(
                     MealPhotoInfo(
                         id=photo["id"],
@@ -909,7 +773,6 @@ async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
                     )
                 )
 
-        # Build meal object
         macros = Macronutrients(
             protein=meal_data.get("protein_grams", 0) or 0,
             carbs=meal_data.get("carbs_grams", 0) or 0,
@@ -939,93 +802,80 @@ async def db_get_meals_with_photos(
     end_date: Any | None = None,
     limit: int = 50,
 ) -> list[Any]:
-    """Get meals with photos for date/range (filters meals older than 1 year).
-
-    Args:
-        user_id: User UUID
-        query_date: Specific date to query
-        start_date: Start of date range
-        end_date: End of date range
-        limit: Maximum number of meals
-
-    Returns:
-        List of MealWithPhotos objects
-    """
-    if sb is None:
-        raise RuntimeError("Supabase configuration not available")
+    """Get meals with photos for date/range (filters meals older than 1 year)."""
+    pool = await get_pool()
 
     from datetime import date as date_type
 
     from ..schemas import Macronutrients, MealWithPhotos
 
     try:
-        # Build query with 1-year retention filter
         one_year_ago = (date_type.today() - timedelta(days=365)).isoformat()
 
-        query = (
-            sb.table("meals")
-            .select("*")
-            .eq("user_id", str(user_id))
-            .gte("created_at", one_year_ago)
-        )
+        # Build query
+        conditions = ["user_id = %s", "created_at >= %s"]
+        params: list[Any] = [str(user_id), one_year_ago]
 
-        # Apply date filters
         if query_date:
-            query = query.gte("created_at", f"{query_date}T00:00:00").lt(
-                "created_at", f"{query_date}T23:59:59.999999"
-            )
+            conditions.append("created_at >= %s")
+            conditions.append("created_at < %s")
+            params.append(f"{query_date}T00:00:00")
+            params.append(f"{query_date}T23:59:59.999999")
         elif start_date and end_date:
-            query = query.gte("created_at", f"{start_date}T00:00:00").lte(
-                "created_at", f"{end_date}T23:59:59.999999"
+            conditions.append("created_at >= %s")
+            conditions.append("created_at <= %s")
+            params.append(f"{start_date}T00:00:00")
+            params.append(f"{end_date}T23:59:59.999999")
+
+        where = " AND ".join(conditions)
+        params.append(limit)
+
+        async with pool.connection() as conn:
+            cur = await conn.execute(
+                f"SELECT * FROM meals WHERE {where} ORDER BY created_at DESC LIMIT %s",  # type: ignore[arg-type]
+                tuple(params),
             )
+            meals_data: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
 
-        # Order and limit
-        query = query.order("created_at", desc=True).limit(limit)
+            if not meals_data:
+                return []
 
-        meals_res = query.execute()
+            meal_ids = [str(m["id"]) for m in meals_data]
 
-        if not meals_res.data:
-            return []
+            cur = await conn.execute(
+                """SELECT id, tigris_key, display_order, meal_id FROM photos
+                   WHERE meal_id = ANY(%s) ORDER BY display_order""",
+                (meal_ids,),
+            )
+            photos_data: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
 
-        # Get all meal IDs for batch photo query
-        meal_ids = [meal["id"] for meal in meals_res.data]
+            # Batch fetch estimates
+            estimate_ids = [
+                str(m["estimate_id"])
+                for m in meals_data
+                if m.get("estimate_id") and not m.get("description")
+            ]
 
-        # Single query to get all photos for all meals
-        photos_res = (
-            sb.table("photos")
-            .select("id, tigris_key, display_order, meal_id")
-            .in_("meal_id", meal_ids)
-            .order("display_order")
-            .execute()
-        )
+            estimates_by_id: dict[str, dict[str, Any]] = {}
+            if estimate_ids:
+                cur = await conn.execute(
+                    "SELECT * FROM estimates WHERE id = ANY(%s)", (estimate_ids,)
+                )
+                estimates_by_id = {str(e["id"]): e for e in (dict(r) for r in await cur.fetchall())}
 
         # Group photos by meal_id
-        photos_by_meal = {}
-        for photo in photos_res.data if photos_res.data else []:
-            meal_id = photo["meal_id"]
-            if meal_id not in photos_by_meal:
-                photos_by_meal[meal_id] = []
-            photos_by_meal[meal_id].append(photo)
+        photos_by_meal: dict[str, list[dict[str, Any]]] = {}
+        for photo in photos_data:
+            mid = str(photo["meal_id"])
+            if mid not in photos_by_meal:
+                photos_by_meal[mid] = []
+            photos_by_meal[mid].append(photo)
 
-        # Batch fetch all estimates for meals that need descriptions
-        estimate_ids = [
-            meal["estimate_id"]
-            for meal in meals_res.data
-            if meal.get("estimate_id") and not meal.get("description")
-        ]
-
-        estimates_by_id = {}
-        if estimate_ids:
-            estimates_res = sb.table("estimates").select("*").in_("id", estimate_ids).execute()
-            estimates_by_id = {est["id"]: est for est in estimates_res.data if estimates_res.data}
-
-        # Build result meals
         result_meals = []
-        for meal_data in meals_res.data:
-            meal_id = meal_data["id"]
+        for meal_data in meals_data:
+            meal_id = str(meal_data["id"])
             meal_photos = photos_by_meal.get(meal_id, [])
 
-            # Build photo list
             photos = []
             for photo in meal_photos:
                 try:
@@ -1033,7 +883,6 @@ async def db_get_meals_with_photos(
 
                     thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
                     full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-
                     photos.append(
                         MealPhotoInfo(
                             id=photo["id"],
@@ -1044,7 +893,6 @@ async def db_get_meals_with_photos(
                     )
                 except Exception as e:
                     logger.warning(f"Failed to generate photo URLs for meal {meal_id}: {e}")
-                    # Still add the photo info but with placeholder URLs
                     photos.append(
                         MealPhotoInfo(
                             id=photo["id"],
@@ -1054,17 +902,15 @@ async def db_get_meals_with_photos(
                         )
                     )
 
-            # Build macronutrients
             macros = Macronutrients(
                 protein=meal_data.get("protein_grams", 0) or 0,
                 carbs=meal_data.get("carbs_grams", 0) or 0,
                 fats=meal_data.get("fats_grams", 0) or 0,
             )
 
-            # Generate description from batched estimates
             description = meal_data.get("description")
             if not description and meal_data.get("estimate_id"):
-                estimate = estimates_by_id.get(meal_data["estimate_id"])
+                estimate = estimates_by_id.get(str(meal_data["estimate_id"]))
                 if estimate:
                     description = _generate_meal_description(estimate)
                 else:
@@ -1093,54 +939,46 @@ async def db_get_meals_with_photos(
 
 
 async def db_update_meal_with_macros(meal_id: uuid.UUID, updates: Any) -> Any | None:
-    """Update meal and recalculate calories from macronutrients.
-
-    Args:
-        meal_id: Meal UUID
-        updates: MealUpdate object
-
-    Returns:
-        Updated MealWithPhotos or None
-    """
-    if sb is None:
-        raise RuntimeError("Supabase configuration not available")
+    """Update meal and recalculate calories from macronutrients."""
+    pool = await get_pool()
 
     try:
-        # Build update dict
         update_data: dict[str, Any] = {}
 
         if updates.description is not None:
             update_data["description"] = updates.description
-
         if updates.protein_grams is not None:
             update_data["protein_grams"] = updates.protein_grams
-
         if updates.carbs_grams is not None:
             update_data["carbs_grams"] = updates.carbs_grams
-
         if updates.fats_grams is not None:
             update_data["fats_grams"] = updates.fats_grams
 
         # Recalculate calories if macros updated (4-4-9 formula)
         if any(k in update_data for k in ["protein_grams", "carbs_grams", "fats_grams"]):
-            # Get current meal to fill missing macros
-            current_meal_res = sb.table("meals").select("*").eq("id", str(meal_id)).execute()
-            if current_meal_res.data:
-                current = current_meal_res.data[0]
+            async with pool.connection() as conn:
+                cur = await conn.execute("SELECT * FROM meals WHERE id = %s", (str(meal_id),))
+                current = await cur.fetchone()
+
+            if current:
+                current = dict(current)
                 protein = update_data.get("protein_grams", current.get("protein_grams", 0) or 0)
                 carbs = update_data.get("carbs_grams", current.get("carbs_grams", 0) or 0)
                 fats = update_data.get("fats_grams", current.get("fats_grams", 0) or 0)
-
-                # Calculate: 4 kcal/g protein, 4 kcal/g carbs, 9 kcal/g fats
                 update_data["kcal_total"] = protein * 4 + carbs * 4 + fats * 9
 
-        # Update meal
-        res = sb.table("meals").update(update_data).eq("id", str(meal_id)).execute()
-
-        if not res.data:
+        if not update_data:
             return None
 
-        # Return updated meal with photos
+        set_clauses = [f"{k} = %s" for k in update_data]
+        values = [*list(update_data.values()), str(meal_id)]
+
+        async with pool.connection() as conn:
+            await conn.execute(
+                f"UPDATE meals SET {', '.join(set_clauses)} WHERE id = %s",  # type: ignore[arg-type]
+                tuple(values),
+            )
+
         return await db_get_meal_with_photos(meal_id)
 
     except Exception as e:
@@ -1151,44 +989,36 @@ async def db_update_meal_with_macros(meal_id: uuid.UUID, updates: Any) -> Any | 
 async def db_get_meals_calendar_summary(
     user_id: uuid.UUID, start_date: Any, end_date: Any
 ) -> list[Any]:
-    """Get daily meal summaries for calendar view.
-
-    Args:
-        user_id: User UUID
-        start_date: Start date
-        end_date: End date
-
-    Returns:
-        List of MealCalendarDay objects
-    """
-    if sb is None:
-        raise RuntimeError("Supabase configuration not available")
+    """Get daily meal summaries for calendar view."""
+    pool = await get_pool()
 
     from ..schemas import MealCalendarDay
 
     try:
-        # Get all meals in range
         one_year_ago = (date.today() - timedelta(days=365)).isoformat()
 
-        meals_res = (
-            sb.table("meals")
-            .select("created_at, kcal_total, protein_grams, carbs_grams, fats_grams")
-            .eq("user_id", str(user_id))
-            .gte("created_at", one_year_ago)
-            .gte("created_at", f"{start_date}T00:00:00")
-            .lte("created_at", f"{end_date}T23:59:59.999999")
-            .execute()
-        )
+        async with pool.connection() as conn:
+            cur = await conn.execute(
+                """SELECT created_at, kcal_total, protein_grams, carbs_grams, fats_grams
+                   FROM meals
+                   WHERE user_id = %s AND created_at >= %s
+                     AND created_at >= %s AND created_at <= %s""",
+                (
+                    str(user_id),
+                    one_year_ago,
+                    f"{start_date}T00:00:00",
+                    f"{end_date}T23:59:59.999999",
+                ),
+            )
+            rows = await cur.fetchall()
 
-        if not meals_res.data:
+        if not rows:
             return []
 
-        # Aggregate by date
         daily_data: dict[str, dict[str, float]] = {}
-
-        for meal in meals_res.data:
-            # Extract date from timestamp
-            meal_date = meal["created_at"].split("T")[0]
+        for meal in rows:
+            meal = dict(meal)
+            meal_date = str(meal["created_at"]).split("T")[0]
 
             if meal_date not in daily_data:
                 daily_data[meal_date] = {
@@ -1205,7 +1035,6 @@ async def db_get_meals_calendar_summary(
             daily_data[meal_date]["carbs"] += meal.get("carbs_grams", 0) or 0
             daily_data[meal_date]["fats"] += meal.get("fats_grams", 0) or 0
 
-        # Build response
         calendar_days = []
         for date_str, data in sorted(daily_data.items(), reverse=True):
             calendar_days.append(
@@ -1272,52 +1101,55 @@ def _inline_payload(daily: InlineAnalyticsDaily) -> dict[str, Any]:
 
 
 async def db_upsert_inline_analytics(daily: InlineAnalyticsDaily) -> InlineAnalyticsDaily:
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
     payload = _inline_payload(daily)
-    response = (
-        sb.table("inline_analytics_daily").upsert(payload, on_conflict="date,chat_type").execute()
-    )
 
-    returned = response.data[0] if response.data else payload
+    columns = ", ".join(payload.keys())
+    placeholders = ", ".join(["%s"] * len(payload))
+    update_set = ", ".join(f"{k} = EXCLUDED.{k}" for k in payload if k not in ("id",))
+
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            f"""INSERT INTO inline_analytics_daily ({columns}) VALUES ({placeholders})
+                ON CONFLICT (date, chat_type) DO UPDATE SET {update_set}
+                RETURNING *""",  # type: ignore[arg-type]
+            tuple(payload.values()),
+        )
+        row = await cur.fetchone()
+
+    returned = dict(row) if row else payload
     return _to_inline_daily_model(returned)
 
 
 async def db_fetch_inline_analytics(
     range_start: date, range_end: date, chat_type: str | None = None
 ) -> list[InlineAnalyticsDaily]:
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
+    pool = await get_pool()
 
-    query = (
-        sb.table("inline_analytics_daily")
-        .select("*")
-        .gte("date", range_start.isoformat())
-        .lte("date", range_end.isoformat())
-        .order("date")
-    )
+    async with pool.connection() as conn:
+        if chat_type:
+            cur = await conn.execute(
+                """SELECT * FROM inline_analytics_daily
+                   WHERE date >= %s AND date <= %s AND chat_type = %s
+                   ORDER BY date""",
+                (range_start, range_end, chat_type),
+            )
+        else:
+            cur = await conn.execute(
+                """SELECT * FROM inline_analytics_daily
+                   WHERE date >= %s AND date <= %s
+                   ORDER BY date""",
+                (range_start, range_end),
+            )
+        rows = await cur.fetchall()
 
-    if chat_type:
-        query = query.eq("chat_type", chat_type)
-
-    response = query.execute()
-    rows = response.data or []
-    return [_to_inline_daily_model(row) for row in rows]
+    return [_to_inline_daily_model(dict(row)) for row in rows]
 
 
 async def db_increment_inline_permission_block(
     *, date_value: date, chat_type: InlineChatType, increment: int = 1
 ) -> InlineAnalyticsDaily:
-    if sb is None:
-        raise RuntimeError(
-            "Supabase configuration not available. Database functionality is disabled."
-        )
-
     existing_rows = await db_fetch_inline_analytics(date_value, date_value, chat_type.value)
     if existing_rows:
         current = existing_rows[0]

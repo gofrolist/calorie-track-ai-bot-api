@@ -7,11 +7,10 @@ from calorie_track_ai_bot.services.config import (
     AWS_REGION,
     AWS_SECRET_ACCESS_KEY,
     BUCKET_NAME,
+    DATABASE_URL,
     OPENAI_API_KEY,
     OPENAI_MODEL,
     REDIS_URL,
-    SUPABASE_KEY,
-    SUPABASE_URL,
 )
 
 
@@ -32,22 +31,16 @@ class TestConfig:
 
     def test_app_env_from_env(self):
         """Test APP_ENV can be set from environment."""
-        # This test verifies the default behavior since re-importing doesn't work
-        # In a real scenario, environment variables would be set before import
         assert APP_ENV == "dev"  # Default value
 
     def test_openai_model_from_env(self):
         """Test OPENAI_MODEL can be set from environment."""
-        # This test verifies the default behavior since re-importing doesn't work
-        # In a real scenario, environment variables would be set before import
         assert OPENAI_MODEL == "gpt-5-mini"  # Default value
 
     def test_optional_env_vars_can_be_none(self):
         """Test that optional environment variables can be None."""
-        # These should be None when not set
         assert OPENAI_API_KEY is None or isinstance(OPENAI_API_KEY, str)
-        assert SUPABASE_URL is None or isinstance(SUPABASE_URL, str)
-        assert SUPABASE_KEY is None or isinstance(SUPABASE_KEY, str)
+        assert DATABASE_URL is None or isinstance(DATABASE_URL, str)
         assert REDIS_URL is None or isinstance(REDIS_URL, str)
         assert AWS_ENDPOINT_URL_S3 is None or isinstance(AWS_ENDPOINT_URL_S3, str)
         assert AWS_ACCESS_KEY_ID is None or isinstance(AWS_ACCESS_KEY_ID, str)
@@ -56,15 +49,12 @@ class TestConfig:
 
     def test_openai_api_key_from_env(self):
         """Test OPENAI_API_KEY can be set from environment."""
-        # Test that the value is set by conftest.py
         assert OPENAI_API_KEY == "test-openai-key"
 
-    def test_supabase_url_from_env(self):
-        """Test SUPABASE_URL can be set from environment."""
-        # Test that the value is set by conftest.py
-        assert SUPABASE_URL == "https://test.supabase.co"
+    def test_database_url_from_env(self):
+        """Test DATABASE_URL can be set from environment."""
+        assert DATABASE_URL == "postgresql://test:test@localhost:5432/testdb"
 
     def test_redis_url_from_env(self):
         """Test REDIS_URL can be set from environment."""
-        # Test that the value is set by conftest.py
         assert REDIS_URL == "redis://localhost:6379"

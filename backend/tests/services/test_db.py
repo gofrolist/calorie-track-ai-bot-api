@@ -1,14 +1,19 @@
-"""Tests for db module."""
+"""Tests for db module (psycopg3 / AsyncConnectionPool)."""
 
 from datetime import UTC, date, datetime
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from postgrest.exceptions import APIError
 
 import calorie_track_ai_bot.services.db as db_module
-from calorie_track_ai_bot.schemas import InlineAnalyticsDaily, InlineChatType
+from calorie_track_ai_bot.schemas import (
+    InlineAnalyticsDaily,
+    InlineChatType,
+    MealCreateFromEstimateRequest,
+    MealCreateManualRequest,
+    MealType,
+)
 from calorie_track_ai_bot.services.db import (
     db_create_meal_from_estimate,
     db_create_meal_from_manual,
@@ -21,47 +26,110 @@ from calorie_track_ai_bot.services.db import (
 )
 
 
+def _make_mock_pool():
+    """Build an AsyncMock pool whose .connection() returns an async context manager with a mock
+    connection.  The connection exposes an async ``execute`` that returns a mock cursor with
+    ``fetchone`` and ``fetchall``.
+
+    Returns (pool, conn, cursor) so tests can configure return values.
+    """
+    cursor = AsyncMock()
+    cursor.fetchone = AsyncMock(return_value=None)
+    cursor.fetchall = AsyncMock(return_value=[])
+
+    conn = AsyncMock()
+    conn.execute = AsyncMock(return_value=cursor)
+
+    # pool.connection() is used as ``async with pool.connection() as conn``
+    ctx = AsyncMock()
+    ctx.__aenter__ = AsyncMock(return_value=conn)
+    ctx.__aexit__ = AsyncMock(return_value=False)
+
+    pool = MagicMock()
+    pool.connection.return_value = ctx
+
+    return pool, conn, cursor
+
+
 class TestDatabaseFunctions:
-    """Test database functions."""
+    """Test database functions backed by psycopg3 connection pool."""
 
     @pytest.fixture
-    def mock_supabase(self):
-        """Mock Supabase client."""
-        with patch("calorie_track_ai_bot.services.db.sb") as mock_sb:
-            mock_table = Mock()
-            mock_query = Mock()
-            mock_query.execute.return_value = Mock(data=[])
-            mock_table.insert.return_value = mock_query
-            mock_table.select.return_value = mock_query
-            mock_table.eq.return_value = mock_query
-            mock_sb.table.return_value = mock_table
-            yield mock_sb
+    def mock_pool(self):
+        """Patch ``get_pool`` to return a mock pool and yield (pool, conn, cursor)."""
+        pool, conn, cursor = _make_mock_pool()
+
+        async def _get_pool():
+            return pool
+
+        with patch("calorie_track_ai_bot.services.db.get_pool", side_effect=_get_pool):
+            yield pool, conn, cursor
+
+    # ------------------------------------------------------------------
+    # db_create_photo
+    # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_db_create_photo(self, mock_supabase):
-        """Test creating a photo record."""
-        tigris_key = "photos/test123.jpg"
+    async def test_db_create_photo_returns_uuid(self, mock_pool):
+        """db_create_photo should return a valid UUID string."""
+        _pool, conn, _cursor = mock_pool
 
-        result = await db_create_photo(tigris_key)
+        result = await db_create_photo("photos/test123.jpg")
 
-        # Should return a UUID string
         assert isinstance(result, str)
-        assert len(result) == 36  # UUID length
+        assert len(result) == 36
 
-        # Should call insert with correct data
-        mock_supabase.table.assert_called_with("photos")
-        mock_table = mock_supabase.table.return_value
-        mock_table.insert.assert_called_once()
-
-        # Check the insert call arguments
-        call_args = mock_table.insert.call_args[0][0]
-        assert "id" in call_args
-        assert call_args["tigris_key"] == tigris_key
+        conn.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_db_save_estimate(self, mock_supabase):
-        """Test saving an estimate."""
-        photo_id = "photo123"
+    async def test_db_create_photo_with_all_params(self, mock_pool):
+        """db_create_photo passes user_id, display_order, and media_group_id to the INSERT."""
+        _pool, conn, _cursor = mock_pool
+
+        result = await db_create_photo(
+            tigris_key="photos/full.jpg",
+            user_id="user123",
+            display_order=2,
+            media_group_id="media456",
+        )
+
+        assert isinstance(result, str)
+        assert len(result) == 36
+
+        conn.execute.assert_awaited_once()
+        call_args = conn.execute.call_args
+        params = call_args[0][1]
+        # params: (pid, tigris_key, user_id, display_order, media_group_id)
+        assert params[1] == "photos/full.jpg"
+        assert params[2] == "user123"
+        assert params[3] == 2
+        assert params[4] == "media456"
+
+    @pytest.mark.asyncio
+    async def test_db_create_photo_minimal(self, mock_pool):
+        """db_create_photo with only the required tigris_key uses default values."""
+        _pool, conn, _cursor = mock_pool
+
+        result = await db_create_photo("photos/minimal.jpg")
+
+        assert isinstance(result, str)
+        assert len(result) == 36
+
+        params = conn.execute.call_args[0][1]
+        assert params[1] == "photos/minimal.jpg"
+        assert params[2] is None  # user_id default
+        assert params[3] == 0  # display_order default
+        assert params[4] is None  # media_group_id default
+
+    # ------------------------------------------------------------------
+    # db_save_estimate
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_db_save_estimate_returns_uuid(self, mock_pool):
+        """db_save_estimate should return a valid UUID string."""
+        _pool, conn, _cursor = mock_pool
+
         estimate_data = {
             "kcal_mean": 500,
             "kcal_min": 400,
@@ -70,319 +138,152 @@ class TestDatabaseFunctions:
             "items": [{"label": "pizza", "kcal": 500, "confidence": 0.8}],
         }
 
-        result = await db_save_estimate(photo_id, estimate_data)
+        result = await db_save_estimate("photo123", estimate_data)
 
-        # Should return a UUID string
         assert isinstance(result, str)
-        assert len(result) == 36  # UUID length
+        assert len(result) == 36
+        conn.execute.assert_awaited_once()
 
-        # Should call insert with correct data
-        mock_supabase.table.assert_called_with("estimates")
-        mock_table = mock_supabase.table.return_value
-        mock_table.insert.assert_called_once()
-
-        # Check the insert call arguments
-        call_args = mock_table.insert.call_args[0][0]
-        assert "id" in call_args
-        assert call_args["photo_id"] == photo_id
-        assert call_args["kcal_mean"] == 500
+    # ------------------------------------------------------------------
+    # db_get_estimate
+    # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_db_get_estimate_found(self, mock_supabase):
-        """Test getting an estimate that exists."""
-        estimate_id = "estimate123"
-        mock_data = [{"id": estimate_id, "kcal_mean": 500}]
+    async def test_db_get_estimate_found(self, mock_pool):
+        """db_get_estimate returns the row dict when the estimate exists."""
+        _pool, _conn, cursor = mock_pool
 
-        # Mock the response
-        mock_response = Mock()
-        mock_response.data = mock_data
-        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+        row_data = {"id": "estimate123", "kcal_mean": 500, "kcal_min": 400, "kcal_max": 600}
+        cursor.fetchone.return_value = row_data
 
-        result = await db_get_estimate(estimate_id)
+        result = await db_get_estimate("estimate123")
 
-        assert result == mock_data[0]
-        mock_supabase.table.assert_called_with("estimates")
+        assert result == row_data
 
     @pytest.mark.asyncio
-    async def test_db_get_estimate_not_found(self, mock_supabase):
-        """Test getting an estimate that doesn't exist."""
-        estimate_id = "nonexistent"
+    async def test_db_get_estimate_not_found(self, mock_pool):
+        """db_get_estimate returns None when no row matches."""
+        _pool, _conn, cursor = mock_pool
 
-        # Mock empty response
-        mock_response = Mock()
-        mock_response.data = []
-        mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_response
+        cursor.fetchone.return_value = None
 
-        result = await db_get_estimate(estimate_id)
+        result = await db_get_estimate("nonexistent")
 
         assert result is None
 
+    # ------------------------------------------------------------------
+    # db_create_meal_from_manual
+    # ------------------------------------------------------------------
+
     @pytest.mark.asyncio
-    async def test_db_create_meal_from_manual(self, mock_supabase):
-        """Test creating a meal from manual data."""
-        from datetime import date
+    async def test_db_create_meal_from_manual(self, mock_pool):
+        """db_create_meal_from_manual returns a dict with a UUID meal_id."""
+        _pool, conn, _cursor = mock_pool
 
-        from calorie_track_ai_bot.schemas import MealCreateManualRequest, MealType
-
-        # Create a proper data object
-        mock_data = MealCreateManualRequest(
-            meal_date=date(2024, 1, 1), meal_type=MealType.breakfast, kcal_total=300.5
+        data = MealCreateManualRequest(
+            meal_date=date(2024, 1, 1),
+            meal_type=MealType.breakfast,
+            kcal_total=300.5,
         )
 
-        result = await db_create_meal_from_manual(mock_data)
+        result = await db_create_meal_from_manual(data)
 
-        # Should return a dict with meal_id
         assert isinstance(result, dict)
         assert "meal_id" in result
         assert isinstance(result["meal_id"], str)
-        assert len(result["meal_id"]) == 36  # UUID length
+        assert len(result["meal_id"]) == 36
+        conn.execute.assert_awaited_once()
 
-        # Should call insert with correct data
-        mock_supabase.table.assert_called_with("meals")
-        mock_table = mock_supabase.table.return_value
-        mock_table.insert.assert_called_once()
-
-        # Check the insert call arguments
-        call_args = mock_table.insert.call_args[0][0]
-        assert call_args["meal_date"] == "2024-01-01"
-        assert call_args["meal_type"] == "breakfast"
-        assert call_args["kcal_total"] == 300.5
-        assert call_args["source"] == "manual"
-        assert call_args["user_id"] is None
+    # ------------------------------------------------------------------
+    # db_create_meal_from_estimate
+    # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_db_create_meal_from_estimate(self, mock_supabase):
-        """Test creating a meal from estimate data."""
-        from datetime import date
+    async def test_db_create_meal_from_estimate_with_overrides(self, mock_pool):
+        """Overrides take precedence over the estimate's kcal_mean."""
+        _pool, conn, _cursor = mock_pool
 
-        from calorie_track_ai_bot.schemas import MealCreateFromEstimateRequest, MealType
-
-        # Mock the estimate data for db_get_estimate
         mock_estimate = {"kcal_mean": 400, "kcal_min": 350, "kcal_max": 450}
 
-        with patch("calorie_track_ai_bot.services.db.db_get_estimate", return_value=mock_estimate):
-            # Create a proper data object
-            mock_data = MealCreateFromEstimateRequest(
+        with patch(
+            "calorie_track_ai_bot.services.db.db_get_estimate",
+            return_value=mock_estimate,
+        ):
+            data = MealCreateFromEstimateRequest(
                 meal_date=date(2024, 1, 1),
                 meal_type=MealType.lunch,
                 estimate_id="estimate123",
                 overrides={"kcal_total": 450},
             )
 
-            result = await db_create_meal_from_estimate(mock_data, "user123")
+            result = await db_create_meal_from_estimate(data, "user123")
 
-            # Should return a dict with meal_id
-            assert isinstance(result, dict)
-            assert "meal_id" in result
-            assert isinstance(result["meal_id"], str)
-            assert len(result["meal_id"]) == 36  # UUID length
+        assert isinstance(result, dict)
+        assert "meal_id" in result
+        assert len(result["meal_id"]) == 36
 
-            # Should call insert with correct data
-            mock_supabase.table.assert_called_with("meals")
-            mock_table = mock_supabase.table.return_value
-            mock_table.insert.assert_called_once()
-
-            # Check the insert call arguments
-            call_args = mock_table.insert.call_args[0][0]
-            assert call_args["meal_date"] == "2024-01-01"
-            assert call_args["meal_type"] == "lunch"
-            assert call_args["kcal_total"] == 450  # From overrides
-            assert call_args["source"] == "photo"
-            assert call_args["estimate_id"] == "estimate123"
-            assert call_args["user_id"] == "user123"
+        # The first execute call is the INSERT INTO meals
+        insert_call = conn.execute.call_args_list[0]
+        params = insert_call[0][1]
+        # params order: (mid, user_id, meal_date, meal_type, kcal_total,
+        #                protein_grams, carbs_grams, fats_grams, "photo", estimate_id)
+        assert params[4] == 450  # kcal_total from overrides
 
     @pytest.mark.asyncio
-    async def test_db_create_meal_from_estimate_no_overrides(self, mock_supabase):
-        """Test creating a meal from estimate data without overrides."""
-        from datetime import date
+    async def test_db_create_meal_from_estimate_no_overrides(self, mock_pool):
+        """Without overrides, kcal_total comes from the estimate's kcal_mean."""
+        _pool, conn, _cursor = mock_pool
 
-        from calorie_track_ai_bot.schemas import MealCreateFromEstimateRequest, MealType
-
-        # Mock the estimate data for db_get_estimate
         mock_estimate = {"kcal_mean": 600, "kcal_min": 550, "kcal_max": 650}
 
-        with patch("calorie_track_ai_bot.services.db.db_get_estimate", return_value=mock_estimate):
-            # Create a proper data object without overrides
-            mock_data = MealCreateFromEstimateRequest(
+        with patch(
+            "calorie_track_ai_bot.services.db.db_get_estimate",
+            return_value=mock_estimate,
+        ):
+            data = MealCreateFromEstimateRequest(
                 meal_date=date(2024, 1, 1),
                 meal_type=MealType.dinner,
                 estimate_id="estimate456",
                 overrides=None,
             )
 
-            result = await db_create_meal_from_estimate(mock_data, "user123")
+            result = await db_create_meal_from_estimate(data, "user123")
 
-            # Should return a dict with meal_id
-            assert isinstance(result, dict)
-            assert "meal_id" in result
+        assert isinstance(result, dict)
+        assert "meal_id" in result
 
-            # Check the insert call arguments
-            call_args = mock_supabase.table.return_value.insert.call_args[0][0]
-            assert call_args["kcal_total"] == 600  # From estimate kcal_mean
+        insert_call = conn.execute.call_args_list[0]
+        params = insert_call[0][1]
+        assert params[4] == 600  # kcal_total from estimate kcal_mean
 
     @pytest.mark.asyncio
-    async def test_db_create_meal_from_estimate_invalid_overrides(self, mock_supabase):
-        """Test creating a meal from estimate data with invalid overrides."""
-        from datetime import date
+    async def test_db_create_meal_from_estimate_not_found(self, mock_pool):
+        """Raises ValueError when the estimate does not exist."""
+        _pool, _conn, _cursor = mock_pool
 
-        from calorie_track_ai_bot.schemas import MealCreateFromEstimateRequest, MealType
-
-        # Mock the estimate data for db_get_estimate
-        mock_estimate = {"kcal_mean": 200, "kcal_min": 180, "kcal_max": 220}
-
-        with patch("calorie_track_ai_bot.services.db.db_get_estimate", return_value=mock_estimate):
-            # Create a proper data object with None overrides (which is valid)
-            mock_data = MealCreateFromEstimateRequest(
+        with patch(
+            "calorie_track_ai_bot.services.db.db_get_estimate",
+            return_value=None,
+        ):
+            data = MealCreateFromEstimateRequest(
                 meal_date=date(2024, 1, 1),
                 meal_type=MealType.snack,
-                estimate_id="estimate789",
-                overrides=None,  # None is valid according to schema
+                estimate_id="missing",
+                overrides=None,
             )
 
-            result = await db_create_meal_from_estimate(mock_data, "user123")
+            with pytest.raises(ValueError, match="Estimate not found"):
+                await db_create_meal_from_estimate(data, "user123")
 
-            # Should return a dict with meal_id
-            assert isinstance(result, dict)
-            assert "meal_id" in result
-
-            # Check the insert call arguments
-            call_args = mock_supabase.table.return_value.insert.call_args[0][0]
-            assert call_args["kcal_total"] == 200  # From estimate kcal_mean
+    # ------------------------------------------------------------------
+    # Inline analytics
+    # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_db_create_photo_with_display_order_success(self, mock_supabase):
-        """Test creating a photo record with display_order (new schema)."""
-        tigris_key = "photos/test123.jpg"
-        user_id = "user123"
-        display_order = 2
-        media_group_id = "media123"
+    async def test_db_upsert_inline_analytics(self, mock_pool):
+        """db_upsert_inline_analytics returns an InlineAnalyticsDaily from the RETURNING row."""
+        _pool, _conn, cursor = mock_pool
 
-        result = await db_create_photo(
-            tigris_key=tigris_key,
-            user_id=user_id,
-            display_order=display_order,
-            media_group_id=media_group_id,
-        )
-
-        # Should return a UUID string
-        assert isinstance(result, str)
-        assert len(result) == 36  # UUID length
-
-        # Should call insert with correct data including display_order
-        mock_supabase.table.assert_called_with("photos")
-        mock_table = mock_supabase.table.return_value
-        mock_table.insert.assert_called_once()
-
-        # Check the insert call arguments
-        call_args = mock_table.insert.call_args[0][0]
-        assert "id" in call_args
-        assert call_args["tigris_key"] == tigris_key
-        assert call_args["display_order"] == display_order
-        assert call_args["user_id"] == user_id
-        assert call_args["media_group_id"] == media_group_id
-
-    @pytest.mark.asyncio
-    async def test_db_create_photo_missing_display_order_column_fallback(self, mock_supabase):
-        """Test creating a photo record when display_order column doesn't exist (legacy schema)."""
-        tigris_key = "photos/test123.jpg"
-        user_id = "user123"
-        display_order = 1
-        media_group_id = "media123"
-
-        # Mock the first call to fail with display_order error
-        mock_table = mock_supabase.table.return_value
-        mock_query = mock_table.insert.return_value
-
-        # First call fails with display_order column error
-        mock_query.execute.side_effect = [
-            APIError(
-                {
-                    "message": "Could not find the 'display_order' column of 'photos' in the schema cache",
-                    "code": "PGRST204",
-                    "hint": None,
-                    "details": None,
-                }
-            ),
-            Mock(),  # Second call succeeds
-        ]
-
-        result = await db_create_photo(
-            tigris_key=tigris_key,
-            user_id=user_id,
-            display_order=display_order,
-            media_group_id=media_group_id,
-        )
-
-        # Should return a UUID string
-        assert isinstance(result, str)
-        assert len(result) == 36  # UUID length
-
-        # Should have called insert twice (first with display_order, second without)
-        assert mock_table.insert.call_count == 2
-
-        # Check the first call (with display_order)
-        first_call_args = mock_table.insert.call_args_list[0][0][0]
-        assert first_call_args["display_order"] == display_order
-        assert first_call_args["media_group_id"] == media_group_id
-
-        # Check the second call (without display_order)
-        second_call_args = mock_table.insert.call_args_list[1][0][0]
-        assert "display_order" not in second_call_args
-        assert "media_group_id" not in second_call_args
-        assert second_call_args["tigris_key"] == tigris_key
-        assert second_call_args["user_id"] == user_id
-
-    @pytest.mark.asyncio
-    async def test_db_create_photo_other_database_error(self, mock_supabase):
-        """Test that other database errors are not caught by the fallback logic."""
-        tigris_key = "photos/test123.jpg"
-        user_id = "user123"
-
-        # Mock a different database error
-        mock_table = mock_supabase.table.return_value
-        mock_query = mock_table.insert.return_value
-        mock_query.execute.side_effect = APIError(
-            {"message": "Connection timeout", "code": "PGRST001", "hint": None, "details": None}
-        )
-
-        # Should raise the error, not fall back
-        with pytest.raises(APIError) as exc_info:
-            await db_create_photo(tigris_key=tigris_key, user_id=user_id)
-
-        assert "Connection timeout" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_db_create_photo_no_supabase_config(self):
-        """Test creating a photo record when Supabase is not configured."""
-        with patch("calorie_track_ai_bot.services.db.sb", None):
-            with pytest.raises(RuntimeError) as exc_info:
-                await db_create_photo("photos/test123.jpg")
-
-            assert "Supabase configuration not available" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_db_create_photo_minimal_data(self, mock_supabase):
-        """Test creating a photo record with minimal required data."""
-        tigris_key = "photos/minimal.jpg"
-
-        result = await db_create_photo(tigris_key)
-
-        # Should return a UUID string
-        assert isinstance(result, str)
-        assert len(result) == 36  # UUID length
-
-        # Should call insert with only required fields
-        mock_table = mock_supabase.table.return_value
-        mock_table.insert.assert_called_once()
-
-        call_args = mock_table.insert.call_args[0][0]
-        assert call_args["tigris_key"] == tigris_key
-        assert "id" in call_args
-        # Optional fields should be included if provided
-        assert call_args.get("display_order") == 0  # Default value
-
-    @pytest.mark.asyncio
-    async def test_db_upsert_inline_analytics(self, monkeypatch):
         daily = InlineAnalyticsDaily(
             id=uuid4(),
             date=date(2024, 1, 1),
@@ -399,29 +300,18 @@ class TestDatabaseFunctions:
             last_updated_at=datetime.now(UTC),
         )
 
-        execute_response = Mock()
-        execute_response.data = [daily.model_dump(mode="json")]
-
-        upsert_query = Mock()
-        upsert_query.execute.return_value = execute_response
-
-        table_mock = Mock()
-        table_mock.upsert.return_value = upsert_query
-
-        mock_sb = Mock()
-        mock_sb.table.return_value = table_mock
-
-        monkeypatch.setattr(db_module, "sb", mock_sb)
+        cursor.fetchone.return_value = daily.model_dump(mode="json")
 
         result = await db_upsert_inline_analytics(daily)
 
-        mock_sb.table.assert_called_with("inline_analytics_daily")
-        table_mock.upsert.assert_called_once()
         assert result.chat_type == InlineChatType.group
         assert result.trigger_counts["inline_query"] == 3
 
     @pytest.mark.asyncio
-    async def test_db_fetch_inline_analytics(self, monkeypatch):
+    async def test_db_fetch_inline_analytics(self, mock_pool):
+        """db_fetch_inline_analytics returns a list of InlineAnalyticsDaily."""
+        _pool, _conn, cursor = mock_pool
+
         daily = InlineAnalyticsDaily(
             id=uuid4(),
             date=date(2024, 2, 1),
@@ -438,28 +328,16 @@ class TestDatabaseFunctions:
             last_updated_at=datetime.now(UTC),
         )
 
-        query = Mock()
-        query.gte.return_value = query
-        query.lte.return_value = query
-        query.order.return_value = query
-        query.eq.return_value = query
-        query.execute.return_value = Mock(data=[daily.model_dump(mode="json")])
-
-        table_mock = Mock()
-        table_mock.select.return_value = query
-
-        mock_sb = Mock()
-        mock_sb.table.return_value = table_mock
-        monkeypatch.setattr(db_module, "sb", mock_sb)
+        cursor.fetchall.return_value = [daily.model_dump(mode="json")]
 
         results = await db_fetch_inline_analytics(date(2024, 2, 1), date(2024, 2, 1), "private")
 
-        mock_sb.table.assert_called_with("inline_analytics_daily")
         assert len(results) == 1
         assert results[0].chat_type == InlineChatType.private
 
     @pytest.mark.asyncio
     async def test_db_increment_inline_permission_block_creates_default(self, monkeypatch):
+        """When no existing row, a default is created and permission_block_count is incremented."""
         saved_daily = InlineAnalyticsDaily(
             id=uuid4(),
             date=date(2024, 3, 1),
@@ -476,7 +354,6 @@ class TestDatabaseFunctions:
             last_updated_at=datetime.now(UTC),
         )
 
-        monkeypatch.setattr(db_module, "sb", Mock())
         monkeypatch.setattr(
             db_module,
             "db_fetch_inline_analytics",
@@ -498,6 +375,8 @@ class TestDatabaseFunctions:
 
     @pytest.mark.asyncio
     async def test_db_increment_inline_permission_block_updates_existing(self, monkeypatch):
+        """When an existing row is found, permission_block_count is incremented by the given
+        amount."""
         existing_daily = InlineAnalyticsDaily(
             id=uuid4(),
             date=date(2024, 4, 1),
@@ -517,7 +396,6 @@ class TestDatabaseFunctions:
         async def fake_upsert(daily: InlineAnalyticsDaily) -> InlineAnalyticsDaily:
             return daily
 
-        monkeypatch.setattr(db_module, "sb", Mock())
         monkeypatch.setattr(
             db_module,
             "db_fetch_inline_analytics",

@@ -17,7 +17,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 
-from ...schemas import DevelopmentEnvironment, ServiceStatus, SupabaseStatus
+from ...schemas import DevelopmentEnvironment
 from ...services.config import APP_ENV
 from ..v1.config import get_current_user
 
@@ -42,10 +42,7 @@ if not DEV_HASH_SECRET:
 
 # Environment configuration with security validation
 DEVELOPMENT_CONFIG = {
-    "supabase_db_url": os.getenv(
-        "SUPABASE_DB_URL", "postgresql://postgres:postgres@localhost:54322/postgres"
-    ),
-    "supabase_db_password": os.getenv("SUPABASE_DB_PASSWORD", "postgres"),
+    "database_url": os.getenv("DATABASE_URL", "postgresql://localhost:5432/neondb"),
     "redis_url": os.getenv("REDIS_URL", "redis://localhost:6379"),
     "storage_endpoint": os.getenv("STORAGE_ENDPOINT", "http://localhost:9000"),
     "frontend_port": int(os.getenv("FRONTEND_PORT", "5173")),
@@ -55,10 +52,8 @@ DEVELOPMENT_CONFIG = {
 # Production safety checks
 if APP_ENV == "production":
     unsafe_defaults = []
-    if "localhost" in DEVELOPMENT_CONFIG["supabase_db_url"]:
-        unsafe_defaults.append("supabase_db_url contains localhost")
-    if DEVELOPMENT_CONFIG["supabase_db_password"] == "postgres":
-        unsafe_defaults.append("supabase_db_password is default")
+    if "localhost" in DEVELOPMENT_CONFIG["database_url"]:
+        unsafe_defaults.append("database_url contains localhost")
     if "localhost" in DEVELOPMENT_CONFIG["redis_url"]:
         unsafe_defaults.append("redis_url contains localhost")
 
@@ -433,8 +428,8 @@ async def get_development_environment(
             "name": f"{APP_ENV}-development" if APP_ENV != "production" else "production-limited",
             "frontend_port": DEVELOPMENT_CONFIG["frontend_port"],
             "backend_port": DEVELOPMENT_CONFIG["backend_port"],
-            "supabase_db_url": DEVELOPMENT_CONFIG["supabase_db_url"],
-            "supabase_db_password": DEVELOPMENT_CONFIG["supabase_db_password"],
+            "supabase_db_url": DEVELOPMENT_CONFIG["database_url"],
+            "supabase_db_password": "",
             "redis_url": DEVELOPMENT_CONFIG["redis_url"],
             "storage_endpoint": DEVELOPMENT_CONFIG["storage_endpoint"],
             "cors_origins": [
@@ -487,116 +482,41 @@ async def get_development_environment(
         ) from e
 
 
-@router.get("/dev/supabase/status", response_model=SupabaseStatus)
-async def get_supabase_status(
-    request: Request, user_id: str = Depends(get_current_user)
-) -> SupabaseStatus:
-    """
-    Get Supabase local development status with enhanced async performance and security.
-
-    Args:
-        request: FastAPI request object
-        user_id: Authenticated user ID
-
-    Returns:
-        SupabaseStatus: Current Supabase local instance status
-
-    Raises:
-        HTTPException: 403 for access denied, 500 for server errors
-    """
+@router.get("/dev/db/status")
+async def get_db_status(request: Request, user_id: str = Depends(get_current_user)) -> dict:
+    """Get database connection pool status."""
     correlation_id = _get_correlation_id(request)
     user_hash = _secure_hash_user_id(user_id)
 
-    logger.info(
-        "Supabase status requested",
-        user_id_hash=user_hash,
-        correlation_id=correlation_id,
-        environment=APP_ENV,
-    )
-
-    # Enhanced security check
     if not _check_dev_endpoints_access(user_id):
-        logger.warning(
-            "Supabase status access denied",
-            user_id_hash=user_hash,
-            correlation_id=correlation_id,
-            reason="insufficient_permissions",
-        )
         raise HTTPException(
             status_code=403,
-            detail={
-                "error": "access_denied",
-                "message": "Development endpoints are not available",
-                "correlation_id": correlation_id,
-            },
+            detail={"error": "access_denied", "correlation_id": correlation_id},
         )
 
     try:
-        # Use async status check with retry logic and caching
-        status_info = await _check_supabase_status_with_retry(max_retries=1, timeout=3)
+        from ...services.database import get_pool
+
+        pool = await get_pool()
+        async with pool.connection() as conn:
+            cur = await conn.execute("SELECT 1")
+            await cur.fetchone()
+
         now = datetime.now(UTC)
-
-        # Convert status string to enum
-        status_enum = ServiceStatus.running
-        if status_info["status"] == "stopped":
-            status_enum = ServiceStatus.stopped
-        elif status_info["status"] == "error":
-            status_enum = ServiceStatus.error
-
-        # Create SupabaseStatus with enhanced information
-        supabase_status = SupabaseStatus(
-            status=status_enum,
-            database_url=status_info.get("db_url") or DEVELOPMENT_CONFIG["supabase_db_url"],
-            db_port=54322,  # Standard Supabase local port
-            services=status_info.get("services", {"db": False}),
-            uptime_seconds=status_info.get("uptime_seconds"),
-            last_check=now,
-            version=status_info.get("version"),
-            error_message=status_info.get("error_message"),
-        )
-
-        # Log with appropriate level based on status
-        log_level = logger.info if status_enum == ServiceStatus.running else logger.warning
-        log_level(
-            "Supabase status retrieved",
-            status=status_enum.value,
-            db_running=status_info.get("services", {}).get("db", False),
-            user_id_hash=user_hash,
-            correlation_id=correlation_id,
-            cached=status_info.get("last_check") != time.time(),
-            attempts=status_info.get("attempts", 1),
-            error=status_info.get("error") if status_enum == ServiceStatus.error else None,
-        )
-
-        return supabase_status
-
-    except TimeoutError:
-        logger.error(
-            "Supabase status check timed out", user_id_hash=user_hash, correlation_id=correlation_id
-        )
-        raise HTTPException(
-            status_code=504,
-            detail={
-                "error": "supabase_timeout",
-                "message": "Supabase status check timed out",
-                "correlation_id": correlation_id,
-            },
-        ) from None
+        return {
+            "status": "running",
+            "database_url": DEVELOPMENT_CONFIG["database_url"],
+            "last_check": now.isoformat(),
+        }
 
     except Exception as e:
         logger.error(
-            "Failed to get Supabase status",
+            "Database status check failed",
             error=str(e),
-            error_type=type(e).__name__,
             user_id_hash=user_hash,
             correlation_id=correlation_id,
         )
-
         raise HTTPException(
             status_code=500,
-            detail={
-                "error": "supabase_status_failed",
-                "message": "Internal server error occurred",  # Generic message for security
-                "correlation_id": correlation_id,
-            },
+            detail={"error": "db_status_failed", "correlation_id": correlation_id},
         ) from e

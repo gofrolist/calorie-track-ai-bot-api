@@ -2,9 +2,8 @@
 # Provides complete local development environment with database, backend, frontend, and supporting services
 
 services:
-  # Note: PostgreSQL database is managed by Supabase CLI
-  # Use `supabase db start` to start the local database
-  # Database will be available at: http://localhost:54321
+  # Note: PostgreSQL database is hosted on Neon
+  # Set DATABASE_URL in your .env file or pass it as an environment variable
 
   # Redis for Queue and Caching
   redis:
@@ -55,11 +54,8 @@ services:
       # Redis Configuration - ALWAYS use local Redis container in Docker
       REDIS_URL: redis://redis:6379/0
 
-      # Database Configuration (Supabase CLI managed)
-      # Start database with: supabase db start
-      SUPABASE_URL: http://host.docker.internal:54321
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOuoJeoDQa2DEOh5NJVr5Y9Y1yG_iJjGwBhU}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+      # Database Configuration (Neon PostgreSQL)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/calorie_track}
 
       # Storage Configuration
       AWS_ENDPOINT_URL_S3: http://minio:9000
@@ -117,10 +113,8 @@ services:
       # Redis Configuration - ALWAYS use local Redis container in Docker
       REDIS_URL: redis://redis:6379/0
 
-      # Database Configuration (Supabase CLI managed)
-      SUPABASE_URL: http://host.docker.internal:54321
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOuoJeoDQa2DEOh5NJVr5Y9Y1yG_iJjGwBhU}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+      # Database Configuration (Neon PostgreSQL)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/calorie_track}
       APP_ENV: development
       LOG_LEVEL: DEBUG
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -214,8 +208,8 @@ services:
     profiles:
       - proxy
 
-  # Database Administration is handled by Supabase Studio
-  # Access at: http://localhost:54323 when running `supabase db start`
+  # Database Administration is handled via Neon Console
+  # https://console.neon.tech
 
   # Redis Admin (optional)
   redis-commander:
@@ -249,10 +243,9 @@ networks:
 
 # Development helpers
 x-development-commands: &dev-commands
-  # Prerequisites: Start Supabase database first
-  # supabase db start
+  # Prerequisites: Set DATABASE_URL in .env
 
-  # Quick start all core services (after starting Supabase)
+  # Quick start all core services
   dev: docker-compose up redis minio backend frontend
 
   # Start with admin tools

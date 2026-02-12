@@ -46,8 +46,7 @@ jobs:
     - name: Pytest
       run: uv run pytest -q
       env:
-        SUPABASE_URL: https://test.supabase.co
-        SUPABASE_KEY: test-supabase-key
+        DATABASE_URL: postgresql://test:test@localhost:5432/testdb
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         REDIS_URL: redis://localhost:6379
         AWS_ENDPOINT_URL_S3: https://test.tigris.com

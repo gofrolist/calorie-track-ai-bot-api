@@ -236,31 +236,34 @@ class TestGoalsEndpoints:
 
         assert response.status_code == 422  # Validation error
 
-    def test_negative_daily_kcal_target(self, client):
+    @patch("calorie_track_ai_bot.api.v1.goals.db_create_or_update_goal")
+    def test_negative_daily_kcal_target(self, mock_db, client):
         """Test creating goal with negative daily_kcal_target."""
+        mock_db.side_effect = Exception("Invalid kcal target")
         headers = {"x-user-id": "59357664"}
         payload = {"daily_kcal_target": -100}
         response = client.post("/goals", json=payload, headers=headers)
 
-        # Should return 500 because the database function will be called with negative value
         assert response.status_code == 500
 
-    def test_zero_daily_kcal_target(self, client):
+    @patch("calorie_track_ai_bot.api.v1.goals.db_create_or_update_goal")
+    def test_zero_daily_kcal_target(self, mock_db, client):
         """Test creating goal with zero daily_kcal_target."""
+        mock_db.side_effect = Exception("Invalid kcal target")
         headers = {"x-user-id": "59357664"}
         payload = {"daily_kcal_target": 0}
         response = client.post("/goals", json=payload, headers=headers)
 
-        # Should return 500 because the database function will be called with zero value
         assert response.status_code == 500
 
-    def test_very_large_daily_kcal_target(self, client):
+    @patch("calorie_track_ai_bot.api.v1.goals.db_create_or_update_goal")
+    def test_very_large_daily_kcal_target(self, mock_db, client):
         """Test creating goal with very large daily_kcal_target."""
+        mock_db.side_effect = Exception("Invalid kcal target")
         headers = {"x-user-id": "59357664"}
         payload = {"daily_kcal_target": 100000}
         response = client.post("/goals", json=payload, headers=headers)
 
-        # Should return 500 because the database function will be called with large value
         assert response.status_code == 500
 
     def test_user_id_header_case_sensitivity(self, client):

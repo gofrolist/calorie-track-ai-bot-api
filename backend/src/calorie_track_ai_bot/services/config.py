@@ -27,9 +27,7 @@ if LOG_LEVEL == "DEBUG":
 OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 
-SUPABASE_URL: str | None = os.getenv("SUPABASE_URL")
-SUPABASE_KEY: str | None = os.getenv("SUPABASE_KEY")
-SUPABASE_SERVICE_ROLE_KEY: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+DATABASE_URL: str | None = os.getenv("DATABASE_URL")
 
 REDIS_URL: str | None = os.getenv("REDIS_URL")
 

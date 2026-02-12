@@ -2,6 +2,7 @@
 
 Feature: 005-mini-app-improvements
 Tests cover feedback submission logic, timezone handling, and admin notifications.
+Uses psycopg3 connection pool mocking (get_pool from database.py).
 """
 
 import uuid
@@ -10,57 +11,51 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.calorie_track_ai_bot.schemas import (
+from calorie_track_ai_bot.schemas import (
     FeedbackMessageType,
     FeedbackStatus,
     FeedbackSubmissionRequest,
     FeedbackSubmissionResponse,
 )
-from src.calorie_track_ai_bot.services.feedback_service import FeedbackService
+from calorie_track_ai_bot.services.feedback_service import FeedbackService
+
+
+def _make_mock_pool():
+    """Create a mock async connection pool with cursor support.
+
+    pool.connection() is a synchronous call that returns an async context manager,
+    so the pool itself is a regular Mock while the connection uses AsyncMock for
+    __aenter__/__aexit__ and execute/fetchone.
+    """
+    mock_pool = Mock()
+    mock_conn = AsyncMock()
+    mock_cursor = AsyncMock()
+    mock_cursor.fetchone = AsyncMock(return_value=None)
+    mock_cursor.fetchall = AsyncMock(return_value=[])
+    mock_conn.execute = AsyncMock(return_value=mock_cursor)
+
+    ctx = AsyncMock()
+    ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    ctx.__aexit__ = AsyncMock(return_value=False)
+    mock_pool.connection.return_value = ctx
+
+    return mock_pool, mock_conn, mock_cursor
 
 
 class TestFeedbackServiceSubmission:
     """Test feedback submission logic."""
 
     @pytest.fixture
-    def mock_supabase(self):
-        """Create a mock Supabase client."""
-        mock_sb = Mock()
+    def mock_pool(self):
+        """Create a mock psycopg3 connection pool."""
+        mock_pool, mock_conn, mock_cursor = _make_mock_pool()
 
-        # Mock for feedback_submissions table (insert)
-        mock_feedback_table = Mock()
-        mock_insert = Mock()
-        mock_execute = Mock()
-
-        mock_execute.execute.return_value = Mock(data=[])
-        mock_insert.return_value = mock_execute
-        mock_feedback_table.insert = mock_insert
-
-        # Mock for users table (select)
-        mock_users_table = Mock()
-        mock_select = Mock()
-        mock_eq = Mock()
-        mock_users_execute = Mock()
-
-        # Default: return user with handle
-        mock_users_execute.execute.return_value = Mock(
-            data=[{"handle": "testuser", "telegram_id": 123456789}]
+        # Default: _get_user_display returns a user with handle
+        mock_cursor.fetchone = AsyncMock(
+            return_value={"handle": "testuser", "telegram_id": 123456789}
         )
-        mock_eq.return_value = mock_users_execute
-        mock_select.eq = mock_eq
-        mock_users_table.select = Mock(return_value=mock_select)
 
-        # Configure table() to return appropriate mock based on table name
-        def table_side_effect(table_name):
-            if table_name == "feedback_submissions":
-                return mock_feedback_table
-            elif table_name == "users":
-                return mock_users_table
-            return Mock()
-
-        mock_sb.table = Mock(side_effect=table_side_effect)
-
-        return mock_sb
+        return mock_pool, mock_conn, mock_cursor
 
     @pytest.fixture
     def mock_bot(self):
@@ -70,12 +65,18 @@ class TestFeedbackServiceSubmission:
         return mock_bot
 
     @pytest.fixture
-    def feedback_service(self, mock_supabase, mock_bot):
+    def feedback_service(self, mock_pool, mock_bot):
         """Create a FeedbackService instance with mocked dependencies."""
+        pool, _conn, _cursor = mock_pool
+
         with (
-            patch("src.calorie_track_ai_bot.services.feedback_service.sb", mock_supabase),
             patch(
-                "src.calorie_track_ai_bot.services.feedback_service.get_bot",
+                "calorie_track_ai_bot.services.feedback_service.get_pool",
+                new_callable=AsyncMock,
+                return_value=pool,
+            ),
+            patch(
+                "calorie_track_ai_bot.services.feedback_service.get_bot",
                 return_value=mock_bot,
             ),
             patch.dict(
@@ -90,9 +91,7 @@ class TestFeedbackServiceSubmission:
             yield service
 
     @pytest.mark.anyio
-    async def test_submit_feedback_creates_timezone_aware_datetime(
-        self, feedback_service, mock_supabase
-    ):
+    async def test_submit_feedback_creates_timezone_aware_datetime(self, feedback_service):
         """Test that feedback submission creates timezone-aware datetime.
 
         This is a critical test for the bug we fixed where datetime.utcnow()
@@ -105,20 +104,19 @@ class TestFeedbackServiceSubmission:
             user_context={"page": "/feedback", "language": "en"},
         )
 
-        # Submit feedback
         response = await feedback_service.submit_feedback(user_id, request)
 
-        # Validate response has timezone-aware datetime
         assert isinstance(response, FeedbackSubmissionResponse)
         assert isinstance(response.created_at, datetime)
-        assert response.created_at.tzinfo is not None  # Critical: must have timezone
+        assert response.created_at.tzinfo is not None
         assert response.created_at.tzinfo == UTC or response.created_at.tzinfo.utcoffset(
             None
         ) == UTC.utcoffset(None)
 
     @pytest.mark.anyio
-    async def test_submit_feedback_saves_to_database(self, feedback_service, mock_supabase):
+    async def test_submit_feedback_saves_to_database(self, feedback_service, mock_pool):
         """Test that feedback is saved to the database with correct fields."""
+        _pool, mock_conn, _cursor = mock_pool
         user_id = str(uuid.uuid4())
         request = FeedbackSubmissionRequest(
             message_type=FeedbackMessageType.bug,
@@ -128,33 +126,23 @@ class TestFeedbackServiceSubmission:
 
         await feedback_service.submit_feedback(user_id, request)
 
-        # Verify database insert was called (should be called with feedback_submissions)
-        mock_supabase.table.assert_any_call("feedback_submissions")
+        # Find the INSERT call (first execute call is the INSERT, second is the SELECT in _get_user_display)
+        insert_call = None
+        for call in mock_conn.execute.call_args_list:
+            sql = call[0][0]
+            if "INSERT INTO feedback_submissions" in sql:
+                insert_call = call
+                break
 
-        # Get the feedback_submissions table mock and check the insert call
-        feedback_table_calls = [
-            call
-            for call in mock_supabase.table.call_args_list
-            if call[0][0] == "feedback_submissions"
-        ]
-        assert len(feedback_table_calls) > 0
+        assert insert_call is not None, "INSERT INTO feedback_submissions was not called"
 
-        # Get the insert call by checking the side_effect result
-        feedback_table_mock = mock_supabase.table("feedback_submissions")
-        insert_call = feedback_table_mock.insert.call_args
-
-        # Validate inserted data
-        assert insert_call is not None
-        inserted_data = insert_call[0][0]
-
-        assert "id" in inserted_data
-        assert inserted_data["user_id"] == user_id
-        assert inserted_data["message_type"] == "bug"
-        assert inserted_data["message_content"] == "Found a bug in the app"
-        assert inserted_data["user_context"] == {"page": "/meals", "language": "en"}
-        assert inserted_data["status"] == "new"
-        assert "created_at" in inserted_data
-        assert "updated_at" in inserted_data
+        params = insert_call[0][1]
+        # params is a tuple: (id, user_id, message_type, message_content, user_context, status, admin_notes, created_at, updated_at)
+        assert params[1] == user_id
+        assert params[2] == "bug"
+        assert params[3] == "Found a bug in the app"
+        assert params[4] == {"page": "/meals", "language": "en"}
+        assert params[5] == "new"
 
     @pytest.mark.anyio
     async def test_submit_feedback_returns_correct_response(self, feedback_service):
@@ -184,13 +172,12 @@ class TestFeedbackServiceSubmission:
 
         await feedback_service.submit_feedback(user_id, request)
 
-        # Verify admin notification was sent
         mock_bot.send_admin_notification.assert_called_once()
         call_args = mock_bot.send_admin_notification.call_args
 
         assert call_args[1]["chat_id"] == 123456
         assert "New Feedback Received" in call_args[1]["message"]
-        assert "@testuser" in call_args[1]["message"]  # User handle should be in message
+        assert "@testuser" in call_args[1]["message"]
         assert "I need help with my account" in call_args[1]["message"]
         # Type, Context, and Status fields should NOT be in message
         assert "Type:" not in call_args[1]["message"]
@@ -236,9 +223,11 @@ class TestFeedbackServiceSubmission:
 
     @pytest.mark.anyio
     async def test_submit_feedback_continues_on_notification_failure(
-        self, feedback_service, mock_bot, mock_supabase
+        self, feedback_service, mock_bot, mock_pool
     ):
         """Test that feedback is saved even if admin notification fails."""
+        _pool, mock_conn, _cursor = mock_pool
+
         # Make admin notification fail
         mock_bot.send_admin_notification.side_effect = Exception("Notification failed")
 
@@ -254,16 +243,31 @@ class TestFeedbackServiceSubmission:
         assert isinstance(response, FeedbackSubmissionResponse)
         assert response.status == FeedbackStatus.new
 
-        # Verify database insert was still called
-        mock_supabase.table.assert_any_call("feedback_submissions")
+        # Verify database INSERT was still called
+        insert_called = any(
+            "INSERT INTO feedback_submissions" in call[0][0]
+            for call in mock_conn.execute.call_args_list
+        )
+        assert insert_called
 
     @pytest.mark.anyio
-    async def test_submit_feedback_with_notifications_disabled(self, mock_supabase, mock_bot):
+    async def test_submit_feedback_with_notifications_disabled(self):
         """Test that notifications are skipped when disabled."""
+        mock_pool, _mock_conn, mock_cursor = _make_mock_pool()
+        mock_cursor.fetchone = AsyncMock(
+            return_value={"handle": "testuser", "telegram_id": 123456789}
+        )
+        mock_bot = Mock()
+        mock_bot.send_admin_notification = AsyncMock()
+
         with (
-            patch("src.calorie_track_ai_bot.services.feedback_service.sb", mock_supabase),
             patch(
-                "src.calorie_track_ai_bot.services.feedback_service.get_bot",
+                "calorie_track_ai_bot.services.feedback_service.get_pool",
+                new_callable=AsyncMock,
+                return_value=mock_pool,
+            ),
+            patch(
+                "calorie_track_ai_bot.services.feedback_service.get_bot",
                 return_value=mock_bot,
             ),
             patch.dict(
@@ -292,58 +296,51 @@ class TestFeedbackServiceRetrieval:
     """Test feedback retrieval logic."""
 
     @pytest.fixture
-    def mock_supabase(self):
-        """Create a mock Supabase client."""
-        mock_sb = Mock()
-        return mock_sb
+    def mock_pool(self):
+        """Create a mock psycopg3 connection pool."""
+        return _make_mock_pool()
 
     @pytest.fixture
-    def feedback_service(self, mock_supabase):
+    def feedback_service(self, mock_pool):
         """Create a FeedbackService instance with mocked dependencies."""
-        with patch("src.calorie_track_ai_bot.services.feedback_service.sb", mock_supabase):
-            mock_bot = Mock()
-            with patch(
-                "src.calorie_track_ai_bot.services.feedback_service.get_bot",
-                return_value=mock_bot,
-            ):
-                service = FeedbackService()
-                yield service
+        pool, _conn, _cursor = mock_pool
+
+        with (
+            patch(
+                "calorie_track_ai_bot.services.feedback_service.get_pool",
+                new_callable=AsyncMock,
+                return_value=pool,
+            ),
+            patch(
+                "calorie_track_ai_bot.services.feedback_service.get_bot",
+                return_value=Mock(),
+            ),
+        ):
+            service = FeedbackService()
+            yield service
 
     @pytest.mark.anyio
-    async def test_get_feedback_returns_submission(self, feedback_service, mock_supabase):
+    async def test_get_feedback_returns_submission(self, feedback_service, mock_pool):
         """Test that get_feedback retrieves feedback by ID."""
+        _pool, _conn, mock_cursor = mock_pool
         feedback_id = uuid.uuid4()
         user_id = str(uuid.uuid4())
         created_at = datetime.now(UTC)
 
-        # Mock database response
-        mock_data = {
-            "id": str(feedback_id),
-            "user_id": user_id,
-            "message_type": "feedback",
-            "message_content": "Test feedback",
-            "user_context": {"page": "/feedback"},
-            "status": "new",
-            "admin_notes": None,
-            "created_at": created_at.isoformat(),
-            "updated_at": created_at.isoformat(),
-        }
+        mock_cursor.fetchone = AsyncMock(
+            return_value={
+                "id": str(feedback_id),
+                "user_id": user_id,
+                "message_type": "feedback",
+                "message_content": "Test feedback",
+                "user_context": {"page": "/feedback"},
+                "status": "new",
+                "admin_notes": None,
+                "created_at": created_at.isoformat(),
+                "updated_at": created_at.isoformat(),
+            }
+        )
 
-        mock_result = Mock()
-        mock_result.data = [mock_data]
-
-        mock_execute = Mock()
-        mock_execute.execute.return_value = mock_result
-
-        mock_eq = Mock()
-        mock_eq.eq.return_value = mock_execute
-
-        mock_select = Mock()
-        mock_select.select.return_value = mock_eq
-
-        mock_supabase.table.return_value = mock_select
-
-        # Get feedback
         result = await feedback_service.get_feedback(feedback_id)
 
         assert result is not None
@@ -353,141 +350,65 @@ class TestFeedbackServiceRetrieval:
         assert result.status == FeedbackStatus.new
 
     @pytest.mark.anyio
-    async def test_get_feedback_returns_none_when_not_found(self, feedback_service, mock_supabase):
+    async def test_get_feedback_returns_none_when_not_found(self, feedback_service, mock_pool):
         """Test that get_feedback returns None for non-existent feedback."""
+        _pool, _conn, mock_cursor = mock_pool
         feedback_id = uuid.uuid4()
 
-        # Mock empty database response
-        mock_result = Mock()
-        mock_result.data = []
-
-        mock_execute = Mock()
-        mock_execute.execute.return_value = mock_result
-
-        mock_eq = Mock()
-        mock_eq.eq.return_value = mock_execute
-
-        mock_select = Mock()
-        mock_select.select.return_value = mock_eq
-
-        mock_supabase.table.return_value = mock_select
+        mock_cursor.fetchone = AsyncMock(return_value=None)
 
         result = await feedback_service.get_feedback(feedback_id)
 
         assert result is None
 
     @pytest.mark.anyio
-    async def test_user_display_with_handle(self, feedback_service, mock_supabase):
+    async def test_user_display_with_handle(self, feedback_service, mock_pool):
         """Test that user display shows handle when available."""
+        _pool, _conn, mock_cursor = mock_pool
         user_id = str(uuid.uuid4())
 
-        # Mock Supabase to return user with handle
-        mock_users_table = Mock()
-        mock_select = Mock()
-        mock_eq = Mock()
-        mock_execute = Mock()
-        mock_execute.execute.return_value = Mock(
-            data=[{"handle": "john_doe", "telegram_id": 123456789}]
+        mock_cursor.fetchone = AsyncMock(
+            return_value={"handle": "john_doe", "telegram_id": 123456789}
         )
-        mock_eq.return_value = mock_execute
-        mock_select.eq = mock_eq
-        mock_users_table.select = Mock(return_value=mock_select)
 
-        # Update table mock for this test
-        def table_side_effect(table_name):
-            if table_name == "users":
-                return mock_users_table
-            return mock_supabase.table(table_name)
-
-        mock_supabase.table = Mock(side_effect=table_side_effect)
-
-        # Test the user display method
         user_display = await feedback_service._get_user_display(user_id)
 
-        assert user_display == "@john\\_doe"  # Handle with escaped underscore
+        assert user_display == "@john\\_doe"
 
     @pytest.mark.anyio
-    async def test_user_display_without_handle(self, feedback_service, mock_supabase):
+    async def test_user_display_without_handle(self, feedback_service, mock_pool):
         """Test that user display shows telegram_id when handle is not available."""
+        _pool, _conn, mock_cursor = mock_pool
         user_id = str(uuid.uuid4())
 
-        # Mock Supabase to return user without handle
-        mock_users_table = Mock()
-        mock_select = Mock()
-        mock_eq = Mock()
-        mock_execute = Mock()
-        mock_execute.execute.return_value = Mock(data=[{"handle": None, "telegram_id": 987654321}])
-        mock_eq.return_value = mock_execute
-        mock_select.eq = mock_eq
-        mock_users_table.select = Mock(return_value=mock_select)
+        mock_cursor.fetchone = AsyncMock(return_value={"handle": None, "telegram_id": 987654321})
 
-        # Update table mock for this test
-        def table_side_effect(table_name):
-            if table_name == "users":
-                return mock_users_table
-            return mock_supabase.table(table_name)
-
-        mock_supabase.table = Mock(side_effect=table_side_effect)
-
-        # Test the user display method
         user_display = await feedback_service._get_user_display(user_id)
 
-        assert user_display == "987654321"  # Just the telegram_id
+        assert user_display == "987654321"
 
     @pytest.mark.anyio
-    async def test_user_display_user_not_found(self, feedback_service, mock_supabase):
+    async def test_user_display_user_not_found(self, feedback_service, mock_pool):
         """Test that user display falls back to user_id when user not found."""
+        _pool, _conn, mock_cursor = mock_pool
         user_id = str(uuid.uuid4())
 
-        # Mock Supabase to return empty data
-        mock_users_table = Mock()
-        mock_select = Mock()
-        mock_eq = Mock()
-        mock_execute = Mock()
-        mock_execute.execute.return_value = Mock(data=[])
-        mock_eq.return_value = mock_execute
-        mock_select.eq = mock_eq
-        mock_users_table.select = Mock(return_value=mock_select)
+        mock_cursor.fetchone = AsyncMock(return_value=None)
 
-        # Update table mock for this test
-        def table_side_effect(table_name):
-            if table_name == "users":
-                return mock_users_table
-            return mock_supabase.table(table_name)
-
-        mock_supabase.table = Mock(side_effect=table_side_effect)
-
-        # Test the user display method
         user_display = await feedback_service._get_user_display(user_id)
 
-        assert user_display == f"User \\#{user_id[:8]}"  # Fallback to user_id
+        assert user_display == f"User \\#{user_id[:8]}"
 
     @pytest.mark.anyio
-    async def test_user_display_handles_special_characters(self, feedback_service, mock_supabase):
+    async def test_user_display_handles_special_characters(self, feedback_service, mock_pool):
         """Test that user display properly escapes markdown special characters."""
+        _pool, _conn, mock_cursor = mock_pool
         user_id = str(uuid.uuid4())
 
-        # Mock Supabase to return user with special characters in handle
-        mock_users_table = Mock()
-        mock_select = Mock()
-        mock_eq = Mock()
-        mock_execute = Mock()
-        mock_execute.execute.return_value = Mock(
-            data=[{"handle": "test_user*bold*", "telegram_id": 123456789}]
+        mock_cursor.fetchone = AsyncMock(
+            return_value={"handle": "test_user*bold*", "telegram_id": 123456789}
         )
-        mock_eq.return_value = mock_execute
-        mock_select.eq = mock_eq
-        mock_users_table.select = Mock(return_value=mock_select)
 
-        # Update table mock for this test
-        def table_side_effect(table_name):
-            if table_name == "users":
-                return mock_users_table
-            return mock_supabase.table(table_name)
-
-        mock_supabase.table = Mock(side_effect=table_side_effect)
-
-        # Test the user display method
         user_display = await feedback_service._get_user_display(user_id)
 
-        assert user_display == "@test\\_user\\*bold\\*"  # Escaped markdown characters
+        assert user_display == "@test\\_user\\*bold\\*"

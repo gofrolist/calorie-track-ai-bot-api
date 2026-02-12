@@ -16,7 +16,7 @@ from ..schemas import (
     FeedbackSubmissionResponse,
 )
 from .config import logger
-from .db import sb
+from .database import get_pool
 from .telegram import get_bot
 
 
@@ -24,11 +24,6 @@ class FeedbackService:
     """Service for managing user feedback submissions."""
 
     def __init__(self):
-        if sb is None:
-            raise RuntimeError(
-                "Supabase configuration not available. Database functionality is disabled."
-            )
-        self.supabase = sb
         self.bot = get_bot()
         self.admin_chat_id = os.getenv("ADMIN_NOTIFICATION_CHAT_ID")
         self.notifications_enabled = (
@@ -40,23 +35,10 @@ class FeedbackService:
         user_id: str,
         request: FeedbackSubmissionRequest,
     ) -> FeedbackSubmissionResponse:
-        """Submit user feedback and send admin notification.
-
-        Args:
-            user_id: Hashed Telegram user ID
-            request: Feedback submission request
-
-        Returns:
-            Feedback submission response with ID and confirmation
-
-        Raises:
-            Exception: If submission or notification fails
-        """
-        # Generate feedback ID
+        """Submit user feedback and send admin notification."""
         feedback_id = uuid4()
         now = datetime.now(UTC)
 
-        # Prepare feedback record
         feedback_data = {
             "id": str(feedback_id),
             "user_id": user_id,
@@ -70,8 +52,25 @@ class FeedbackService:
         }
 
         try:
-            # Insert into database
-            self.supabase.table("feedback_submissions").insert(feedback_data).execute()
+            pool = await get_pool()
+            async with pool.connection() as conn:
+                await conn.execute(
+                    """INSERT INTO feedback_submissions
+                       (id, user_id, message_type, message_content, user_context,
+                        status, admin_notes, created_at, updated_at)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (
+                        feedback_data["id"],
+                        feedback_data["user_id"],
+                        feedback_data["message_type"],
+                        feedback_data["message_content"],
+                        feedback_data["user_context"],
+                        feedback_data["status"],
+                        feedback_data["admin_notes"],
+                        feedback_data["created_at"],
+                        feedback_data["updated_at"],
+                    ),
+                )
 
             logger.info(
                 f"Feedback submitted successfully: {feedback_id}",
@@ -82,7 +81,6 @@ class FeedbackService:
                 },
             )
 
-            # Send admin notification (non-blocking)
             if self.notifications_enabled and self.admin_chat_id:
                 await self._send_admin_notification(
                     feedback_id=feedback_id,
@@ -93,7 +91,6 @@ class FeedbackService:
                     created_at=now,
                 )
 
-            # Return success response
             return FeedbackSubmissionResponse(
                 id=feedback_id,
                 status=FeedbackStatus.new,
@@ -118,27 +115,15 @@ class FeedbackService:
         user_context: dict | None,
         created_at: datetime,
     ) -> None:
-        """Send Telegram notification to admin chat/channel.
-
-        Args:
-            feedback_id: Feedback submission UUID
-            user_id: User UUID from users table
-            message_type: Type of feedback
-            message_content: User's message
-            user_context: Optional user environment context
-            created_at: Submission timestamp
-        """
+        """Send Telegram notification to admin chat/channel."""
         if not self.admin_chat_id:
             logger.warning("ADMIN_NOTIFICATION_CHAT_ID not configured, skipping notification")
             return
 
         try:
             chat_id = int(self.admin_chat_id)
-
-            # Get user details from database
             user_display = await self._get_user_display(user_id)
 
-            # Format notification message
             message = f"""🔔 *New Feedback Received*
 
 👤 *From:* {user_display}
@@ -167,7 +152,6 @@ class FeedbackService:
                 extra={"feedback_id": str(feedback_id)},
             )
         except Exception as e:
-            # Log error but don't fail feedback submission
             logger.error(
                 f"Failed to send admin notification for feedback {feedback_id}: {e}",
                 extra={"feedback_id": str(feedback_id), "error": str(e)},
@@ -175,29 +159,21 @@ class FeedbackService:
             )
 
     async def _get_user_display(self, user_id: str) -> str:
-        """Get user display name from database.
-
-        Args:
-            user_id: User UUID
-
-        Returns:
-            User handle (if exists) or telegram_id, formatted with proper escaping
-        """
+        """Get user display name from database."""
         try:
-            result = (
-                self.supabase.table("users")
-                .select("handle, telegram_id")
-                .eq("id", user_id)
-                .execute()
-            )
+            pool = await get_pool()
+            async with pool.connection() as conn:
+                cur = await conn.execute(
+                    "SELECT handle, telegram_id FROM users WHERE id = %s", (user_id,)
+                )
+                row = await cur.fetchone()
 
-            if result.data and len(result.data) > 0:
-                user_data = result.data[0]
+            if row:
+                user_data = dict(row)
                 handle = user_data.get("handle")
                 telegram_id = user_data.get("telegram_id")
 
                 if handle:
-                    # Escape markdown special characters in handle
                     escaped_handle = (
                         handle.replace("_", "\\_").replace("*", "\\*").replace("`", "\\`")
                     )
@@ -205,7 +181,6 @@ class FeedbackService:
                 elif telegram_id:
                     return str(telegram_id)
 
-            # Fallback to user_id if user not found
             return f"User \\#{user_id[:8]}"
 
         except Exception as e:
@@ -213,38 +188,30 @@ class FeedbackService:
                 f"Failed to get user display for {user_id}: {e}",
                 extra={"user_id": user_id, "error": str(e)},
             )
-            # Fallback to user_id on error
             return f"User \\#{user_id[:8]}"
 
     async def get_feedback(self, feedback_id: UUID) -> FeedbackSubmission | None:
-        """Retrieve feedback submission by ID (admin only).
-
-        Args:
-            feedback_id: Feedback submission UUID
-
-        Returns:
-            FeedbackSubmission if found, None otherwise
-        """
+        """Retrieve feedback submission by ID (admin only)."""
         try:
-            result = (
-                self.supabase.table("feedback_submissions")
-                .select("*")
-                .eq("id", str(feedback_id))
-                .execute()
-            )
+            pool = await get_pool()
+            async with pool.connection() as conn:
+                cur = await conn.execute(
+                    "SELECT * FROM feedback_submissions WHERE id = %s", (str(feedback_id),)
+                )
+                row = await cur.fetchone()
 
-            if result.data and len(result.data) > 0:
-                data = result.data[0]
+            if row:
+                data = dict(row)
                 return FeedbackSubmission(
-                    id=UUID(data["id"]),
+                    id=UUID(str(data["id"])),
                     user_id=data["user_id"],
                     message_type=FeedbackMessageType(data["message_type"]),
                     message_content=data["message_content"],
                     user_context=data.get("user_context"),
                     status=FeedbackStatus(data["status"]),
                     admin_notes=data.get("admin_notes"),
-                    created_at=datetime.fromisoformat(data["created_at"]),
-                    updated_at=datetime.fromisoformat(data["updated_at"]),
+                    created_at=datetime.fromisoformat(str(data["created_at"])),
+                    updated_at=datetime.fromisoformat(str(data["updated_at"])),
                 )
 
             return None

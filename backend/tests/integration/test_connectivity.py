@@ -22,11 +22,13 @@ def isolated_client():
     with (
         patch("calorie_track_ai_bot.services.telegram.get_bot") as mock_get_bot,
         patch("calorie_track_ai_bot.services.monitoring.performance_monitor") as mock_monitor,
-        patch("calorie_track_ai_bot.services.db.sb") as mock_db,
+        patch("calorie_track_ai_bot.services.db.get_pool") as mock_db,
         patch("calorie_track_ai_bot.services.queue.r") as mock_redis,
         patch("calorie_track_ai_bot.services.storage.s3") as mock_s3,
         patch("calorie_track_ai_bot.services.estimator.client") as mock_openai,
         patch("calorie_track_ai_bot.main.get_bot") as mock_main_bot,
+        patch("calorie_track_ai_bot.main.close_pool") as _mock_close_pool,
+        patch("calorie_track_ai_bot.main.redis_client", None),
     ):
         # Mock the bot to prevent async operations during lifespan
         mock_bot = Mock()

@@ -12,7 +12,7 @@ help: ## Show this help message
 	@echo "  make setup     - Complete setup (backend + frontend)"
 	@echo "  make dev       - Start both backend and frontend in development mode"
 	@echo "  make test      - Run all tests (backend + frontend)"
-	@echo "  make supabase  - Start Supabase local development"
+	@echo "  make docker-dev - Start Docker development environment"
 	@echo ""
 	@echo "Available Commands:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -47,10 +47,6 @@ dev-hybrid: ## Start backend services in Docker, frontend locally (best for fron
 	@echo "Frontend running locally for better IDE integration"
 	@echo "Backend: http://localhost:8000"
 	@echo "Frontend: http://localhost:3000"
-	@echo "Supabase API: http://localhost:54321"
-	@echo ""
-	@echo "Starting Supabase database..."
-	@supabase start
 	@echo ""
 	@echo "Starting backend services in Docker..."
 	@docker compose up -d redis minio backend worker
@@ -153,8 +149,8 @@ logs: ## Show logs from both backend and frontend (if running)
 	@echo "Frontend logs (if running with make dev-frontend)"
 
 # Docker Commands (uses root docker-compose.yml)
-# Note: This uses LOCAL containers (Redis, MinIO, Supabase CLI)
-# Not production services (Upstash, Tigris, Supabase cloud)
+# Note: This uses LOCAL containers (Redis, MinIO)
+# Not production services (Upstash, Tigris, Neon)
 
 .PHONY: docker-dev
 docker-dev: ## Start development environment with Docker (all services)
@@ -163,10 +159,6 @@ docker-dev: ## Start development environment with Docker (all services)
 	@echo "Frontend: http://localhost:3000"
 	@echo "Backend: http://localhost:8000"
 	@echo "MinIO Console: http://localhost:9001"
-	@echo "Supabase API: http://localhost:54321"
-	@echo ""
-	@echo "Starting Supabase database..."
-	@supabase start
 	@echo ""
 	@echo "Starting Docker services..."
 	@docker compose up --build
@@ -177,11 +169,7 @@ docker-dev-services: ## Start only backend services (Redis, MinIO, Backend, Work
 	@echo "Services: Redis, MinIO, Backend, Worker"
 	@echo "Backend: http://localhost:8000"
 	@echo "MinIO Console: http://localhost:9001"
-	@echo "Supabase API: http://localhost:54321"
 	@echo "Run 'make dev-frontend' in another terminal to start frontend locally"
-	@echo ""
-	@echo "Starting Supabase database..."
-	@supabase start
 	@echo ""
 	@echo "Starting Docker services..."
 	@docker compose up --build redis minio backend worker
@@ -190,11 +178,7 @@ docker-dev-services: ## Start only backend services (Redis, MinIO, Backend, Work
 docker-dev-backend-only: ## Start only backend API in Docker - run frontend and other services locally
 	@echo "Starting only backend API in Docker..."
 	@echo "Backend: http://localhost:8000"
-	@echo "Supabase API: http://localhost:54321"
-	@echo "Make sure Redis, MinIO, and Supabase are running locally"
-	@echo ""
-	@echo "Starting Supabase database..."
-	@supabase start
+	@echo "Make sure Redis and MinIO are running locally"
 	@echo ""
 	@echo "Starting backend container..."
 	@docker compose up --build backend
@@ -214,8 +198,6 @@ docker-restart: ## Clean restart (fixes cache issues)
 	@docker compose down
 	@echo "Cleaning frontend cache..."
 	@rm -rf frontend/dist frontend/node_modules/.vite
-	@echo "Starting Supabase database..."
-	@supabase start
 	@echo "Rebuilding and starting containers..."
 	@docker compose up --build
 
@@ -284,32 +266,3 @@ restart: ## Restart development servers
 	@pkill -f "vite.*dev" || true
 	@sleep 2
 	@$(MAKE) dev
-
-.PHONY: supabase
-supabase: ## Start Supabase local development
-	@echo "Starting Supabase local development..."
-	@supabase start
-	@echo "Supabase is running at:"
-	@echo "  API URL: http://localhost:54321"
-	@echo "  Studio: http://localhost:54323"
-	@echo "  DB URL: postgresql://postgres:postgres@localhost:54322/postgres"
-
-.PHONY: supabase-stop
-supabase-stop: ## Stop Supabase local development
-	@supabase stop
-
-.PHONY: supabase-reset
-supabase-reset: ## Reset Supabase local database
-	@supabase db reset
-
-.PHONY: supabase-gen-types
-supabase-gen-types: ## Generate TypeScript types from Supabase
-	@supabase gen types typescript --local > types.gen.ts
-	@echo "TypeScript types generated in types.gen.ts"
-
-.PHONY: supabase-deploy
-supabase-deploy: ## Deploy migrations to production (requires SUPABASE_ACCESS_TOKEN, PRODUCTION_DB_PASSWORD, PRODUCTION_PROJECT_ID)
-	@echo "Deploying migrations to production..."
-	@supabase link --project-ref $${PRODUCTION_PROJECT_ID}
-	@supabase db push
-	@echo "Migrations deployed successfully!"

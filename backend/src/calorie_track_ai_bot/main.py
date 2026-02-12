@@ -36,7 +36,7 @@ from .services.config import (
     get_trusted_hosts,
     logger,
 )
-from .services.db import sb
+from .services.database import close_pool
 from .services.queue import r as redis_client
 from .services.telegram import get_bot
 
@@ -174,15 +174,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"❌ Error closing Redis client: {e}")
 
-    # Close Supabase HTTP client
+    # Close database connection pool
     try:
-        if sb and hasattr(sb, "_client") and hasattr(sb._client, "close"):
-            sb._client.close()
-            logger.info("✅ Supabase HTTP client closed")
-        else:
-            logger.info("i Supabase client cleanup skipped (not configured)")
+        await close_pool()
+        logger.info("✅ Database connection pool closed")
     except Exception as e:
-        logger.error(f"❌ Error closing Supabase client: {e}")
+        logger.error(f"❌ Error closing database pool: {e}")
 
     logger.info("✅ Application shutdown completed")
 

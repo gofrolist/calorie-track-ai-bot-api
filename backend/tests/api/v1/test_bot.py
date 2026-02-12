@@ -349,16 +349,9 @@ class TestBotWebhook:
             mock_get_user.return_value = "user-uuid-123"
             mock_presign.return_value = ("photos/storage_key.jpg", "https://presigned-url.com")
 
-            # Simulate database schema error (missing display_order column)
-            from postgrest.exceptions import APIError
-
-            mock_create_photo.side_effect = APIError(
-                {
-                    "message": "Could not find the 'display_order' column of 'photos' in the schema cache",
-                    "code": "PGRST204",
-                    "hint": None,
-                    "details": None,
-                }
+            # Simulate database error during photo creation
+            mock_create_photo.side_effect = Exception(
+                "column 'display_order' of relation 'photos' does not exist"
             )
 
             response = client.post("/bot", json=webhook_data)

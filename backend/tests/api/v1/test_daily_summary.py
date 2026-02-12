@@ -171,14 +171,14 @@ class TestDailySummaryEndpoints:
         assert response.status_code == 500
         assert "Database connection failed" in response.json()["detail"]
 
-    def test_invalid_date_format(self, client):
+    @patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_daily_summary")
+    def test_invalid_date_format(self, mock_db_get_daily_summary, client):
         """Test getting daily summary with invalid date format."""
+        mock_db_get_daily_summary.side_effect = Exception("Invalid date format")
         headers = {"x-user-id": "59357664"}
         response = client.get("/daily-summary/invalid-date", headers=headers)
 
-        # The endpoint should still work, but the database query might fail
-        # This tests the API endpoint validation
-        assert response.status_code in [200, 500]  # Either works or fails gracefully
+        assert response.status_code == 500
 
     def test_empty_user_id_header(self, client):
         """Test getting daily summary with empty x-user-id header."""

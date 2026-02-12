@@ -1,5 +1,7 @@
 """Tests for main application."""
 
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -59,19 +61,21 @@ class TestMainApplication:
 
     def test_estimates_endpoints_available(self, client):
         """Test that estimates endpoints are available."""
-        # Test estimate photo endpoint
-        response = client.post("/api/v1/photos/test123/estimate")
-        assert response.status_code in [
-            200,
-            500,
-        ]  # May fail due to missing deps, but endpoint exists
+        with (
+            patch("calorie_track_ai_bot.services.queue.enqueue_estimate_job") as mock_enqueue,
+            patch("calorie_track_ai_bot.services.db.get_pool"),
+            patch("calorie_track_ai_bot.api.v1.estimates.db_get_estimate") as mock_get_est,
+        ):
+            mock_enqueue.return_value = "job-123"
+            mock_get_est.return_value = None
 
-        # Test get estimate endpoint
-        response = client.get("/api/v1/estimates/test123")
-        assert response.status_code in [
-            404,
-            500,
-        ]  # May fail due to missing deps, but endpoint exists
+            # Test estimate photo endpoint
+            response = client.post("/api/v1/photos/test123/estimate")
+            assert response.status_code in [200, 500]
+
+            # Test get estimate endpoint
+            response = client.get("/api/v1/estimates/test123")
+            assert response.status_code in [404, 500]
 
     def test_meals_endpoints_available(self, client):
         """Test that meals endpoints are available."""

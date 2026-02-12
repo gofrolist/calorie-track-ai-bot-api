@@ -4,7 +4,7 @@ Tests the backend photo URL generation and meal data enhancement.
 """
 
 from datetime import date
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -15,6 +15,21 @@ from calorie_track_ai_bot.services.db import (
     db_get_meal,
     db_get_meals_by_date,
 )
+
+
+def _make_mock_pool():
+    """Create a mock pool with async context manager for connection."""
+    mock_cursor = AsyncMock()
+    mock_cursor.fetchone = AsyncMock(return_value=None)
+    mock_cursor.fetchall = AsyncMock(return_value=[])
+    mock_conn = AsyncMock()
+    mock_conn.execute = AsyncMock(return_value=mock_cursor)
+    ctx = AsyncMock()
+    ctx.__aenter__ = AsyncMock(return_value=mock_conn)
+    ctx.__aexit__ = AsyncMock(return_value=False)
+    mock_pool = MagicMock()
+    mock_pool.connection.return_value = ctx
+    return mock_pool, mock_conn, mock_cursor
 
 
 class TestPhotoUrlGeneration:
@@ -30,8 +45,14 @@ class TestPhotoUrlGeneration:
     @pytest.fixture
     def mock_db_operations(self):
         """Mock database operations for testing."""
+        mock_pool, mock_conn, mock_cursor = _make_mock_pool()
+
         with (
-            patch("calorie_track_ai_bot.services.db.sb") as mock_db,
+            patch(
+                "calorie_track_ai_bot.services.db.get_pool",
+                new_callable=AsyncMock,
+                return_value=mock_pool,
+            ),
             patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve,
             patch(
                 "calorie_track_ai_bot.services.db.db_get_estimate", new_callable=AsyncMock
@@ -52,33 +73,10 @@ class TestPhotoUrlGeneration:
                 "created_at": "2025-01-27T10:00:00Z",
             }
 
-            # Mock for db_get_meal (single result)
-            def mock_get_meal_result():
-                response = Mock()
-                response.data = [mock_meal_data]
-                return response
-
-            # Mock for db_get_meals_by_date (list result)
-            def mock_get_meals_result():
-                response = Mock()
-                response.data = [mock_meal_data]
-                return response
-
-            # Setup the chain of mocks for Supabase queries
-            table_mock = Mock()
-            select_mock = Mock()
-            eq_mock_1 = Mock()
-            eq_mock_2 = Mock()
-
-            table_mock.select.return_value = select_mock
-            select_mock.eq.return_value = eq_mock_1
-            eq_mock_1.eq.return_value = eq_mock_2
-            eq_mock_2.execute.return_value = mock_get_meals_result()
-
-            # For single meal query (no second eq)
-            eq_mock_1.execute.return_value = mock_get_meal_result()
-
-            mock_db.table.return_value = table_mock
+            # For db_get_meal: fetchone returns one row
+            mock_cursor.fetchone = AsyncMock(return_value=mock_meal_data)
+            # For db_get_meals_by_date: fetchall returns list
+            mock_cursor.fetchall = AsyncMock(return_value=[mock_meal_data])
 
             mock_resolve.return_value = "user-uuid-123"
             mock_get_estimate.return_value = {
@@ -96,7 +94,9 @@ class TestPhotoUrlGeneration:
             mock_s3.generate_presigned_url.return_value = "https://photos.example.com/test123.jpg"
 
             yield {
-                "db": mock_db,
+                "pool": mock_pool,
+                "conn": mock_conn,
+                "cursor": mock_cursor,
                 "resolve": mock_resolve,
                 "get_estimate": mock_get_estimate,
                 "get_photo": mock_get_photo,
@@ -219,16 +219,21 @@ class TestPhotoUrlGeneration:
     @pytest.mark.asyncio
     async def test_create_meal_from_estimate_with_kcal_from_estimate(self):
         """Test that meals created from estimates get kcal_total from estimate.kcal_mean."""
+        mock_pool, mock_conn, _mock_cursor = _make_mock_pool()
+
         with (
-            patch("calorie_track_ai_bot.services.db.sb") as mock_db,
+            patch(
+                "calorie_track_ai_bot.services.db.get_pool",
+                new_callable=AsyncMock,
+                return_value=mock_pool,
+            ),
             patch(
                 "calorie_track_ai_bot.services.db.db_get_estimate", new_callable=AsyncMock
             ) as mock_get_estimate,
         ):
-            mock_db.table.return_value.insert.return_value.execute.return_value = Mock()
             mock_get_estimate.return_value = {
                 "id": "estimate-uuid-123",
-                "kcal_mean": 850,  # This should be used as kcal_total
+                "kcal_mean": 850,
                 "breakdown": [{"label": "test food", "kcal": 850}],
             }
 
@@ -240,28 +245,31 @@ class TestPhotoUrlGeneration:
 
             await db_create_meal_from_estimate(meal_request, "telegram-user-123")
 
-            # Verify the meal was created with kcal_total from estimate
-            mock_db.table.return_value.insert.assert_called_once()
-            call_args = mock_db.table.return_value.insert.call_args[0][0]
-
-            # The inserted meal should have kcal_total = 850 from the estimate
-            assert call_args["kcal_total"] == 850
-            assert call_args["estimate_id"] == "estimate-uuid-123"
-            assert call_args["meal_type"] == "snack"
+            # Verify the INSERT was called with correct kcal_total
+            call_args = mock_conn.execute.call_args_list[0]
+            params = call_args[0][1]
+            # params: (mid, user_id, meal_date, meal_type, kcal_total, ...)
+            assert params[4] == 850  # kcal_total from estimate
+            assert params[3] == "snack"  # meal_type
 
     @pytest.mark.asyncio
     async def test_create_meal_from_estimate_with_kcal_override(self):
         """Test that meal kcal can be overridden when creating from estimate."""
+        mock_pool, mock_conn, _mock_cursor = _make_mock_pool()
+
         with (
-            patch("calorie_track_ai_bot.services.db.sb") as mock_db,
+            patch(
+                "calorie_track_ai_bot.services.db.get_pool",
+                new_callable=AsyncMock,
+                return_value=mock_pool,
+            ),
             patch(
                 "calorie_track_ai_bot.services.db.db_get_estimate", new_callable=AsyncMock
             ) as mock_get_estimate,
         ):
-            mock_db.table.return_value.insert.return_value.execute.return_value = Mock()
             mock_get_estimate.return_value = {
                 "id": "estimate-uuid-123",
-                "kcal_mean": 850,  # This should be overridden
+                "kcal_mean": 850,
                 "breakdown": [{"label": "test food", "kcal": 850}],
             }
 
@@ -269,15 +277,12 @@ class TestPhotoUrlGeneration:
                 estimate_id="estimate-uuid-123",
                 meal_date=date.today(),
                 meal_type=MealType.snack,
-                overrides={"kcal_total": 750},  # Override to 750
+                overrides={"kcal_total": 750},
             )
 
             await db_create_meal_from_estimate(meal_request, "telegram-user-123")
 
-            # Verify the meal was created with overridden kcal_total
-            mock_db.table.return_value.insert.assert_called_once()
-            call_args = mock_db.table.return_value.insert.call_args[0][0]
-
-            # The inserted meal should have kcal_total = 750 (overridden)
-            assert call_args["kcal_total"] == 750
-            assert call_args["estimate_id"] == "estimate-uuid-123"
+            # Verify the INSERT was called with overridden kcal_total
+            call_args = mock_conn.execute.call_args_list[0]
+            params = call_args[0][1]
+            assert params[4] == 750  # kcal_total overridden

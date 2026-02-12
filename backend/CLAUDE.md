@@ -30,7 +30,8 @@ src/calorie_track_ai_bot/
 ├── api/v1/              # Route handlers (one file per resource)
 ├── services/            # Business logic and external integrations
 │   ├── config.py        # All env var loading, feature flags
-│   ├── db.py            # Supabase client (`sb`), user ID resolution with 5-min cache
+│   ├── database.py      # Async connection pool (psycopg_pool) lifecycle
+│   ├── db.py            # All database operations via raw SQL, user ID resolution with 5-min cache
 │   ├── estimator.py     # OpenAI vision API for calorie estimation
 │   ├── queue.py         # Redis job queue (`r` client)
 │   ├── storage.py       # Tigris S3 presigned URLs
@@ -51,7 +52,7 @@ src/calorie_track_ai_bot/
 
 **Middleware order** (in `main.py`): request logging → correlation ID → CORS. The correlation ID middleware binds `x-correlation-id` to structlog context vars.
 
-**Testing:** All external services (Supabase, Redis, OpenAI, S3, Telegram) are mocked at module level in `tests/conftest.py` via `unittest.mock.patch`. Test env vars are set in `pytest.ini`. Use fixtures like `api_client`, `mock_supabase_client`, `mock_redis_client`, `mock_openai_client` from conftest.
+**Testing:** All external services (Database, Redis, OpenAI, S3, Telegram) are mocked at module level in `tests/conftest.py` via `unittest.mock.patch`. Test env vars are set in `pytest.ini`. Use fixtures like `api_client`, `mock_db_pool`, `mock_redis_client`, `mock_openai_client` from conftest. The `mock_db_pool` fixture patches `get_pool()` and returns `(mock_pool, mock_conn)` — pool uses `Mock()` (synchronous `pool.connection()`), connection uses `AsyncMock()`.
 
 **Database:** Schema defined in `infra/schema.sql`. Tables: `users`, `photos`, `estimates`, `meals`, `goals`. All PKs are UUID via `gen_random_uuid()`. Users are keyed by `telegram_id` (bigint, unique).
 

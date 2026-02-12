@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Telegram Mini App for AI-powered food photo analysis and calorie tracking. Monorepo with two main directories:
 
-- **`backend/`** — Python 3.12, FastAPI, Supabase PostgreSQL, Upstash Redis, Tigris S3, OpenAI vision API
+- **`backend/`** — Python 3.12, FastAPI, Neon PostgreSQL (psycopg3), Upstash Redis, Tigris S3, OpenAI vision API
 - **`frontend/`** — React 19, TypeScript 5.9, Vite 7, Telegram Mini App SDK
 
 Deployed: frontend on Vercel, backend on Fly.io.
@@ -18,7 +18,7 @@ Deployed: frontend on Vercel, backend on Fly.io.
 make dev              # Start both backend (port 8000) and frontend (port 3000)
 make test             # Run all tests (backend + frontend)
 make lint             # Lint both
-make docker-dev       # Full stack via Docker Compose (requires supabase start first)
+make docker-dev       # Full stack via Docker Compose
 ```
 
 ### Backend (`cd backend`)
@@ -50,12 +50,9 @@ npm run format        # Prettier
 npm run i18n:validate # Check EN/RU translation key consistency
 ```
 
-### Database (Supabase)
-```bash
-supabase start        # Start local Supabase (from project root)
-supabase stop         # Stop local Supabase
-supabase db reset     # Reset local database
-```
+### Database (Neon PostgreSQL)
+Database is hosted on Neon. Set `DATABASE_URL` env var to the pooled connection string.
+Schema is in `backend/infra/schema.sql`.
 
 ## Architecture
 
@@ -66,7 +63,8 @@ supabase db reset     # Reset local database
 **API routes** are under `/api/v1/` with routers in individual files: `meals.py`, `photos.py`, `estimates.py`, `goals.py`, `statistics.py`, `feedback.py`, `bot.py` (Telegram webhook handler), etc.
 
 **Key services:**
-- `db.py` — Supabase client wrapper; all database operations, user ID resolution with 5-min cache
+- `database.py` — Async connection pool (`psycopg_pool.AsyncConnectionPool`) lifecycle
+- `db.py` — All database operations via raw SQL, user ID resolution with 5-min cache
 - `estimator.py` — OpenAI vision API for calorie estimation
 - `queue.py` — Redis job queue for async photo processing
 - `storage.py` — Tigris S3 presigned URL generation
@@ -101,7 +99,7 @@ supabase db reset     # Reset local database
 GitHub Actions workflows trigger on path-based changes:
 - `backend-ci.yml` → `backend-build.yml` → `backend-deploy.yml` (Fly.io)
 - `frontend-ci.yml` → `frontend-deploy.yml` (Vercel)
-- `supabase-migrations.yml` for DB schema changes
+- Database schema managed via `backend/infra/schema.sql` (applied to Neon)
 
 ## Code Style
 

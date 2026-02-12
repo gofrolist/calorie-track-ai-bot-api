@@ -14,8 +14,6 @@ class TestEstimateWorker:
     def mock_dependencies(self):
         """Mock all external dependencies."""
         with (
-            patch("calorie_track_ai_bot.services.config.SUPABASE_URL", "test-url"),
-            patch("calorie_track_ai_bot.services.config.SUPABASE_KEY", "test-key"),
             patch("calorie_track_ai_bot.services.config.OPENAI_API_KEY", "test-key"),
             patch("calorie_track_ai_bot.services.config.REDIS_URL", "redis://test"),
             patch("calorie_track_ai_bot.services.config.AWS_ENDPOINT_URL_S3", "test-endpoint"),
