@@ -28,6 +28,7 @@ from .api.v1 import (
     statistics,
 )
 from .services.config import (
+    ENABLE_WORKER,
     TELEGRAM_BOT_TOKEN,
     USE_WEBHOOK,
     WEBHOOK_URL,
@@ -129,6 +130,8 @@ async def request_logging_middleware(request: Request, call_next):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
+    import asyncio
+
     # Startup
     logger.info("Starting Calories Count API application")
 
@@ -146,12 +149,31 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Telegram webhook setup skipped (not configured)")
 
+    # Start background worker tasks if enabled
+    worker_tasks: list[asyncio.Task] = []
+    if ENABLE_WORKER:
+        from .workers.estimate_worker import process_estimate_jobs, process_inline_jobs
+
+        logger.info("Starting background worker tasks...")
+        worker_tasks.append(asyncio.create_task(process_estimate_jobs()))
+        worker_tasks.append(asyncio.create_task(process_inline_jobs()))
+        logger.info("✅ Background worker tasks started")
+    else:
+        logger.info("Background worker disabled (ENABLE_WORKER not set)")
+
     logger.info("All routers registered successfully")
 
     yield
 
     # Shutdown - Clean up all resources
     logger.info("Starting application shutdown...")
+
+    # Cancel worker tasks
+    for task in worker_tasks:
+        task.cancel()
+    if worker_tasks:
+        await asyncio.gather(*worker_tasks, return_exceptions=True)
+        logger.info("✅ Background worker tasks stopped")
 
     # Close Telegram bot client
     try:

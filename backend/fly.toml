@@ -7,13 +7,9 @@ primary_region = 'lax'
 [env]
   USE_WEBHOOK = 'true'
   WEBHOOK_URL = 'https://calorie-track-ai-bot.fly.dev/bot'
-
-[processes]
-  api = "uvicorn calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8080"
-  worker = "python -m calorie_track_ai_bot.workers.estimate_worker"
+  ENABLE_WORKER = 'true'
 
 [[services]]
-  processes = ["api"]
   protocol = 'tcp'
   internal_port = 8080
   auto_start_machines = true
