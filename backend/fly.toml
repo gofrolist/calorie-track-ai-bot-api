@@ -39,6 +39,6 @@ primary_region = 'lax'
     grace_period = "8s"
 
 [[vm]]
-  memory = '1gb'
+  memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
