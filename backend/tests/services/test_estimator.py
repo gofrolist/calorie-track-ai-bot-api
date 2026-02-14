@@ -1,7 +1,7 @@
 """Tests for estimator module."""
 
 import json
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -61,7 +61,7 @@ class TestEstimator:
             mock_message.content = json.dumps(expected_response)
             mock_choice.message = mock_message
             mock_response.choices = [mock_choice]
-            mock_client.chat.completions.create.return_value = mock_response
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             result = await estimate_from_image_url(image_url)
 
@@ -101,7 +101,7 @@ class TestEstimator:
             mock_message.content = None
             mock_choice.message = mock_message
             mock_response.choices = [mock_choice]
-            mock_client.chat.completions.create.return_value = mock_response
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             # Should raise ValueError
             with pytest.raises(ValueError, match="No content returned from OpenAI"):
@@ -120,7 +120,7 @@ class TestEstimator:
             mock_message.content = "invalid json"
             mock_choice.message = mock_message
             mock_response.choices = [mock_choice]
-            mock_client.chat.completions.create.return_value = mock_response
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             # Should raise JSONDecodeError
             with pytest.raises(json.JSONDecodeError):
@@ -133,7 +133,7 @@ class TestEstimator:
 
         # Mock the OpenAI client to raise an exception
         with patch("calorie_track_ai_bot.services.estimator.client") as mock_client:
-            mock_client.chat.completions.create.side_effect = Exception("API Error")
+            mock_client.chat.completions.create = AsyncMock(side_effect=Exception("API Error"))
 
             # Should propagate the exception
             with pytest.raises(Exception, match="API Error"):
@@ -148,7 +148,7 @@ class TestEstimator:
         with patch("calorie_track_ai_bot.services.estimator.client") as mock_client:
             mock_response = Mock()
             mock_response.choices = []
-            mock_client.chat.completions.create.return_value = mock_response
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             # Should raise IndexError when accessing choices[0]
             with pytest.raises(IndexError):

@@ -24,6 +24,10 @@ if LOG_LEVEL == "DEBUG":
     for module_name in ["calorie_track_ai_bot", "fastapi", "uvicorn"]:
         logging.getLogger(module_name).setLevel(logging.DEBUG)
 
+# Suppress DEBUG logs from third-party HTTP libraries that leak secrets (bot tokens, S3 keys)
+for module_name in ["httpx", "httpcore", "botocore", "openai"]:
+    logging.getLogger(module_name).setLevel(logging.WARNING)
+
 OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
 OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 

@@ -28,7 +28,7 @@ for key, value in test_env_vars.items():
 with (
     patch("boto3.Session") as mock_session,
     patch("redis.asyncio.from_url") as mock_redis,
-    patch("openai.OpenAI") as mock_openai,
+    patch("openai.AsyncOpenAI") as mock_openai,
     patch("psycopg_pool.AsyncConnectionPool") as mock_pool_cls,
 ):
     # Configure mocks
@@ -42,14 +42,16 @@ with (
     mock_redis.return_value = mock_redis_instance
 
     mock_openai_instance = Mock()
-    mock_openai_instance.chat.completions.create.return_value = Mock(
-        choices=[
-            Mock(
-                message=Mock(
-                    content='{"kcal_mean": 500, "kcal_min": 400, "kcal_max": 600, "confidence": 0.8, "items": []}'
+    mock_openai_instance.chat.completions.create = AsyncMock(
+        return_value=Mock(
+            choices=[
+                Mock(
+                    message=Mock(
+                        content='{"kcal_mean": 500, "kcal_min": 400, "kcal_max": 600, "confidence": 0.8, "items": []}'
+                    )
                 )
-            )
-        ]
+            ]
+        )
     )
     mock_openai.return_value = mock_openai_instance
 
@@ -181,7 +183,7 @@ def mock_openai_client():
                 )
             )
         ]
-        mock_openai.chat.completions.create.return_value = mock_response
+        mock_openai.chat.completions.create = AsyncMock(return_value=mock_response)
         yield mock_openai
 
 
@@ -452,14 +454,16 @@ def simulate_openai_error(mock_openai_client):
 
     def _simulate_error(error_type: str = "rate_limit"):
         if error_type == "rate_limit":
-            mock_openai_client.chat.completions.create.side_effect = Exception(
-                "Rate limit exceeded"
+            mock_openai_client.chat.completions.create = AsyncMock(
+                side_effect=Exception("Rate limit exceeded")
             )
         elif error_type == "invalid_api_key":
-            mock_openai_client.chat.completions.create.side_effect = Exception("Invalid API key")
+            mock_openai_client.chat.completions.create = AsyncMock(
+                side_effect=Exception("Invalid API key")
+            )
         else:
-            mock_openai_client.chat.completions.create.side_effect = Exception(
-                f"OpenAI error: {error_type}"
+            mock_openai_client.chat.completions.create = AsyncMock(
+                side_effect=Exception(f"OpenAI error: {error_type}")
             )
 
     return _simulate_error

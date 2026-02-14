@@ -2,15 +2,15 @@ import json
 import os
 from typing import Any
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from .config import APP_ENV, OPENAI_API_KEY, OPENAI_MODEL
 
 # Initialize OpenAI client only if configuration is available
-client: OpenAI | None = None
+client: AsyncOpenAI | None = None
 
 if OPENAI_API_KEY is not None:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 elif APP_ENV == "dev":
     # In development mode, allow missing OpenAI config
     print("WARNING: OpenAI configuration not set. AI estimation functionality will be disabled.")
@@ -103,7 +103,7 @@ async def estimate_from_image_url(image_url: str) -> dict[str, Any]:
             "OpenAI configuration not available. AI estimation functionality is disabled."
         )
 
-    resp = client.chat.completions.create(
+    resp = await client.chat.completions.create(
         model=OPENAI_MODEL,
         messages=[
             {
@@ -202,7 +202,7 @@ class CalorieEstimator:
             content.append({"type": "image_url", "image_url": {"url": url}})
 
         # Single API call with all photos (combined analysis)
-        resp = self.client.chat.completions.create(
+        resp = await self.client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[{"role": "user", "content": content}],  # type: ignore
             response_format={

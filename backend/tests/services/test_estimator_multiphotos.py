@@ -4,7 +4,7 @@ Feature: 003-update-logic-for
 Task: T013
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -37,7 +37,7 @@ class TestMultiPhotoEstimation:
             }
             """
             # Use Mock (not AsyncMock) because the OpenAI client is synchronous
-            mock_client.chat.completions.create = Mock(return_value=mock_response)
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             from calorie_track_ai_bot.services.estimator import CalorieEstimator
 
@@ -109,7 +109,7 @@ class TestMultiPhotoEstimation:
             }
             """
             # Use Mock (not AsyncMock) because the OpenAI client is synchronous
-            mock_client.chat.completions.create = Mock(return_value=mock_response)
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             from calorie_track_ai_bot.services.estimator import CalorieEstimator
 
@@ -144,7 +144,7 @@ class TestMultiPhotoEstimation:
                 }
                 """
                 # Use Mock (not AsyncMock) because the OpenAI client is synchronous
-                mock_client.chat.completions.create = Mock(return_value=mock_response)
+                mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
                 from calorie_track_ai_bot.services.estimator import CalorieEstimator
 
