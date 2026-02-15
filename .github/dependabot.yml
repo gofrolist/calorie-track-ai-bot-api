@@ -8,6 +8,7 @@ updates:
     directory: "/backend"
     schedule:
       interval: "weekly"
+  # Bun uses npm-compatible package.json; Dependabot npm ecosystem works with bun.lock
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
