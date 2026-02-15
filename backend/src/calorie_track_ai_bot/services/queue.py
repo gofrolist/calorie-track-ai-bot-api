@@ -6,6 +6,8 @@ from typing import Any
 from uuid import UUID
 
 import redis.asyncio as redis
+from redis.asyncio.retry import Retry
+from redis.backoff import ExponentialBackoff
 
 from ..schemas import InlineChatType, InlineInteractionJob, InlineTriggerType
 from .config import (
@@ -26,7 +28,15 @@ INLINE_BURST_KEY = "inline:throttle:burst"
 INLINE_RETENTION_HOURS_DEFAULT = 24
 
 if REDIS_URL is not None:
-    r = redis.from_url(REDIS_URL, decode_responses=True)
+    r = redis.from_url(
+        REDIS_URL,
+        decode_responses=True,
+        health_check_interval=30,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+        retry=Retry(ExponentialBackoff(), 3),
+        retry_on_error=[redis.ConnectionError, redis.TimeoutError],
+    )
 elif APP_ENV == "dev":
     # In development mode, allow missing Redis config
     print("WARNING: Redis configuration not set. Queue functionality will be disabled.")
