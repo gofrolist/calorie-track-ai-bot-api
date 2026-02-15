@@ -116,9 +116,14 @@ class TestInlineWebhookContracts:
             },
         }
 
-        with patch(
-            "calorie_track_ai_bot.api.v1.bot.enqueue_inline_job", create=True
-        ) as mock_enqueue:
+        with (
+            patch(
+                "calorie_track_ai_bot.api.v1.bot.enqueue_inline_job", create=True
+            ) as mock_enqueue,
+            patch(
+                "calorie_track_ai_bot.api.v1.bot.send_group_inline_placeholder", create=True
+            ) as _mock_placeholder,
+        ):
             mock_enqueue.return_value = "job-inline-reply-uuid"
 
             response = client.post("/bot", json=inline_reply_payload)
