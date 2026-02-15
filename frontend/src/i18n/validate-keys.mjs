@@ -3,7 +3,7 @@
  * Feature: 005-mini-app-improvements
  *
  * Validates that all translation keys are present in all languages
- * Works with i18n/index.ts structure
+ * Works with i18n/en.ts and i18n/ru.ts structure
  *
  * Usage: npm run i18n:validate
  */
@@ -31,46 +31,41 @@ function flattenKeys(obj, prefix = '') {
 }
 
 /**
- * Parse translations from index.ts file
+ * Parse a translation object from a .ts file
+ * Expects: const <name> = { ... } as const; export default <name>;
  */
-function parseTranslationsFromFile() {
-  const indexPath = join(__dirname, 'index.ts');
-  const content = readFileSync(indexPath, 'utf-8');
+function parseTranslationFile(filePath) {
+  const content = readFileSync(filePath, 'utf-8');
 
-  // Extract the resources object
-  const resourcesMatch = content.match(/const resources = \{([\s\S]+?)\};/);
-  if (!resourcesMatch) {
-    console.error('❌ Could not find resources object in index.ts');
-    process.exit(1);
-  }
-
-  // Extract EN translation block
-  const enMatch = content.match(/en: \{\s*translation: \{([\s\S]+?)\n    \},\s*\},/);
-  if (!enMatch) {
-    console.error('❌ Could not find EN translation block');
-    process.exit(1);
-  }
-
-  // Extract RU translation block
-  const ruMatch = content.match(/ru: \{\s*translation: \{([\s\S]+?)\n    \},\s*\},/);
-  if (!ruMatch) {
-    console.error('❌ Could not find RU translation block');
-    process.exit(1);
-  }
+  // Remove TypeScript syntax to get a plain JS object literal
+  const cleaned = content
+    .replace(/^const \w+ = /, '')
+    .replace(/export default \w+;\s*/g, '')
+    .replace(/\} as const;/, '}')
+    .trim();
 
   try {
-    // Build executable JavaScript to parse the objects
-    const enCode = `const translation = {${enMatch[1]}}; translation;`;
-    const ruCode = `const translation = {${ruMatch[1]}}; translation;`;
-
-    const enTranslation = eval(enCode);
-    const ruTranslation = eval(ruCode);
-
-    return { en: enTranslation, ru: ruTranslation };
+    // Note: eval is used here intentionally to parse TypeScript object literals
+    // from our own project files in a dev-only validation script.
+    const translation = eval(`(${cleaned})`);
+    return translation;
   } catch (e) {
-    console.error('❌ Failed to parse translation objects:', e.message);
+    console.error(`❌ Failed to parse ${filePath}:`, e.message);
     process.exit(1);
   }
+}
+
+/**
+ * Parse translations from separate en.ts and ru.ts files
+ */
+function parseTranslationsFromFiles() {
+  const enPath = join(__dirname, 'en.ts');
+  const ruPath = join(__dirname, 'ru.ts');
+
+  const enTranslation = parseTranslationFile(enPath);
+  const ruTranslation = parseTranslationFile(ruPath);
+
+  return { en: enTranslation, ru: ruTranslation };
 }
 
 /**
@@ -79,7 +74,7 @@ function parseTranslationsFromFile() {
 function validateTranslations() {
   console.log('\n🔍 Validating translation keys...\n');
 
-  const { en, ru } = parseTranslationsFromFile();
+  const { en, ru } = parseTranslationsFromFiles();
 
   const enKeys = new Set(flattenKeys(en));
   const ruKeys = new Set(flattenKeys(ru));
