@@ -16,9 +16,7 @@ dependencies = [
   "boto3>=1.40.25",
   "redis>=6.4.0",
   "httpx>=0.27.0",
-  "datamodel-code-generator>=0.33.0",
-  "openapi-spec-validator>=0.7.2",
-  # Structured logging dependencies
+# Structured logging dependencies
   "structlog>=24.4.0",
   "python-json-logger>=2.0.7",
   "uuid-utils>=0.9.0",

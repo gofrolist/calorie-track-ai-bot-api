@@ -14,7 +14,7 @@ make test-unit        # Unit tests only (ignores tests/integration/)
 make test-integration # Integration tests only
 make check            # lint (ruff) + typecheck (pyright)
 make format           # ruff format
-make codegen          # Regenerate schemas.py from specs/openapi.yaml
+make openapi-export   # Export OpenAPI spec JSON from FastAPI app
 
 # Single test
 uv run pytest tests/path/to/test_file.py -v
@@ -26,7 +26,7 @@ uv run pytest tests/path/to/test_file.py::test_name
 ```
 src/calorie_track_ai_bot/
 ├── main.py              # FastAPI app, middleware stack, router registration
-├── schemas.py           # AUTO-GENERATED from specs/openapi.yaml (do not edit manually)
+├── schemas.py           # Pydantic models (edit directly, source of truth for API schema)
 ├── api/v1/              # Route handlers (one file per resource)
 ├── services/            # Business logic and external integrations
 │   ├── config.py        # All env var loading, feature flags
@@ -48,7 +48,7 @@ src/calorie_track_ai_bot/
 
 **Error handling:** Route handlers use `@handle_api_errors("context_name")` decorator. It re-raises `HTTPException` as-is and wraps unexpected exceptions into 500s with logging.
 
-**Schemas:** `schemas.py` is auto-generated — run `make codegen` after modifying `specs/openapi.yaml`. Do not edit `schemas.py` manually.
+**Schemas:** `schemas.py` is the source of truth for API request/response models. Edit it directly. FastAPI auto-generates the OpenAPI spec from these models at runtime (`/docs`, `/openapi.json`). Use `make openapi-export` to dump the spec to a file.
 
 **Middleware order** (in `main.py`): request logging → correlation ID → CORS. The correlation ID middleware binds `x-correlation-id` to structlog context vars.
 

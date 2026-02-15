@@ -55,8 +55,7 @@ help:
 	@echo ""
 	@echo "📋 Documentation & OpenAPI:"
 	@echo "  docs           - Generate and serve API documentation"
-	@echo "  validate       - Validate OpenAPI spec"
-	@echo "  codegen        - Generate schemas from OpenAPI spec"
+	@echo "  openapi-export - Export OpenAPI spec to JSON from running app"
 	@echo ""
 	@echo "🚀 Deployment:"
 	@echo "  build          - Build for production"
@@ -314,22 +313,11 @@ docs: venv
 	@open http://localhost:8000/docs 2>/dev/null || true
 	@uv run uvicorn src.calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8000 --reload
 
-.PHONY: validate
-validate: venv
-	@echo "✅ Validating OpenAPI specification..."
-	uv run openapi-spec-validator specs/openapi.yaml
-
-.PHONY: codegen
-codegen: venv
-	@echo "🏗️  Generating schemas from OpenAPI spec..."
-	uv run datamodel-codegen \
-		--input specs/openapi.yaml \
-		--input-file-type openapi \
-		--output src/calorie_track_ai_bot/schemas.py \
-		--output-model-type pydantic_v2.BaseModel \
-		--target-python-version 3.12 \
-		--field-constraints \
-		--use-annotated
+.PHONY: openapi-export
+openapi-export: venv
+	@echo "📄 Exporting OpenAPI spec from FastAPI app..."
+	uv run python -c "import json; from calorie_track_ai_bot.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
+	@echo "✅ Exported to openapi.json"
 
 # =============================================================================
 # DEPLOYMENT
