@@ -230,4 +230,4 @@ frontend/*.tsbuildinfo
 .codex
 .cursor
 .specify
-specs
+/specs
