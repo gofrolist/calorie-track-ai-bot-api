@@ -66,3 +66,4 @@ Do NOT offer to deploy to Fly.io unless explicitly asked. GitHub CI deploys auto
 - **Ruff:** line length 100, double quotes, LF, rules E/F/I/B/UP/RUF (E501 ignored)
 - **Pyright:** basic mode, excludes tests directory
 - **Python:** 3.12, Pydantic v2, async FastAPI handlers
+- **Before committing:** run `uv run ruff format .` to auto-format all changed files. Pre-commit hooks enforce formatting and will reject unformatted code.
