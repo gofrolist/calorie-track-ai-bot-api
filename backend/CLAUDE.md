@@ -31,22 +31,26 @@ src/calorie_track_ai_bot/
 ├── services/            # Business logic and external integrations
 │   ├── config.py        # All env var loading, feature flags
 │   ├── database.py      # Async connection pool (psycopg_pool) lifecycle
-│   ├── db.py            # All database operations via raw SQL, user ID resolution with 5-min cache
+│   ├── db/              # Database operations (per-domain modules)
+│   │   ├── _base.py     # resolve_user_id with 5-min TTL cache (max 1000 entries)
+│   │   ├── users.py, photos.py, estimates.py, meals.py, goals.py
+│   │   ├── summaries.py, ui_config.py, inline_analytics.py
+│   │   └── __init__.py  # Re-exports all public functions
 │   ├── estimator.py     # OpenAI vision API for calorie estimation
 │   ├── queue.py         # Redis job queue (`r` client)
 │   ├── storage.py       # Tigris S3 presigned URLs
 │   └── telegram.py      # Telegram bot client
 ├── utils/
-│   └── error_handling.py  # @handle_api_errors decorator, auth helpers
+│   └── error_handling.py  # @handle_api_errors decorator
 └── workers/
     └── estimate_worker.py  # Background photo estimation processor
 ```
 
 ## Key Patterns
 
-**Auth:** No JWT/session auth. Telegram user ID arrives via `x-user-id` header. Use `validate_user_authentication(request)` from `utils/error_handling.py` to extract it. The `db.py` service resolves telegram_id to internal UUID user with a 5-minute cache.
+**Auth:** No JWT/session auth. Telegram user ID arrives via `x-user-id` header. Use `Depends(get_telegram_user_id)` or `Depends(get_authenticated_user_id)` from `api/v1/deps.py`. The `db/_base.py` module resolves telegram_id to internal UUID user with a 5-minute TTL cache (max 1000 entries).
 
-**Error handling:** Route handlers use `@handle_api_errors("context_name")` decorator. It re-raises `HTTPException` as-is and wraps unexpected exceptions into 500s with logging.
+**Error handling:** Route handlers use `@handle_api_errors("context_name")` decorator. It re-raises `HTTPException` as-is and wraps unexpected exceptions into generic 500s (no internal details leaked).
 
 **Schemas:** `schemas.py` is the source of truth for API request/response models. Edit it directly. FastAPI auto-generates the OpenAPI spec from these models at runtime (`/docs`, `/openapi.json`). Use `make openapi-export` to dump the spec to a file.
 
