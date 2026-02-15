@@ -12,7 +12,7 @@ You can run the application in two different ways, each with different environme
 
 **Uses**: Local containerized services
 - ✅ Redis: `redis://redis:6379/0` (local container)
-- ✅ Supabase: `http://host.docker.internal:54321` (Supabase CLI)
+- ✅ Database: `postgresql://host.docker.internal:5432/neondb` (local PostgreSQL)
 - ✅ MinIO: `http://minio:9000` (local S3-compatible storage)
 
 **Environment**: Defined in `docker-compose.yml`
@@ -22,7 +22,7 @@ You can run the application in two different ways, each with different environme
 
 **Uses**: Production/cloud services (requires credentials)
 - ⚠️ Redis: Upstash Redis (production URL from `backend/.env`)
-- ⚠️ Supabase: Production/staging URL from `backend/.env`
+- ⚠️ Database: Neon PostgreSQL URL from `backend/.env`
 - ⚠️ Storage: Tigris/production S3 from `backend/.env`
 
 **Environment**: Defined in `backend/.env`
@@ -142,7 +142,7 @@ make run  # Uses backend/.env with production services
 
 **Pros:**
 - Quick backend iteration
-- Uses real production services (Upstash, Supabase)
+- Uses real production services (Upstash, Neon PostgreSQL)
 
 **Cons:**
 - Requires production credentials
@@ -214,7 +214,7 @@ docker compose logs minio
 
 For production, use the values from `backend/.env` which should point to:
 - ✅ Upstash Redis (production)
-- ✅ Supabase (production project)
+- ✅ Neon PostgreSQL (production project)
 - ✅ Tigris S3 (production bucket)
 
 The docker-compose.yml is **only for local development**.

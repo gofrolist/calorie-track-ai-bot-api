@@ -29,9 +29,8 @@ graph TB
         MONITOR[Performance Monitor]
     end
 
-    subgraph "Database Layer (Supabase)"
+    subgraph "Database Layer (Neon PostgreSQL)"
         DB[PostgreSQL Database]
-        STUDIO[Supabase Studio]
         AUTH_DB[Auth Service]
         MIGRATIONS[Migration System]
     end
@@ -115,7 +114,7 @@ graph TB
     class U,TG,WEB client
     class FE,THEME,LANG,SAFE,CONFIG frontend
     class API,WORKER,MIDDLEWARE,MONITOR backend
-    class DB,STUDIO,AUTH_DB,MIGRATIONS database
+    class DB,AUTH_DB,MIGRATIONS database
     class REDIS,S3,OPENAI,BOT_API external
     class CV,ESTIMATOR,QUEUE ai
     class LOGS,METRICS,HEALTH,ALERTS observability
@@ -133,7 +132,7 @@ sequenceDiagram
     participant WK as Inline Worker
     participant OA as OpenAI Vision
     participant ST as Tigris Storage
-    participant SA as Supabase Analytics
+    participant SA as Neon PostgreSQL Analytics
 
     TG->>API: Inline update (query / reply / tagged photo)
     API->>API: Validate + hash identifiers<br/>record request metadata
@@ -151,7 +150,7 @@ sequenceDiagram
 
 **Throughput target**: the inline queue is dimensioned for 60 jobs per minute with bursts up to 5 RPS across active groups, matching the plan’s scaling assumptions. The worker pool scales horizontally once Redis pending counts exceed thresholds logged via the telemetry hooks.
 
-**Privacy boundary**: chat and user identifiers are salted + hashed before leaving the webhook, and only aggregate analytics (success/failure counts, latency, accuracy within tolerance, permission block counts) reach Supabase. Transient photos uploaded to Tigris are purged within 24 hours by the existing cleanup routine.
+**Privacy boundary**: chat and user identifiers are salted + hashed before leaving the webhook, and only aggregate analytics (success/failure counts, latency, accuracy within tolerance, permission block counts) reach PostgreSQL. Transient photos uploaded to Tigris are purged within 24 hours by the existing cleanup routine.
 
 ## Component Architecture
 
@@ -286,7 +285,7 @@ graph TD
 
         subgraph "Core Services"
             CONFIG_SVC[Configuration Service<br/>Settings & Features]
-            DB_SVC[Database Service<br/>Supabase Integration]
+            DB_SVC[Database Service<br/>Neon PostgreSQL]
             STORAGE_SVC[Storage Service<br/>Tigris S3]
             TELEGRAM_SVC[Telegram Service<br/>Bot API]
             ESTIMATOR_SVC[AI Estimator Service<br/>OpenAI Integration]
@@ -450,7 +449,7 @@ graph TB
         end
 
         subgraph "External Services"
-            SUPABASE[(Supabase PostgreSQL)]
+            NEON[(Neon PostgreSQL)]
             REDIS_PROD[(Redis Cloud)]
             TIGRIS[(Tigris Storage)]
         end
@@ -465,10 +464,10 @@ graph TB
     FE_PROD --> FE_CDN
     FE_PROD --> API_PROD
     API_PROD --> WORKER_PROD
-    API_PROD --> SUPABASE
+    API_PROD --> NEON
     API_PROD --> REDIS_PROD
     API_PROD --> TIGRIS
-    WORKER_PROD --> SUPABASE
+    WORKER_PROD --> NEON
     WORKER_PROD --> REDIS_PROD
     API_PROD --> LOGS
     WORKER_PROD --> LOGS
@@ -493,7 +492,7 @@ graph LR
     subgraph "Production Environment"
         PROD_FE[Frontend Container<br/>Fly.io]
         PROD_API[Backend Container<br/>Fly.io]
-        PROD_DB[Supabase PostgreSQL]
+        PROD_DB[Neon PostgreSQL]
         PROD_REDIS[Redis Cloud]
         PROD_S3[Tigris Storage]
     end
@@ -554,7 +553,7 @@ graph LR
 ### Backend Technologies
 - **FastAPI**: Modern Python web framework with OpenAPI 3.1.1
 - **Python 3.12**: Latest Python with type hints
-- **Supabase**: PostgreSQL database with real-time features
+- **Neon PostgreSQL**: Serverless PostgreSQL database (via psycopg3)
 - **Upstash Redis**: Serverless Redis for caching and queues
 - **Tigris**: S3-compatible object storage
 - **OpenAI API**: GPT-5-mini for nutrition analysis
@@ -567,7 +566,7 @@ graph LR
 - **Fly.io**: Container deployment platform for backend
 - **Vercel**: Edge deployment for frontend
 - **Docker**: Containerization with multi-stage builds
-- **Supabase CLI**: Local development and migrations
+- **Neon**: Serverless PostgreSQL with branching
 - **GitHub Actions**: CI/CD pipeline
 - **Performance Monitoring**: Real-time metrics collection
 - **Health Checks**: Comprehensive connectivity monitoring

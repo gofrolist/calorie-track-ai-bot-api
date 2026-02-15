@@ -35,7 +35,7 @@ graph TB
             PLAYWRIGHT[Playwright Multi-Device]
             PYTEST[Pytest + FastAPI TestClient]
             MOCK[Mock Services & Fixtures]
-            SUPABASE[Supabase Test DB]
+            TESTDB[PostgreSQL Test DB]
             DOCKER[Docker Test Containers]
         end
     end
@@ -59,7 +59,7 @@ graph TB
     THEME_LANG --> PLAYWRIGHT
 
     %% Infrastructure connections
-    INTEGRATION_BE --> SUPABASE
+    INTEGRATION_BE --> TESTDB
     INTEGRATION_BE --> DOCKER
     CONTRACT_BE --> MOCK
 ```
@@ -118,8 +118,7 @@ VITE_TELEGRAM_APP_URL=http://localhost:3000
 #### Backend Environment (.env.backend)
 ```bash
 # Database Configuration
-SUPABASE_URL=postgresql://localhost:5432/calorie_track_test
-SUPABASE_DB_PASSWORD=test_password
+DATABASE_URL=postgresql://localhost:5432/calorie_track_test
 
 # Redis Configuration
 REDIS_URL=redis://localhost:6379/0

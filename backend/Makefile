@@ -34,12 +34,7 @@ help:
 	@echo "  precommit      - Run pre-commit on all files"
 	@echo ""
 	@echo "🗄️ Database & Services:"
-	@echo "  db-start       - Start Supabase database only (recommended)"
-	@echo "  db-stop        - Stop Supabase database"
-	@echo "  db-reset       - Reset Supabase local database"
 	@echo "  db-migrate     - Run database migrations"
-	@echo "  db-seed        - Seed database with test data"
-	@echo "  db-types       - Generate TypeScript types from Supabase"
 	@echo ""
 	@echo "🐳 Docker & Compose:"
 	@echo "  docker-build   - Build Docker image"
@@ -76,7 +71,7 @@ setup: venv env
 	@echo ""
 	@echo "Next steps:"
 	@echo "1. Update .env file with your credentials"
-	@echo "2. Run 'make db-start' to start the Supabase database"
+	@echo "2. Set DATABASE_URL in .env to your Neon connection string"
 	@echo "3. Run 'make dev' to start the development server"
 	@echo "4. Run 'make test' to verify everything is working"
 
@@ -219,35 +214,10 @@ precommit: venv
 # DATABASE & SERVICES
 # =============================================================================
 
-.PHONY: db-start
-db-start:
-	@echo "🗄️  Starting Supabase database only (recommended for development)..."
-	cd .. && supabase db start
-
-.PHONY: db-stop
-db-stop:
-	@echo "🛑 Stopping Supabase database..."
-	cd .. && supabase stop
-
-.PHONY: db-reset
-db-reset:
-	@echo "🔄 Resetting Supabase local database..."
-	cd .. && supabase db reset
-
 .PHONY: db-migrate
 db-migrate:
-	@echo "🔄 Running database migrations..."
-	cd .. && supabase db push
-
-.PHONY: db-seed
-db-seed:
-	@echo "🌱 Seeding database with test data..."
-	cd .. && supabase db seed
-
-.PHONY: db-types
-db-types:
-	@echo "📝 Generating TypeScript types from Supabase..."
-	cd .. && supabase gen types typescript --local > backend/types.gen.ts
+	@echo "🔄 Running database migrations against Neon..."
+	@echo "Apply schema from infra/schema.sql via psql or Neon console"
 
 # =============================================================================
 # DOCKER & COMPOSE
@@ -358,10 +328,3 @@ clean-all: clean
 	@echo "🧹 Cleaning everything including dependencies..."
 	rm -rf .venv/
 	uv cache clean
-
-# Legacy aliases for backward compatibility
-.PHONY: supabase-start supabase-stop supabase-reset supabase-gen
-supabase-start: db-start
-supabase-stop: db-stop
-supabase-reset: db-reset
-supabase-gen: db-types

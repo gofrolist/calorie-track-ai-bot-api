@@ -45,9 +45,8 @@ LOG_LEVEL=INFO
 OPENAI_API_KEY=sk-your-openai-key
 OPENAI_MODEL=gpt-5-mini
 
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Database (Neon PostgreSQL)
+DATABASE_URL=postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
 
 # Redis
 REDIS_URL=redis://localhost:6379
@@ -282,9 +281,9 @@ If you have port conflicts:
 - **Frontend**: Change port in `frontend/vite.config.ts`
 
 ### Database Issues
-- Ensure your Supabase project is active
-- Check that the service role key has proper permissions
-- Verify the database schema is up to date
+- Ensure your Neon PostgreSQL project is active
+- Check that DATABASE_URL is set correctly
+- Verify the database schema is up to date (see `backend/infra/schema.sql`)
 
 ## Production Deployment
 

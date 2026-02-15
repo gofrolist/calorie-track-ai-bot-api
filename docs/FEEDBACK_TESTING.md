@@ -212,7 +212,7 @@ When adding new feedback functionality:
 
 ### Test Data
 Tests use:
-- Mock Supabase client for database operations
+- Mock database pool for database operations
 - Mock bot for Telegram notifications
 - Playwright mock routes for API responses
 - Mock localStorage for draft persistence

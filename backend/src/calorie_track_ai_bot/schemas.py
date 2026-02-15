@@ -409,20 +409,6 @@ class LogLevel(StrEnum):
     CRITICAL = "CRITICAL"
 
 
-class LogEntry(BaseModel):
-    id: UUID
-    timestamp: AwareDatetime
-    level: LogLevel
-    message: str
-    correlation_id: UUID | None = None
-    module: str | None = None
-    function: str | None = None
-    user_id: str | None = None
-    request_id: str | None = None
-    context: dict[str, Any] | None = None
-    error_details: dict[str, Any] | None = None
-
-
 class LogEntryCreate(BaseModel):
     level: LogLevel
     message: str
@@ -439,13 +425,12 @@ class DevelopmentEnvironment(BaseModel):
     name: str
     frontend_port: int
     backend_port: int
-    supabase_db_url: str
-    supabase_db_password: str
+    database_url: str
+    database_password: str
     redis_url: str
     storage_endpoint: str
     cors_origins: list[str]
     log_level: str
     hot_reload: bool
-    supabase_cli_version: str
     created_at: AwareDatetime
     updated_at: AwareDatetime

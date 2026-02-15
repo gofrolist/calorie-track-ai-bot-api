@@ -44,16 +44,6 @@ class TestMainApplication:
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
-    def test_auth_endpoints_available(self, client):
-        """Test that auth endpoints are available."""
-        response = client.post("/api/v1/auth/telegram/init")
-        assert response.status_code == 200
-
-        data = response.json()
-        assert "token" in data
-        assert "refresh_token" in data
-        assert "user" in data
-
     def test_photos_endpoints_available(self, client):
         """Test that photos endpoints are available."""
         # Test that endpoint exists (will fail validation but endpoint exists)
@@ -137,7 +127,7 @@ class TestMainApplication:
         assert response.status_code == 200
 
         # API endpoints should be under /api/v1
-        response = client.post("/api/v1/auth/telegram/init")
+        response = client.get("/api/v1/config/theme", headers={"x-user-id": "123456789"})
         assert response.status_code == 200
 
     def test_404_for_nonexistent_endpoints(self, client):
@@ -166,7 +156,6 @@ class TestMainApplication:
             "/health/live",
             "/health/ready",
             "/healthz",
-            "/api/v1/auth/telegram/init",
             "/api/v1/photos",
             "/api/v1/photos/{photo_id}/estimate",
             "/api/v1/estimates/{estimate_id}",

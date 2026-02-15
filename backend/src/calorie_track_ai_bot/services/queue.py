@@ -165,7 +165,7 @@ async def enqueue_inline_job(
         origin_message_id: Identifier of forwarded/original message for logging purposes.
         consent_granted: Whether user consent covers inline processing.
         consent_scope: Consent scope label propagated to workers.
-        consent_reference: Consent record identifier (e.g., Supabase row).
+        consent_reference: Consent record identifier (e.g., database row ID).
         retention_hours: Hour window before transient artifacts must be purged.
         metadata: Additional metadata to propagate with the job.
         throttle: Skip rate-limit enforcement when False (e.g., backfill jobs).

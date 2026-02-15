@@ -14,12 +14,11 @@ To enable full testing and deployment, you need to add the following secrets to 
 |-------------|-------------|---------|
 | `OPENAI_API_KEY` | OpenAI API key for AI estimation | `sk-proj-...` |
 
-## Supabase Configuration
+## Database Configuration
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `SUPABASE_URL` | Supabase project URL | `https://your-project.supabase.co` |
-| `SUPABASE_KEY` | Supabase service role key | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+| `DATABASE_URL` | Neon PostgreSQL connection string | `postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require` |
 
 ## Redis Configuration
 
@@ -96,7 +95,7 @@ nano .env
 ### Tests Failing
 - Check that all required secrets are set
 - Verify secret values are correct
-- Check service connectivity (Supabase, Redis, etc.)
+- Check service connectivity (Neon PostgreSQL, Redis, etc.)
 
 ### Deployment Failing
 - Verify `FLY_API_TOKEN` is set correctly

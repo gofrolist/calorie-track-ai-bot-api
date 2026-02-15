@@ -1,6 +1,6 @@
 # Calories Count — Photo‑First POC
 
-Frontend: Vercel (Telegram Mini App) • Backend: FastAPI on Fly.io • Redis: Upstash • DB: Supabase • Object Storage: Tigris • Vision: OpenAI gpt‑5‑mini
+Frontend: Vercel (Telegram Mini App) • Backend: FastAPI on Fly.io • Redis: Upstash • DB: Neon PostgreSQL • Object Storage: Tigris • Vision: OpenAI gpt‑5‑mini
 
 ## Repository Structure
 
@@ -13,7 +13,7 @@ This repository is organized into backend and frontend components:
 - Presigned PUT to Tigris (S3‑compatible) for meal photos
 - Queue job to Upstash Redis; background worker processes photos
 - Vision estimate via OpenAI gpt‑5‑mini → deterministic kcal aggregation with min/max
-- Persist users/photos/estimates/meals in Supabase Postgres
+- Persist users/photos/estimates/meals in Neon PostgreSQL Postgres
 
 ## Quick start
 
@@ -38,8 +38,8 @@ cp .env.example .env
 # fill values
 docker compose up --build
 
-# In another terminal (optional) create tables in Supabase:
-psql "$SUPABASE_DATABASE_URL" -f infra/schema.sql
+# In another terminal (optional) create tables in Neon PostgreSQL:
+psql "$DATABASE_URL" -f infra/schema.sql
 ```
 
 ### Testing
@@ -123,8 +123,7 @@ When debugging Telegram bot issues:
 The application requires the following environment variables:
 
 #### Required for Production
-- `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key (bypasses RLS)
+- `DATABASE_URL`: Neon PostgreSQL connection string
 - `OPENAI_API_KEY`: OpenAI API key for image analysis
 - `TELEGRAM_BOT_TOKEN`: Telegram bot token from @BotFather
 - `REDIS_URL`: Redis connection URL for job queue
@@ -143,9 +142,8 @@ The application requires the following environment variables:
 ### Common Issues
 - **Silent bot responses**: Check webhook URL configuration and endpoint accessibility
 - **Photo processing failures**: Verify Tigris/S3 configuration and OpenAI API key
-- **Database errors**: Check Supabase connection and table schema
+- **Database errors**: Check Neon PostgreSQL connection and table schema
 - **Bot not responding**: Verify `TELEGRAM_BOT_TOKEN` is set correctly
-- **RLS policy violations**: Ensure `SUPABASE_SERVICE_ROLE_KEY` is used instead of `SUPABASE_KEY`
 - **Webhook issues**: Use `/bot/webhook-info` to check webhook status
 
 ## Environment Configuration
@@ -161,9 +159,8 @@ APP_ENV=dev
 OPENAI_API_KEY=sk-your-openai-key
 OPENAI_MODEL=gpt-5-mini
 
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-service-role-key
+# Database (Neon PostgreSQL)
+DATABASE_URL=postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
 
 # Redis
 REDIS_URL=redis://localhost:6379

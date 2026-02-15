@@ -37,8 +37,7 @@ Run tests that don't require external services:
 ### Manual Test Run
 Set environment variables and run specific tests:
 ```bash
-export SUPABASE_URL="https://test.supabase.co"
-export SUPABASE_SERVICE_ROLE="test-supabase-key"
+export DATABASE_URL="postgresql://test:test@localhost:5432/testdb"
 export OPENAI_API_KEY="sk-test123"
 export REDIS_URL="redis://localhost:6379"
 export AWS_ENDPOINT_URL_S3="https://test.tigris.com"
@@ -52,7 +51,7 @@ uv run pytest tests/services/test_config.py tests/api/v1/test_health.py tests/ap
 
 ### All Tests (Requires External Services)
 To run all tests, you need access to:
-- Supabase instance
+- PostgreSQL database (Neon)
 - Redis server
 - Tigris/S3 storage
 - OpenAI API key
@@ -65,7 +64,7 @@ uv run pytest tests/ -v
 
 ### Services Tests
 - **config.py**: Environment variable handling and defaults
-- **db.py**: Database operations with mocked Supabase client
+- **db.py**: Database operations with mocked psycopg3 pool
 - **estimator.py**: AI estimation with mocked OpenAI client
 - **queue.py**: Redis queue operations with mocked Redis client
 - **storage.py**: S3/Tigris operations with mocked boto3 client
@@ -103,8 +102,7 @@ The tests use the following testing libraries:
 ## Environment Variables
 
 Tests use mock environment variables to avoid requiring real service credentials:
-- `SUPABASE_URL`: Mock Supabase URL
-- `SUPABASE_SERVICE_ROLE`: Mock Supabase key
+- `DATABASE_URL`: Mock PostgreSQL connection URL
 - `OPENAI_API_KEY`: Mock OpenAI API key
 - `REDIS_URL`: Mock Redis URL
 - `AWS_*`: Mock Tigris/S3 credentials

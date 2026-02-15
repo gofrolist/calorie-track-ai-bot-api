@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from .api.v1 import (
-    auth,
     bot,
     config,
     connectivity,
@@ -259,7 +258,6 @@ app.include_router(connectivity.router, prefix="/health", tags=["health"])
 app.include_router(config.router, prefix="/api/v1", tags=["configuration"])
 app.include_router(logs.router, prefix="/api/v1", tags=["logging"])
 app.include_router(dev.router, prefix="/api/v1", tags=["development"])
-app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(photos.router, prefix="/api/v1", tags=["photos"])
 app.include_router(estimates.router, prefix="/api/v1", tags=["estimates"])
 app.include_router(meals.router, prefix="/api/v1", tags=["meals"])

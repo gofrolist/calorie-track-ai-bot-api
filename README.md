@@ -23,7 +23,7 @@ A full-stack application for tracking calories using AI-powered photo analysis w
 ### Technical Features
 - FastAPI backend with automatic OpenAPI documentation
 - React frontend with TypeScript
-- Supabase PostgreSQL database
+- Neon PostgreSQL database
 - Tigris S3-compatible storage
 - Upstash Redis for background job queuing
 
@@ -108,7 +108,7 @@ flyctl deploy           # Deploy to Fly.io
 ## Architecture
 
 - **Backend**: FastAPI on Fly.io
-- **Database**: Supabase Postgres
+- **Database**: Neon PostgreSQL
 - **Queue**: Redis (Upstash)
 - **Storage**: Tigris (S3-compatible)
 - **AI**: OpenAI GPT-5-mini for image analysis

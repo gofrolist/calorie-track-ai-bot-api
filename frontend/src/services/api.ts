@@ -688,8 +688,8 @@ export const devApi = {
     return response.data;
   },
 
-  async getSupabaseStatus(): Promise<any> {
-    const response = await api.get('/api/v1/dev/supabase/status');
+  async getDbStatus(): Promise<any> {
+    const response = await api.get('/api/v1/dev/db/status');
     return response.data;
   },
 };

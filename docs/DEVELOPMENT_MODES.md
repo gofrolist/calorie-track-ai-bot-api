@@ -2,10 +2,10 @@
 
 ## Quick Reference
 
-| Mode | Command | Services | Redis | Supabase | Storage | Use Case |
+| Mode | Command | Services | Redis | Database | Storage | Use Case |
 |------|---------|----------|-------|----------|---------|----------|
-| **Docker Full Stack** | `make docker-dev` | All containerized | Local (6379) | Supabase CLI | MinIO | Full integration testing |
-| **Local Dev** | `make dev` | Local processes | Upstash (cloud) | Cloud/CLI | Tigris/Cloud | Rapid development |
+| **Docker Full Stack** | `make docker-dev` | All containerized | Local (6379) | Local PostgreSQL | MinIO | Full integration testing |
+| **Local Dev** | `make dev` | Local processes | Upstash (cloud) | Neon (cloud) | Tigris/Cloud | Rapid development |
 | **Backend Only** | `cd backend && make run` | Backend only | From .env | From .env | From .env | Backend testing |
 
 ## Detailed Comparison
@@ -57,7 +57,7 @@
 ✅ Backend (local)        → localhost:8000
 ✅ Frontend (local)       → localhost:5173
 ⚠️  Redis (Upstash)       → Cloud service
-⚠️  Supabase (cloud)      → Cloud database
+⚠️  Neon (cloud)           → Cloud database
 ⚠️  Tigris (cloud)        → Cloud storage
 ```
 
@@ -132,7 +132,7 @@ npm run dev
 # docker-compose.yml (root)
 environment:
   REDIS_URL: redis://redis:6379/0          # ← Hardcoded
-  SUPABASE_URL: http://host.docker.internal:54321
+  DATABASE_URL: postgresql://host.docker.internal:5432/neondb
   AWS_ENDPOINT_URL_S3: http://minio:9000
 
   # These CAN come from .env:
@@ -145,8 +145,7 @@ environment:
 ```bash
 # backend/.env
 REDIS_URL=rediss://your-redis.upstash.io:6379  # ← Used in local mode
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_DB_PASSWORD=your-password
+DATABASE_URL=postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
 AWS_ENDPOINT_URL_S3=https://fly.storage.tigris.dev
 OPENAI_API_KEY=sk-...
 TELEGRAM_BOT_TOKEN=123456:ABC...
@@ -201,14 +200,11 @@ make docker-restart  # Clean restart
 
 ### Issue: "Connection refused" to backend
 
-**Problem:** Backend not started or Supabase not running
+**Problem:** Backend not started or database not reachable
 
 **Solution:**
 ```bash
-# 1. Start Supabase CLI (required for Docker mode)
-supabase start
-
-# 2. Then start Docker
+# Ensure DATABASE_URL is set in backend/.env, then start Docker
 make docker-dev
 ```
 
@@ -218,7 +214,7 @@ make docker-dev
 
 1. **Clone repo**
 2. **Copy template:** `cp backend/env.template backend/.env`
-3. **Start Supabase:** `supabase start`
+3. **Set DATABASE_URL** to your Neon connection string
 4. **Start Docker:** `make docker-dev`
 5. **Open browser:** http://localhost:3000
 
@@ -229,7 +225,7 @@ You're done! No credentials needed.
 If you already have `backend/.env` with production credentials:
 
 ```bash
-# Docker will IGNORE these values for Redis/Supabase/MinIO
+# Docker will IGNORE these values for Redis/Database/MinIO
 # It uses local containers instead
 make docker-dev
 
