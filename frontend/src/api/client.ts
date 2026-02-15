@@ -35,7 +35,7 @@ export async function customFetch<T>(
     method = init?.method ?? 'GET';
     body = init?.body as string | undefined;
     extraHeaders = init?.headers as Record<string, string> | undefined;
-    signal = init?.signal;
+    signal = init?.signal ?? undefined;
   } else {
     // Legacy call: customFetch({ url, method, params, data, ... })
     const { url, params, data, headers: cfgHeaders, signal: cfgSignal } = urlOrConfig;
