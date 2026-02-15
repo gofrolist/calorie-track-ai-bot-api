@@ -2,20 +2,21 @@ import calendar
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query
 
 from ...services.db import db_get_daily_summary, db_get_summaries_by_date_range, db_get_today_data
-from ...utils.error_handling import handle_api_errors, validate_user_authentication
+from ...utils.error_handling import handle_api_errors
+from .deps import get_telegram_user_id
 
 router = APIRouter()
 
 
 @router.get("/daily-summary/{date}")
 @handle_api_errors("daily summary")
-async def get_daily_summary(date: str, request: Request) -> dict[str, Any]:
+async def get_daily_summary(
+    date: str, telegram_user_id: str = Depends(get_telegram_user_id)
+) -> dict[str, Any]:
     """Get daily summary for a specific date."""
-    telegram_user_id = validate_user_authentication(request)
-
     summary = await db_get_daily_summary(date, telegram_user_id)
     if summary is None:
         # Return empty summary if no meals found
@@ -31,8 +32,8 @@ async def get_daily_summary(date: str, request: Request) -> dict[str, Any]:
 @router.get("/weekly-summary")
 @handle_api_errors("weekly summary")
 async def get_weekly_summary(
-    request: Request,
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    telegram_user_id: str = Depends(get_telegram_user_id),
 ) -> list[dict[str, Any]]:
     """Get weekly summary starting from the given date."""
     start_dt = datetime.strptime(start_date, "%Y-%m-%d")
@@ -40,8 +41,6 @@ async def get_weekly_summary(
 
     start_date_str = start_dt.strftime("%Y-%m-%d")
     end_date_str = end_dt.strftime("%Y-%m-%d")
-
-    telegram_user_id = validate_user_authentication(request)
 
     # Get all meals for the week in a single query
     summaries_dict = await db_get_summaries_by_date_range(
@@ -73,9 +72,9 @@ async def get_weekly_summary(
 @router.get("/monthly-summary")
 @handle_api_errors("monthly summary")
 async def get_monthly_summary(
-    request: Request,
     year: int = Query(..., description="Year"),
     month: int = Query(..., description="Month (1-12)"),
+    telegram_user_id: str = Depends(get_telegram_user_id),
 ):
     """Get monthly summary for the given year and month."""
     # Get number of days in the month
@@ -83,8 +82,6 @@ async def get_monthly_summary(
 
     start_date_str = f"{year}-{month:02d}-01"
     end_date_str = f"{year}-{month:02d}-{days_in_month:02d}"
-
-    telegram_user_id = validate_user_authentication(request)
 
     # Get all meals for the month in a single query
     summaries_dict = await db_get_summaries_by_date_range(
@@ -114,9 +111,7 @@ async def get_monthly_summary(
 
 @router.get("/today/{date}")
 @handle_api_errors("today data")
-async def get_today_data(date: str, request: Request):
+async def get_today_data(date: str, telegram_user_id: str = Depends(get_telegram_user_id)):
     """Get all data needed for the Today page (meals + daily summary) in a single request."""
-    telegram_user_id = validate_user_authentication(request)
-
     today_data = await db_get_today_data(date, telegram_user_id)
     return today_data

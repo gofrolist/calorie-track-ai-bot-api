@@ -6,7 +6,17 @@ Provides reusable dependency functions for authentication and user resolution.
 from fastapi import HTTPException, Request
 
 from ...services.db import resolve_user_id
-from ...utils.error_handling import validate_user_authentication
+
+
+def get_telegram_user_id(request: Request) -> str:
+    """Extract and validate telegram user ID from x-user-id header.
+
+    Use as a FastAPI dependency: Depends(get_telegram_user_id)
+    """
+    telegram_user_id = request.headers.get("x-user-id")
+    if not telegram_user_id:
+        raise HTTPException(status_code=401, detail="Missing x-user-id header")
+    return telegram_user_id
 
 
 async def get_authenticated_user_id(request: Request) -> str:
@@ -14,18 +24,8 @@ async def get_authenticated_user_id(request: Request) -> str:
 
     Combines user authentication (x-user-id header extraction) with database
     user ID resolution into a single reusable dependency.
-
-    Args:
-        request: FastAPI Request object
-
-    Returns:
-        Internal database user ID (UUID string)
-
-    Raises:
-        HTTPException 401: If x-user-id header is missing
-        HTTPException 404: If user not found in database
     """
-    telegram_user_id = validate_user_authentication(request)
+    telegram_user_id = get_telegram_user_id(request)
     internal_user_id = await resolve_user_id(telegram_user_id)
     if not internal_user_id:
         raise HTTPException(status_code=404, detail="User not found")
