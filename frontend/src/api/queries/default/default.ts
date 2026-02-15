@@ -19,6 +19,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Health check endpoint for Fly.io.
  * @summary Healthz
@@ -61,14 +63,15 @@ export const getHealthzHealthzGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getHealthzHealthzGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof healthzHealthzGet>>
-  > = ({ signal }) => healthzHealthzGet({ signal });
+  > = ({ signal }) => healthzHealthzGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof healthzHealthzGet>>,
@@ -102,6 +105,7 @@ export function useHealthzHealthzGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -127,6 +131,7 @@ export function useHealthzHealthzGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -142,6 +147,7 @@ export function useHealthzHealthzGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -161,6 +167,7 @@ export function useHealthzHealthzGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

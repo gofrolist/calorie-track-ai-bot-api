@@ -29,6 +29,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Submit user feedback, bug report, question, or support request.
 
@@ -97,6 +99,7 @@ export const getSubmitFeedbackApiV1FeedbackPostMutationOptions = <
     { data: FeedbackSubmissionRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
   TError,
@@ -104,13 +107,13 @@ export const getSubmitFeedbackApiV1FeedbackPostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["submitFeedbackApiV1FeedbackPost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
@@ -118,7 +121,7 @@ export const getSubmitFeedbackApiV1FeedbackPostMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return submitFeedbackApiV1FeedbackPost(data);
+    return submitFeedbackApiV1FeedbackPost(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -145,6 +148,7 @@ export const useSubmitFeedbackApiV1FeedbackPost = <
       { data: FeedbackSubmissionRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -233,9 +237,10 @@ export const getGetFeedbackApiV1FeedbackFeedbackIdGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -244,7 +249,10 @@ export const getGetFeedbackApiV1FeedbackFeedbackIdGetQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>
   > = ({ signal }) =>
-    getFeedbackApiV1FeedbackFeedbackIdGet(feedbackId, { signal });
+    getFeedbackApiV1FeedbackFeedbackIdGet(feedbackId, {
+      signal,
+      ...requestOptions,
+    });
 
   return {
     queryKey,
@@ -285,6 +293,7 @@ export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -311,6 +320,7 @@ export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -327,6 +337,7 @@ export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -347,6 +358,7 @@ export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

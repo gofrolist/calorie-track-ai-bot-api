@@ -27,6 +27,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Get daily summary for a specific date.
  * @summary Get Daily Summary
@@ -90,9 +92,10 @@ export const getGetDailySummaryApiV1DailySummaryDateGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -100,7 +103,11 @@ export const getGetDailySummaryApiV1DailySummaryDateGetQueryOptions = <
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getDailySummaryApiV1DailySummaryDateGet>>
-  > = ({ signal }) => getDailySummaryApiV1DailySummaryDateGet(date, { signal });
+  > = ({ signal }) =>
+    getDailySummaryApiV1DailySummaryDateGet(date, {
+      signal,
+      ...requestOptions,
+    });
 
   return {
     queryKey,
@@ -141,6 +148,7 @@ export function useGetDailySummaryApiV1DailySummaryDateGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -167,6 +175,7 @@ export function useGetDailySummaryApiV1DailySummaryDateGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -183,6 +192,7 @@ export function useGetDailySummaryApiV1DailySummaryDateGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -203,6 +213,7 @@ export function useGetDailySummaryApiV1DailySummaryDateGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -296,9 +307,10 @@ export const getGetWeeklySummaryApiV1WeeklySummaryGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -306,7 +318,11 @@ export const getGetWeeklySummaryApiV1WeeklySummaryGetQueryOptions = <
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWeeklySummaryApiV1WeeklySummaryGet>>
-  > = ({ signal }) => getWeeklySummaryApiV1WeeklySummaryGet(params, { signal });
+  > = ({ signal }) =>
+    getWeeklySummaryApiV1WeeklySummaryGet(params, {
+      signal,
+      ...requestOptions,
+    });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getWeeklySummaryApiV1WeeklySummaryGet>>,
@@ -342,6 +358,7 @@ export function useGetWeeklySummaryApiV1WeeklySummaryGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -368,6 +385,7 @@ export function useGetWeeklySummaryApiV1WeeklySummaryGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -384,6 +402,7 @@ export function useGetWeeklySummaryApiV1WeeklySummaryGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -404,6 +423,7 @@ export function useGetWeeklySummaryApiV1WeeklySummaryGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -497,9 +517,10 @@ export const getGetMonthlySummaryApiV1MonthlySummaryGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -508,7 +529,10 @@ export const getGetMonthlySummaryApiV1MonthlySummaryGetQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getMonthlySummaryApiV1MonthlySummaryGet>>
   > = ({ signal }) =>
-    getMonthlySummaryApiV1MonthlySummaryGet(params, { signal });
+    getMonthlySummaryApiV1MonthlySummaryGet(params, {
+      signal,
+      ...requestOptions,
+    });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getMonthlySummaryApiV1MonthlySummaryGet>>,
@@ -544,6 +568,7 @@ export function useGetMonthlySummaryApiV1MonthlySummaryGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -570,6 +595,7 @@ export function useGetMonthlySummaryApiV1MonthlySummaryGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -586,6 +612,7 @@ export function useGetMonthlySummaryApiV1MonthlySummaryGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -606,6 +633,7 @@ export function useGetMonthlySummaryApiV1MonthlySummaryGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -683,16 +711,18 @@ export const getGetTodayDataApiV1TodayDateGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetTodayDataApiV1TodayDateGetQueryKey(date);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getTodayDataApiV1TodayDateGet>>
-  > = ({ signal }) => getTodayDataApiV1TodayDateGet(date, { signal });
+  > = ({ signal }) =>
+    getTodayDataApiV1TodayDateGet(date, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -732,6 +762,7 @@ export function useGetTodayDataApiV1TodayDateGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -758,6 +789,7 @@ export function useGetTodayDataApiV1TodayDateGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -774,6 +806,7 @@ export function useGetTodayDataApiV1TodayDateGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -794,6 +827,7 @@ export function useGetTodayDataApiV1TodayDateGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

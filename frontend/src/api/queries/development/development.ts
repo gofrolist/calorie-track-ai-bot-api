@@ -24,6 +24,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Get current development environment configuration.
  * @summary Get Development Environment
@@ -76,8 +78,9 @@ export const getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -86,7 +89,10 @@ export const getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>
   > = ({ signal }) =>
-    getDevelopmentEnvironmentApiV1DevEnvironmentGet({ signal });
+    getDevelopmentEnvironmentApiV1DevEnvironmentGet({
+      signal,
+      ...requestOptions,
+    });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>,
@@ -129,6 +135,7 @@ export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -162,6 +169,7 @@ export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -181,6 +189,7 @@ export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -204,6 +213,7 @@ export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -265,15 +275,17 @@ export const getGetDbStatusApiV1DevDbStatusGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetDbStatusApiV1DevDbStatusGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>
-  > = ({ signal }) => getDbStatusApiV1DevDbStatusGet({ signal });
+  > = ({ signal }) =>
+    getDbStatusApiV1DevDbStatusGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
@@ -307,6 +319,7 @@ export function useGetDbStatusApiV1DevDbStatusGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -332,6 +345,7 @@ export function useGetDbStatusApiV1DevDbStatusGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -347,6 +361,7 @@ export function useGetDbStatusApiV1DevDbStatusGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -366,6 +381,7 @@ export function useGetDbStatusApiV1DevDbStatusGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

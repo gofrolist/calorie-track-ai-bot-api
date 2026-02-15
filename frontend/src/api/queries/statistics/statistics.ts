@@ -27,6 +27,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Get daily nutrition statistics for a date range.
 
@@ -119,9 +121,10 @@ export const getGetDailyStatisticsApiV1StatisticsDailyGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -130,7 +133,10 @@ export const getGetDailyStatisticsApiV1StatisticsDailyGetQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getDailyStatisticsApiV1StatisticsDailyGet>>
   > = ({ signal }) =>
-    getDailyStatisticsApiV1StatisticsDailyGet(params, { signal });
+    getDailyStatisticsApiV1StatisticsDailyGet(params, {
+      signal,
+      ...requestOptions,
+    });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getDailyStatisticsApiV1StatisticsDailyGet>>,
@@ -166,6 +172,7 @@ export function useGetDailyStatisticsApiV1StatisticsDailyGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -192,6 +199,7 @@ export function useGetDailyStatisticsApiV1StatisticsDailyGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -208,6 +216,7 @@ export function useGetDailyStatisticsApiV1StatisticsDailyGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -228,6 +237,7 @@ export function useGetDailyStatisticsApiV1StatisticsDailyGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -337,9 +347,10 @@ export const getGetMacroStatisticsApiV1StatisticsMacrosGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -348,7 +359,10 @@ export const getGetMacroStatisticsApiV1StatisticsMacrosGetQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getMacroStatisticsApiV1StatisticsMacrosGet>>
   > = ({ signal }) =>
-    getMacroStatisticsApiV1StatisticsMacrosGet(params, { signal });
+    getMacroStatisticsApiV1StatisticsMacrosGet(params, {
+      signal,
+      ...requestOptions,
+    });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getMacroStatisticsApiV1StatisticsMacrosGet>>,
@@ -388,6 +402,7 @@ export function useGetMacroStatisticsApiV1StatisticsMacrosGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -418,6 +433,7 @@ export function useGetMacroStatisticsApiV1StatisticsMacrosGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -436,6 +452,7 @@ export function useGetMacroStatisticsApiV1StatisticsMacrosGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -458,6 +475,7 @@ export function useGetMacroStatisticsApiV1StatisticsMacrosGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

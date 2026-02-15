@@ -21,6 +21,8 @@ import type { ConnectivityResponse, HealthResponse } from "../../model";
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * @summary Live
  */
@@ -62,14 +64,15 @@ export const getLiveHealthLiveGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getLiveHealthLiveGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof liveHealthLiveGet>>
-  > = ({ signal }) => liveHealthLiveGet({ signal });
+  > = ({ signal }) => liveHealthLiveGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof liveHealthLiveGet>>,
@@ -103,6 +106,7 @@ export function useLiveHealthLiveGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -128,6 +132,7 @@ export function useLiveHealthLiveGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -143,6 +148,7 @@ export function useLiveHealthLiveGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -162,6 +168,7 @@ export function useLiveHealthLiveGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -217,14 +224,15 @@ export const getReadyHealthReadyGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getReadyHealthReadyGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof readyHealthReadyGet>>
-  > = ({ signal }) => readyHealthReadyGet({ signal });
+  > = ({ signal }) => readyHealthReadyGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof readyHealthReadyGet>>,
@@ -258,6 +266,7 @@ export function useReadyHealthReadyGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -283,6 +292,7 @@ export function useReadyHealthReadyGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -298,6 +308,7 @@ export function useReadyHealthReadyGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -317,6 +328,7 @@ export function useReadyHealthReadyGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -379,8 +391,9 @@ export const getGetConnectivityStatusHealthConnectivityGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -388,7 +401,8 @@ export const getGetConnectivityStatusHealthConnectivityGetQueryOptions = <
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>
-  > = ({ signal }) => getConnectivityStatusHealthConnectivityGet({ signal });
+  > = ({ signal }) =>
+    getConnectivityStatusHealthConnectivityGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
@@ -426,6 +440,7 @@ export function useGetConnectivityStatusHealthConnectivityGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -455,6 +470,7 @@ export function useGetConnectivityStatusHealthConnectivityGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -472,6 +488,7 @@ export function useGetConnectivityStatusHealthConnectivityGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -493,6 +510,7 @@ export function useGetConnectivityStatusHealthConnectivityGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

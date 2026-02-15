@@ -20,6 +20,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Accept a frontend log entry and forward it to structlog.
  * @summary Create Log Entry
@@ -76,6 +78,7 @@ export const getCreateLogEntryApiV1LogsPostMutationOptions = <
     { data: LogEntryCreate },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createLogEntryApiV1LogsPost>>,
   TError,
@@ -83,13 +86,13 @@ export const getCreateLogEntryApiV1LogsPostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["createLogEntryApiV1LogsPost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createLogEntryApiV1LogsPost>>,
@@ -97,7 +100,7 @@ export const getCreateLogEntryApiV1LogsPostMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return createLogEntryApiV1LogsPost(data);
+    return createLogEntryApiV1LogsPost(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -123,6 +126,7 @@ export const useCreateLogEntryApiV1LogsPost = <
       { data: LogEntryCreate },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

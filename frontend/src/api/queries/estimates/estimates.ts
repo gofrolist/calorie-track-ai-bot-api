@@ -28,6 +28,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * @summary Estimate Photo
  */
@@ -83,6 +85,7 @@ export const getEstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationOptions = <
     { photoId: string },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
   TError,
@@ -90,13 +93,13 @@ export const getEstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["estimatePhotoApiV1PhotosPhotoIdEstimatePost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
@@ -104,7 +107,7 @@ export const getEstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationOptions = <
   > = (props) => {
     const { photoId } = props ?? {};
 
-    return estimatePhotoApiV1PhotosPhotoIdEstimatePost(photoId);
+    return estimatePhotoApiV1PhotosPhotoIdEstimatePost(photoId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -132,6 +135,7 @@ export const useEstimatePhotoApiV1PhotosPhotoIdEstimatePost = <
       { photoId: string },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -209,9 +213,10 @@ export const getGetEstimateApiV1EstimatesEstimateIdGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -220,7 +225,10 @@ export const getGetEstimateApiV1EstimatesEstimateIdGetQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>
   > = ({ signal }) =>
-    getEstimateApiV1EstimatesEstimateIdGet(estimateId, { signal });
+    getEstimateApiV1EstimatesEstimateIdGet(estimateId, {
+      signal,
+      ...requestOptions,
+    });
 
   return {
     queryKey,
@@ -261,6 +269,7 @@ export function useGetEstimateApiV1EstimatesEstimateIdGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -287,6 +296,7 @@ export function useGetEstimateApiV1EstimatesEstimateIdGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -303,6 +313,7 @@ export function useGetEstimateApiV1EstimatesEstimateIdGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -323,6 +334,7 @@ export function useGetEstimateApiV1EstimatesEstimateIdGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

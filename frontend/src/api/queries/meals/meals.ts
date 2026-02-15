@@ -35,6 +35,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * @summary Create Meal
  */
@@ -94,6 +96,7 @@ export const getCreateMealApiV1MealsPostMutationOptions = <
     { data: MealCreateManualRequest | MealCreateFromEstimateRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
   TError,
@@ -101,13 +104,13 @@ export const getCreateMealApiV1MealsPostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["createMealApiV1MealsPost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
@@ -115,7 +118,7 @@ export const getCreateMealApiV1MealsPostMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return createMealApiV1MealsPost(data);
+    return createMealApiV1MealsPost(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -143,6 +146,7 @@ export const useCreateMealApiV1MealsPost = <
       { data: MealCreateManualRequest | MealCreateFromEstimateRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -239,16 +243,18 @@ export const getGetMealsApiV1MealsGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetMealsApiV1MealsGetQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getMealsApiV1MealsGet>>
-  > = ({ signal }) => getMealsApiV1MealsGet(params, { signal });
+  > = ({ signal }) =>
+    getMealsApiV1MealsGet(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
@@ -283,6 +289,7 @@ export function useGetMealsApiV1MealsGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -309,6 +316,7 @@ export function useGetMealsApiV1MealsGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -325,6 +333,7 @@ export function useGetMealsApiV1MealsGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -345,6 +354,7 @@ export function useGetMealsApiV1MealsGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -438,9 +448,10 @@ export const getGetMealsCalendarApiV1MealsCalendarGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -448,7 +459,11 @@ export const getGetMealsCalendarApiV1MealsCalendarGetQueryOptions = <
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>
-  > = ({ signal }) => getMealsCalendarApiV1MealsCalendarGet(params, { signal });
+  > = ({ signal }) =>
+    getMealsCalendarApiV1MealsCalendarGet(params, {
+      signal,
+      ...requestOptions,
+    });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
@@ -484,6 +499,7 @@ export function useGetMealsCalendarApiV1MealsCalendarGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -510,6 +526,7 @@ export function useGetMealsCalendarApiV1MealsCalendarGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -526,6 +543,7 @@ export function useGetMealsCalendarApiV1MealsCalendarGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -546,6 +564,7 @@ export function useGetMealsCalendarApiV1MealsCalendarGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -625,16 +644,18 @@ export const getGetMealApiV1MealsMealIdGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetMealApiV1MealsMealIdGetQueryKey(mealId);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>
-  > = ({ signal }) => getMealApiV1MealsMealIdGet(mealId, { signal });
+  > = ({ signal }) =>
+    getMealApiV1MealsMealIdGet(mealId, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -674,6 +695,7 @@ export function useGetMealApiV1MealsMealIdGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -700,6 +722,7 @@ export function useGetMealApiV1MealsMealIdGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -716,6 +739,7 @@ export function useGetMealApiV1MealsMealIdGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -736,6 +760,7 @@ export function useGetMealApiV1MealsMealIdGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -812,6 +837,7 @@ export const getUpdateMealApiV1MealsMealIdPatchMutationOptions = <
     { mealId: string; data: MealUpdate },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
   TError,
@@ -819,13 +845,13 @@ export const getUpdateMealApiV1MealsMealIdPatchMutationOptions = <
   TContext
 > => {
   const mutationKey = ["updateMealApiV1MealsMealIdPatch"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
@@ -833,7 +859,7 @@ export const getUpdateMealApiV1MealsMealIdPatchMutationOptions = <
   > = (props) => {
     const { mealId, data } = props ?? {};
 
-    return updateMealApiV1MealsMealIdPatch(mealId, data);
+    return updateMealApiV1MealsMealIdPatch(mealId, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -859,6 +885,7 @@ export const useUpdateMealApiV1MealsMealIdPatch = <
       { mealId: string; data: MealUpdate },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -929,6 +956,7 @@ export const getDeleteMealApiV1MealsMealIdDeleteMutationOptions = <
     { mealId: string },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
   TError,
@@ -936,13 +964,13 @@ export const getDeleteMealApiV1MealsMealIdDeleteMutationOptions = <
   TContext
 > => {
   const mutationKey = ["deleteMealApiV1MealsMealIdDelete"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
@@ -950,7 +978,7 @@ export const getDeleteMealApiV1MealsMealIdDeleteMutationOptions = <
   > = (props) => {
     const { mealId } = props ?? {};
 
-    return deleteMealApiV1MealsMealIdDelete(mealId);
+    return deleteMealApiV1MealsMealIdDelete(mealId, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -976,6 +1004,7 @@ export const useDeleteMealApiV1MealsMealIdDelete = <
       { mealId: string },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

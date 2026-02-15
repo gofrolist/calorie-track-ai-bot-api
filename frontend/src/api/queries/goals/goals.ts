@@ -28,6 +28,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Get user's goal.
  * @summary Get Goal
@@ -74,14 +76,15 @@ export const getGetGoalApiV1GoalsGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetGoalApiV1GoalsGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getGoalApiV1GoalsGet>>
-  > = ({ signal }) => getGoalApiV1GoalsGet({ signal });
+  > = ({ signal }) => getGoalApiV1GoalsGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getGoalApiV1GoalsGet>>,
@@ -115,6 +118,7 @@ export function useGetGoalApiV1GoalsGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -140,6 +144,7 @@ export function useGetGoalApiV1GoalsGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -155,6 +160,7 @@ export function useGetGoalApiV1GoalsGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -174,6 +180,7 @@ export function useGetGoalApiV1GoalsGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -243,6 +250,7 @@ export const getCreateGoalApiV1GoalsPostMutationOptions = <
     { data: GoalRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createGoalApiV1GoalsPost>>,
   TError,
@@ -250,13 +258,13 @@ export const getCreateGoalApiV1GoalsPostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["createGoalApiV1GoalsPost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createGoalApiV1GoalsPost>>,
@@ -264,7 +272,7 @@ export const getCreateGoalApiV1GoalsPostMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return createGoalApiV1GoalsPost(data);
+    return createGoalApiV1GoalsPost(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -290,6 +298,7 @@ export const useCreateGoalApiV1GoalsPost = <
       { data: GoalRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -359,6 +368,7 @@ export const getUpdateGoalApiV1GoalsPatchMutationOptions = <
     { data: GoalRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateGoalApiV1GoalsPatch>>,
   TError,
@@ -366,13 +376,13 @@ export const getUpdateGoalApiV1GoalsPatchMutationOptions = <
   TContext
 > => {
   const mutationKey = ["updateGoalApiV1GoalsPatch"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateGoalApiV1GoalsPatch>>,
@@ -380,7 +390,7 @@ export const getUpdateGoalApiV1GoalsPatchMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return updateGoalApiV1GoalsPatch(data);
+    return updateGoalApiV1GoalsPatch(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -406,6 +416,7 @@ export const useUpdateGoalApiV1GoalsPatch = <
       { data: GoalRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

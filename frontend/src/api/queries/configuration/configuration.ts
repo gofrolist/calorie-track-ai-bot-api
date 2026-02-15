@@ -30,6 +30,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Get current UI configuration for the user.
  * @summary Get Ui Configuration
@@ -77,15 +79,17 @@ export const getGetUiConfigurationApiV1ConfigUiGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetUiConfigurationApiV1ConfigUiGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getUiConfigurationApiV1ConfigUiGet>>
-  > = ({ signal }) => getUiConfigurationApiV1ConfigUiGet({ signal });
+  > = ({ signal }) =>
+    getUiConfigurationApiV1ConfigUiGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getUiConfigurationApiV1ConfigUiGet>>,
@@ -119,6 +123,7 @@ export function useGetUiConfigurationApiV1ConfigUiGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -144,6 +149,7 @@ export function useGetUiConfigurationApiV1ConfigUiGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -159,6 +165,7 @@ export function useGetUiConfigurationApiV1ConfigUiGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -178,6 +185,7 @@ export function useGetUiConfigurationApiV1ConfigUiGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -248,6 +256,7 @@ export const getUpdateUiConfigurationApiV1ConfigUiPutMutationOptions = <
     { data: UIConfigurationUpdate },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateUiConfigurationApiV1ConfigUiPut>>,
   TError,
@@ -255,13 +264,13 @@ export const getUpdateUiConfigurationApiV1ConfigUiPutMutationOptions = <
   TContext
 > => {
   const mutationKey = ["updateUiConfigurationApiV1ConfigUiPut"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateUiConfigurationApiV1ConfigUiPut>>,
@@ -269,7 +278,7 @@ export const getUpdateUiConfigurationApiV1ConfigUiPutMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return updateUiConfigurationApiV1ConfigUiPut(data);
+    return updateUiConfigurationApiV1ConfigUiPut(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -297,6 +306,7 @@ export const useUpdateUiConfigurationApiV1ConfigUiPut = <
       { data: UIConfigurationUpdate },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -366,6 +376,7 @@ export const getPatchUiConfigurationApiV1ConfigUiPatchMutationOptions = <
     { data: UIConfigurationUpdate },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof patchUiConfigurationApiV1ConfigUiPatch>>,
   TError,
@@ -373,13 +384,13 @@ export const getPatchUiConfigurationApiV1ConfigUiPatchMutationOptions = <
   TContext
 > => {
   const mutationKey = ["patchUiConfigurationApiV1ConfigUiPatch"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof patchUiConfigurationApiV1ConfigUiPatch>>,
@@ -387,7 +398,7 @@ export const getPatchUiConfigurationApiV1ConfigUiPatchMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return patchUiConfigurationApiV1ConfigUiPatch(data);
+    return patchUiConfigurationApiV1ConfigUiPatch(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -415,6 +426,7 @@ export const usePatchUiConfigurationApiV1ConfigUiPatch = <
       { data: UIConfigurationUpdate },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -475,15 +487,17 @@ export const getDetectThemeApiV1ConfigThemeGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getDetectThemeApiV1ConfigThemeGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof detectThemeApiV1ConfigThemeGet>>
-  > = ({ signal }) => detectThemeApiV1ConfigThemeGet({ signal });
+  > = ({ signal }) =>
+    detectThemeApiV1ConfigThemeGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof detectThemeApiV1ConfigThemeGet>>,
@@ -517,6 +531,7 @@ export function useDetectThemeApiV1ConfigThemeGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -542,6 +557,7 @@ export function useDetectThemeApiV1ConfigThemeGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -557,6 +573,7 @@ export function useDetectThemeApiV1ConfigThemeGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -576,6 +593,7 @@ export function useDetectThemeApiV1ConfigThemeGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -636,15 +654,17 @@ export const getDetectLanguageApiV1ConfigLanguageGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getDetectLanguageApiV1ConfigLanguageGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof detectLanguageApiV1ConfigLanguageGet>>
-  > = ({ signal }) => detectLanguageApiV1ConfigLanguageGet({ signal });
+  > = ({ signal }) =>
+    detectLanguageApiV1ConfigLanguageGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof detectLanguageApiV1ConfigLanguageGet>>,
@@ -678,6 +698,7 @@ export function useDetectLanguageApiV1ConfigLanguageGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -703,6 +724,7 @@ export function useDetectLanguageApiV1ConfigLanguageGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -718,6 +740,7 @@ export function useDetectLanguageApiV1ConfigLanguageGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -737,6 +760,7 @@ export function useDetectLanguageApiV1ConfigLanguageGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

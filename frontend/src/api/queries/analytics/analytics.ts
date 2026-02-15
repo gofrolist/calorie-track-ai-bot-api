@@ -25,6 +25,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * @summary Get Inline Summary
  */
@@ -108,9 +110,10 @@ export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryOptions = <
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
 ) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ??
@@ -119,7 +122,10 @@ export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>
   > = ({ signal }) =>
-    getInlineSummaryApiV1AnalyticsInlineSummaryGet(params, { signal });
+    getInlineSummaryApiV1AnalyticsInlineSummaryGet(params, {
+      signal,
+      ...requestOptions,
+    });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>,
@@ -164,6 +170,7 @@ export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -198,6 +205,7 @@ export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -218,6 +226,7 @@ export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -242,6 +251,7 @@ export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {

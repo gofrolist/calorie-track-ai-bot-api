@@ -22,6 +22,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Create photo upload request(s) with support for both single and multi-photo uploads.
 
@@ -83,6 +85,7 @@ export const getCreatePhotoApiV1PhotosPostMutationOptions = <
     { data: PhotoCreateRequest | MultiPhotoCreateRequest },
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
   TError,
@@ -90,13 +93,13 @@ export const getCreatePhotoApiV1PhotosPostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["createPhotoApiV1PhotosPost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
@@ -104,7 +107,7 @@ export const getCreatePhotoApiV1PhotosPostMutationOptions = <
   > = (props) => {
     const { data } = props ?? {};
 
-    return createPhotoApiV1PhotosPost(data);
+    return createPhotoApiV1PhotosPost(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -132,6 +135,7 @@ export const useCreatePhotoApiV1PhotosPost = <
       { data: PhotoCreateRequest | MultiPhotoCreateRequest },
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<

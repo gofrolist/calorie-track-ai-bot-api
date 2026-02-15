@@ -22,6 +22,8 @@ import type {
 
 import { customFetch } from "../../client";
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 /**
  * Handle Telegram webhook updates.
  * @summary Telegram Webhook
@@ -64,6 +66,7 @@ export const getTelegramWebhookBotPostMutationOptions = <
     void,
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof telegramWebhookBotPost>>,
   TError,
@@ -71,19 +74,19 @@ export const getTelegramWebhookBotPostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["telegramWebhookBotPost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof telegramWebhookBotPost>>,
     void
   > = () => {
-    return telegramWebhookBotPost();
+    return telegramWebhookBotPost(requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -106,6 +109,7 @@ export const useTelegramWebhookBotPost = <TError = unknown, TContext = unknown>(
       void,
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -161,6 +165,7 @@ export const getSetupWebhookBotSetupPostMutationOptions = <
     void,
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
   TError,
@@ -168,19 +173,19 @@ export const getSetupWebhookBotSetupPostMutationOptions = <
   TContext
 > => {
   const mutationKey = ["setupWebhookBotSetupPost"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
     void
   > = () => {
-    return setupWebhookBotSetupPost();
+    return setupWebhookBotSetupPost(requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -206,6 +211,7 @@ export const useSetupWebhookBotSetupPost = <
       void,
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
@@ -266,15 +272,17 @@ export const getGetWebhookInfoBotWebhookInfoGetQueryOptions = <
       TData
     >
   >;
+  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions } = options ?? {};
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetWebhookInfoBotWebhookInfoGetQueryKey();
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>
-  > = ({ signal }) => getWebhookInfoBotWebhookInfoGet({ signal });
+  > = ({ signal }) =>
+    getWebhookInfoBotWebhookInfoGet({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
@@ -308,6 +316,7 @@ export function useGetWebhookInfoBotWebhookInfoGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
@@ -333,6 +342,7 @@ export function useGetWebhookInfoBotWebhookInfoGet<
         >,
         "initialData"
       >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -348,6 +358,7 @@ export function useGetWebhookInfoBotWebhookInfoGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
@@ -367,6 +378,7 @@ export function useGetWebhookInfoBotWebhookInfoGet<
         TData
       >
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
@@ -422,6 +434,7 @@ export const getDeleteWebhookBotWebhookDeleteMutationOptions = <
     void,
     TContext
   >;
+  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
   TError,
@@ -429,19 +442,19 @@ export const getDeleteWebhookBotWebhookDeleteMutationOptions = <
   TContext
 > => {
   const mutationKey = ["deleteWebhookBotWebhookDelete"];
-  const { mutation: mutationOptions } = options
+  const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
       options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+    : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
     void
   > = () => {
-    return deleteWebhookBotWebhookDelete();
+    return deleteWebhookBotWebhookDelete(requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -467,6 +480,7 @@ export const useDeleteWebhookBotWebhookDelete = <
       void,
       TContext
     >;
+    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient,
 ): UseMutationResult<
