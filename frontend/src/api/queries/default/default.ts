@@ -4,9 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -16,118 +14,162 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * Health check endpoint for Fly.io.
  * @summary Healthz
  */
 export type healthzHealthzGetResponse200 = {
-  data: unknown
-  status: 200
-}
+  data: unknown;
+  status: 200;
+};
 
-export type healthzHealthzGetResponseSuccess = (healthzHealthzGetResponse200) & {
+export type healthzHealthzGetResponseSuccess = healthzHealthzGetResponse200 & {
   headers: Headers;
 };
-;
-
-export type healthzHealthzGetResponse = (healthzHealthzGetResponseSuccess)
+export type healthzHealthzGetResponse = healthzHealthzGetResponseSuccess;
 
 export const getHealthzHealthzGetUrl = () => {
+  return `/healthz`;
+};
 
-
-
-
-  return `/healthz`
-}
-
-export const healthzHealthzGet = async ( options?: RequestInit): Promise<healthzHealthzGetResponse> => {
-
-  return customFetch<healthzHealthzGetResponse>(getHealthzHealthzGetUrl(),
-  {
+export const healthzHealthzGet = async (
+  options?: RequestInit,
+): Promise<healthzHealthzGetResponse> => {
+  return customFetch<healthzHealthzGetResponse>(getHealthzHealthzGetUrl(), {
     ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
+    method: "GET",
+  });
+};
 
 export const getHealthzHealthzGetQueryKey = () => {
-    return [
-    `/healthz`
-    ] as const;
-    }
+  return [`/healthz`] as const;
+};
 
+export const getHealthzHealthzGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof healthzHealthzGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof healthzHealthzGet>>,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-export const getHealthzHealthzGetQueryOptions = <TData = Awaited<ReturnType<typeof healthzHealthzGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzHealthzGet>>, TError, TData>>, }
-) => {
+  const queryKey = queryOptions?.queryKey ?? getHealthzHealthzGetQueryKey();
 
-const {query: queryOptions} = options ?? {};
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof healthzHealthzGet>>
+  > = ({ signal }) => healthzHealthzGet({ signal });
 
-  const queryKey =  queryOptions?.queryKey ?? getHealthzHealthzGetQueryKey();
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof healthzHealthzGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type HealthzHealthzGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof healthzHealthzGet>>
+>;
+export type HealthzHealthzGetQueryError = unknown;
 
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof healthzHealthzGet>>> = ({ signal }) => healthzHealthzGet({ signal });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof healthzHealthzGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type HealthzHealthzGetQueryResult = NonNullable<Awaited<ReturnType<typeof healthzHealthzGet>>>
-export type HealthzHealthzGetQueryError = unknown
-
-
-export function useHealthzHealthzGet<TData = Awaited<ReturnType<typeof healthzHealthzGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzHealthzGet>>, TError, TData>> & Pick<
+export function useHealthzHealthzGet<
+  TData = Awaited<ReturnType<typeof healthzHealthzGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthzHealthzGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof healthzHealthzGet>>,
           TError,
           Awaited<ReturnType<typeof healthzHealthzGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useHealthzHealthzGet<TData = Awaited<ReturnType<typeof healthzHealthzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzHealthzGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useHealthzHealthzGet<
+  TData = Awaited<ReturnType<typeof healthzHealthzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthzHealthzGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof healthzHealthzGet>>,
           TError,
           Awaited<ReturnType<typeof healthzHealthzGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useHealthzHealthzGet<TData = Awaited<ReturnType<typeof healthzHealthzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzHealthzGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useHealthzHealthzGet<
+  TData = Awaited<ReturnType<typeof healthzHealthzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthzHealthzGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Healthz
  */
 
-export function useHealthzHealthzGet<TData = Awaited<ReturnType<typeof healthzHealthzGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof healthzHealthzGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useHealthzHealthzGet<
+  TData = Awaited<ReturnType<typeof healthzHealthzGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof healthzHealthzGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getHealthzHealthzGetQueryOptions(options);
 
-  const queryOptions = getHealthzHealthzGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

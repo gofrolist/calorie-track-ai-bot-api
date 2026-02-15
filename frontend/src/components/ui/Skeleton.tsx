@@ -1,4 +1,4 @@
-export function Skeleton({ className = '' }: { className?: string }) {
+export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
       role="status"

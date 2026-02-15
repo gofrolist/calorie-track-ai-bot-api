@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { MealCreateFromEstimateRequestOverrides } from './mealCreateFromEstimateRequestOverrides';
-import type { MealType } from './mealType';
+import type { MealCreateFromEstimateRequestOverrides } from "./mealCreateFromEstimateRequestOverrides";
+import type { MealType } from "./mealType";
 
 export interface MealCreateFromEstimateRequest {
   meal_date: string;

@@ -4,10 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,368 +17,466 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * Handle Telegram webhook updates.
  * @summary Telegram Webhook
  */
 export type telegramWebhookBotPostResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type telegramWebhookBotPostResponseSuccess = (telegramWebhookBotPostResponse200) & {
-  headers: Headers;
+  data: unknown;
+  status: 200;
 };
-;
 
-export type telegramWebhookBotPostResponse = (telegramWebhookBotPostResponseSuccess)
+export type telegramWebhookBotPostResponseSuccess =
+  telegramWebhookBotPostResponse200 & {
+    headers: Headers;
+  };
+export type telegramWebhookBotPostResponse =
+  telegramWebhookBotPostResponseSuccess;
 
 export const getTelegramWebhookBotPostUrl = () => {
+  return `/bot`;
+};
 
+export const telegramWebhookBotPost = async (
+  options?: RequestInit,
+): Promise<telegramWebhookBotPostResponse> => {
+  return customFetch<telegramWebhookBotPostResponse>(
+    getTelegramWebhookBotPostUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
 
+export const getTelegramWebhookBotPostMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof telegramWebhookBotPost>>,
+    TError,
+    void,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof telegramWebhookBotPost>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["telegramWebhookBotPost"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof telegramWebhookBotPost>>,
+    void
+  > = () => {
+    return telegramWebhookBotPost();
+  };
 
-  return `/bot`
-}
+  return { mutationFn, ...mutationOptions };
+};
 
-export const telegramWebhookBotPost = async ( options?: RequestInit): Promise<telegramWebhookBotPostResponse> => {
+export type TelegramWebhookBotPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof telegramWebhookBotPost>>
+>;
 
-  return customFetch<telegramWebhookBotPostResponse>(getTelegramWebhookBotPostUrl(),
-  {
-    ...options,
-    method: 'POST'
+export type TelegramWebhookBotPostMutationError = unknown;
 
-
-  }
-);}
-
-
-
-
-export const getTelegramWebhookBotPostMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhookBotPost>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof telegramWebhookBotPost>>, TError,void, TContext> => {
-
-const mutationKey = ['telegramWebhookBotPost'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof telegramWebhookBotPost>>, void> = () => {
-
-
-          return  telegramWebhookBotPost()
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type TelegramWebhookBotPostMutationResult = NonNullable<Awaited<ReturnType<typeof telegramWebhookBotPost>>>
-
-    export type TelegramWebhookBotPostMutationError = unknown
-
-    /**
+/**
  * @summary Telegram Webhook
  */
-export const useTelegramWebhookBotPost = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhookBotPost>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof telegramWebhookBotPost>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getTelegramWebhookBotPostMutationOptions(options), queryClient);
-    }
-    /**
+export const useTelegramWebhookBotPost = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof telegramWebhookBotPost>>,
+      TError,
+      void,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof telegramWebhookBotPost>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    getTelegramWebhookBotPostMutationOptions(options),
+    queryClient,
+  );
+};
+/**
  * Setup Telegram webhook if configured.
  * @summary Setup Webhook
  */
 export type setupWebhookBotSetupPostResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type setupWebhookBotSetupPostResponseSuccess = (setupWebhookBotSetupPostResponse200) & {
-  headers: Headers;
+  data: unknown;
+  status: 200;
 };
-;
 
-export type setupWebhookBotSetupPostResponse = (setupWebhookBotSetupPostResponseSuccess)
+export type setupWebhookBotSetupPostResponseSuccess =
+  setupWebhookBotSetupPostResponse200 & {
+    headers: Headers;
+  };
+export type setupWebhookBotSetupPostResponse =
+  setupWebhookBotSetupPostResponseSuccess;
 
 export const getSetupWebhookBotSetupPostUrl = () => {
+  return `/bot/setup`;
+};
 
+export const setupWebhookBotSetupPost = async (
+  options?: RequestInit,
+): Promise<setupWebhookBotSetupPostResponse> => {
+  return customFetch<setupWebhookBotSetupPostResponse>(
+    getSetupWebhookBotSetupPostUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
 
+export const getSetupWebhookBotSetupPostMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
+    TError,
+    void,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["setupWebhookBotSetupPost"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
+    void
+  > = () => {
+    return setupWebhookBotSetupPost();
+  };
 
-  return `/bot/setup`
-}
+  return { mutationFn, ...mutationOptions };
+};
 
-export const setupWebhookBotSetupPost = async ( options?: RequestInit): Promise<setupWebhookBotSetupPostResponse> => {
+export type SetupWebhookBotSetupPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setupWebhookBotSetupPost>>
+>;
 
-  return customFetch<setupWebhookBotSetupPostResponse>(getSetupWebhookBotSetupPostUrl(),
-  {
-    ...options,
-    method: 'POST'
+export type SetupWebhookBotSetupPostMutationError = unknown;
 
-
-  }
-);}
-
-
-
-
-export const getSetupWebhookBotSetupPostMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setupWebhookBotSetupPost>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof setupWebhookBotSetupPost>>, TError,void, TContext> => {
-
-const mutationKey = ['setupWebhookBotSetupPost'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setupWebhookBotSetupPost>>, void> = () => {
-
-
-          return  setupWebhookBotSetupPost()
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SetupWebhookBotSetupPostMutationResult = NonNullable<Awaited<ReturnType<typeof setupWebhookBotSetupPost>>>
-
-    export type SetupWebhookBotSetupPostMutationError = unknown
-
-    /**
+/**
  * @summary Setup Webhook
  */
-export const useSetupWebhookBotSetupPost = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setupWebhookBotSetupPost>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getSetupWebhookBotSetupPostMutationOptions(options), queryClient);
-    }
-    /**
+export const useSetupWebhookBotSetupPost = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
+      TError,
+      void,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setupWebhookBotSetupPost>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    getSetupWebhookBotSetupPostMutationOptions(options),
+    queryClient,
+  );
+};
+/**
  * Get current webhook information.
  * @summary Get Webhook Info
  */
 export type getWebhookInfoBotWebhookInfoGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type getWebhookInfoBotWebhookInfoGetResponseSuccess = (getWebhookInfoBotWebhookInfoGetResponse200) & {
-  headers: Headers;
+  data: unknown;
+  status: 200;
 };
-;
 
-export type getWebhookInfoBotWebhookInfoGetResponse = (getWebhookInfoBotWebhookInfoGetResponseSuccess)
+export type getWebhookInfoBotWebhookInfoGetResponseSuccess =
+  getWebhookInfoBotWebhookInfoGetResponse200 & {
+    headers: Headers;
+  };
+export type getWebhookInfoBotWebhookInfoGetResponse =
+  getWebhookInfoBotWebhookInfoGetResponseSuccess;
 
 export const getGetWebhookInfoBotWebhookInfoGetUrl = () => {
+  return `/bot/webhook-info`;
+};
 
-
-
-
-  return `/bot/webhook-info`
-}
-
-export const getWebhookInfoBotWebhookInfoGet = async ( options?: RequestInit): Promise<getWebhookInfoBotWebhookInfoGetResponse> => {
-
-  return customFetch<getWebhookInfoBotWebhookInfoGetResponse>(getGetWebhookInfoBotWebhookInfoGetUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
+export const getWebhookInfoBotWebhookInfoGet = async (
+  options?: RequestInit,
+): Promise<getWebhookInfoBotWebhookInfoGetResponse> => {
+  return customFetch<getWebhookInfoBotWebhookInfoGetResponse>(
+    getGetWebhookInfoBotWebhookInfoGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
 export const getGetWebhookInfoBotWebhookInfoGetQueryKey = () => {
-    return [
-    `/bot/webhook-info`
-    ] as const;
-    }
+  return [`/bot/webhook-info`] as const;
+};
 
+export const getGetWebhookInfoBotWebhookInfoGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-export const getGetWebhookInfoBotWebhookInfoGetQueryOptions = <TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError, TData>>, }
-) => {
+  const queryKey =
+    queryOptions?.queryKey ?? getGetWebhookInfoBotWebhookInfoGetQueryKey();
 
-const {query: queryOptions} = options ?? {};
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>
+  > = ({ signal }) => getWebhookInfoBotWebhookInfoGet({ signal });
 
-  const queryKey =  queryOptions?.queryKey ?? getGetWebhookInfoBotWebhookInfoGetQueryKey();
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type GetWebhookInfoBotWebhookInfoGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>
+>;
+export type GetWebhookInfoBotWebhookInfoGetQueryError = unknown;
 
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>> = ({ signal }) => getWebhookInfoBotWebhookInfoGet({ signal });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetWebhookInfoBotWebhookInfoGetQueryResult = NonNullable<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>>
-export type GetWebhookInfoBotWebhookInfoGetQueryError = unknown
-
-
-export function useGetWebhookInfoBotWebhookInfoGet<TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError, TData>> & Pick<
+export function useGetWebhookInfoBotWebhookInfoGet<
+  TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
           TError,
           Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetWebhookInfoBotWebhookInfoGet<TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetWebhookInfoBotWebhookInfoGet<
+  TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
           TError,
           Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetWebhookInfoBotWebhookInfoGet<TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetWebhookInfoBotWebhookInfoGet<
+  TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Webhook Info
  */
 
-export function useGetWebhookInfoBotWebhookInfoGet<TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetWebhookInfoBotWebhookInfoGet<
+  TData = Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getWebhookInfoBotWebhookInfoGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetWebhookInfoBotWebhookInfoGetQueryOptions(options);
 
-  const queryOptions = getGetWebhookInfoBotWebhookInfoGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 /**
  * Delete current webhook.
  * @summary Delete Webhook
  */
 export type deleteWebhookBotWebhookDeleteResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type deleteWebhookBotWebhookDeleteResponseSuccess = (deleteWebhookBotWebhookDeleteResponse200) & {
-  headers: Headers;
+  data: unknown;
+  status: 200;
 };
-;
 
-export type deleteWebhookBotWebhookDeleteResponse = (deleteWebhookBotWebhookDeleteResponseSuccess)
+export type deleteWebhookBotWebhookDeleteResponseSuccess =
+  deleteWebhookBotWebhookDeleteResponse200 & {
+    headers: Headers;
+  };
+export type deleteWebhookBotWebhookDeleteResponse =
+  deleteWebhookBotWebhookDeleteResponseSuccess;
 
 export const getDeleteWebhookBotWebhookDeleteUrl = () => {
+  return `/bot/webhook`;
+};
 
+export const deleteWebhookBotWebhookDelete = async (
+  options?: RequestInit,
+): Promise<deleteWebhookBotWebhookDeleteResponse> => {
+  return customFetch<deleteWebhookBotWebhookDeleteResponse>(
+    getDeleteWebhookBotWebhookDeleteUrl(),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
 
+export const getDeleteWebhookBotWebhookDeleteMutationOptions = <
+  TError = unknown,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
+    TError,
+    void,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["deleteWebhookBotWebhookDelete"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
+    void
+  > = () => {
+    return deleteWebhookBotWebhookDelete();
+  };
 
-  return `/bot/webhook`
-}
+  return { mutationFn, ...mutationOptions };
+};
 
-export const deleteWebhookBotWebhookDelete = async ( options?: RequestInit): Promise<deleteWebhookBotWebhookDeleteResponse> => {
+export type DeleteWebhookBotWebhookDeleteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>
+>;
 
-  return customFetch<deleteWebhookBotWebhookDeleteResponse>(getDeleteWebhookBotWebhookDeleteUrl(),
-  {
-    ...options,
-    method: 'DELETE'
+export type DeleteWebhookBotWebhookDeleteMutationError = unknown;
 
-
-  }
-);}
-
-
-
-
-export const getDeleteWebhookBotWebhookDeleteMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>, TError,void, TContext> => {
-
-const mutationKey = ['deleteWebhookBotWebhookDelete'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>, void> = () => {
-
-
-          return  deleteWebhookBotWebhookDelete()
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteWebhookBotWebhookDeleteMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>>
-
-    export type DeleteWebhookBotWebhookDeleteMutationError = unknown
-
-    /**
+/**
  * @summary Delete Webhook
  */
-export const useDeleteWebhookBotWebhookDelete = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getDeleteWebhookBotWebhookDeleteMutationOptions(options), queryClient);
-    }
+export const useDeleteWebhookBotWebhookDelete = <
+  TError = unknown,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
+      TError,
+      void,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteWebhookBotWebhookDelete>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    getDeleteWebhookBotWebhookDeleteMutationOptions(options),
+    queryClient,
+  );
+};

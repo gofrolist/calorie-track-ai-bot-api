@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { MealCalendarDay } from './mealCalendarDay';
+import type { MealCalendarDay } from "./mealCalendarDay";
 
 export interface MealsCalendarResponse {
   dates: MealCalendarDay[];

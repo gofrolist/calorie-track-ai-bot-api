@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { PhotoInfo } from './photoInfo';
+import type { PhotoInfo } from "./photoInfo";
 
 export interface MultiPhotoResponse {
   photos: PhotoInfo[];

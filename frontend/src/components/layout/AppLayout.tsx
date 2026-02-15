@@ -1,7 +1,7 @@
-import { Suspense } from 'react';
-import { Outlet } from 'react-router-dom';
-import { Navigation } from './Navigation';
-import { ErrorBoundary } from './ErrorBoundary';
+import { Suspense } from "react";
+import { Outlet } from "react-router-dom";
+import { Navigation } from "./Navigation";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 function PageLoading() {
   return (

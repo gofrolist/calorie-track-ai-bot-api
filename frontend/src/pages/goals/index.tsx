@@ -1,17 +1,17 @@
-import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useGetGoalApiV1GoalsGet,
   useUpdateGoalApiV1GoalsPatch,
   useCreateGoalApiV1GoalsPost,
-} from '@/api/queries/goals/goals';
-import { useGetDailySummaryApiV1DailySummaryDateGet } from '@/api/queries/daily-summary/daily-summary';
-import { Modal } from '@/components/ui/Modal';
-import { Skeleton } from '@/components/ui/Skeleton';
-import type { GoalResponse, DailySummary } from '@/api/model';
+} from "@/api/queries/goals/goals";
+import { useGetDailySummaryApiV1DailySummaryDateGet } from "@/api/queries/daily-summary/daily-summary";
+import { Modal } from "@/components/ui/Modal";
+import { Skeleton } from "@/components/ui/Skeleton";
+import type { GoalResponse, DailySummary } from "@/api/model";
 
 function formatDate(d: Date): string {
-  return d.toISOString().split('T')[0];
+  return d.toISOString().split("T")[0];
 }
 
 /**
@@ -22,7 +22,7 @@ function formatDate(d: Date): string {
 function unwrap<T>(response: unknown): T | undefined {
   if (!response) return undefined;
   const r = response as Record<string, unknown>;
-  if ('data' in r && 'status' in r) {
+  if ("data" in r && "status" in r) {
     return r.data as T;
   }
   return response as T;
@@ -31,12 +31,13 @@ function unwrap<T>(response: unknown): T | undefined {
 export default function GoalsPage() {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
-  const [goalInput, setGoalInput] = useState('');
-  const [error, setError] = useState('');
+  const [goalInput, setGoalInput] = useState("");
+  const [error, setError] = useState("");
 
   const { data: goalRaw, isLoading: loadingGoal } = useGetGoalApiV1GoalsGet();
-  const { data: summaryRaw } =
-    useGetDailySummaryApiV1DailySummaryDateGet(formatDate(new Date()));
+  const { data: summaryRaw } = useGetDailySummaryApiV1DailySummaryDateGet(
+    formatDate(new Date()),
+  );
   const updateGoal = useUpdateGoalApiV1GoalsPatch();
   const createGoal = useCreateGoalApiV1GoalsPost();
 
@@ -44,15 +45,15 @@ export default function GoalsPage() {
   const summary = unwrap<DailySummary>(summaryRaw);
 
   const handleEdit = useCallback(() => {
-    setGoalInput(goal?.daily_kcal_target?.toString() ?? '2000');
-    setError('');
+    setGoalInput(goal?.daily_kcal_target?.toString() ?? "2000");
+    setError("");
     setEditing(true);
   }, [goal]);
 
   const handleSave = useCallback(() => {
     const value = parseInt(goalInput, 10);
     if (isNaN(value) || value < 500 || value > 10000) {
-      setError(t('goals.validation.range'));
+      setError(t("goals.validation.range"));
       return;
     }
     const mutation = goal ? updateGoal : createGoal;
@@ -69,7 +70,7 @@ export default function GoalsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-lg font-semibold text-tg-text">{t('goals.title')}</h1>
+      <h1 className="text-lg font-semibold text-tg-text">{t("goals.title")}</h1>
 
       {loadingGoal ? (
         <Skeleton className="h-32 w-full" />
@@ -80,19 +81,17 @@ export default function GoalsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-tg-hint">
-                  {t('goals.dailyCalorieGoal')}
+                  {t("goals.dailyCalorieGoal")}
                 </p>
-                <p className="text-3xl font-bold text-tg-text">
-                  {target} kcal
-                </p>
+                <p className="text-3xl font-bold text-tg-text">{target} kcal</p>
               </div>
               <button
                 type="button"
-                aria-label={t('goals.editGoal')}
+                aria-label={t("goals.editGoal")}
                 onClick={handleEdit}
                 className="rounded-lg bg-tg-button px-4 py-2 text-sm font-medium text-tg-button-text"
               >
-                {t('goals.editGoal')}
+                {t("goals.editGoal")}
               </button>
             </div>
           </div>
@@ -101,7 +100,7 @@ export default function GoalsPage() {
           {target > 0 && (
             <div className="rounded-xl bg-tg-secondary-bg p-4">
               <p className="mb-2 text-sm font-medium text-tg-text">
-                {t('goals.todayProgress')}
+                {t("goals.todayProgress")}
               </p>
               <div className="h-3 overflow-hidden rounded-full bg-tg-bg">
                 <div
@@ -113,10 +112,10 @@ export default function GoalsPage() {
                 <span>{consumed} kcal</span>
                 <span>
                   {remaining > 0
-                    ? `${remaining} ${t('goals.remaining')}`
+                    ? `${remaining} ${t("goals.remaining")}`
                     : remaining === 0
-                      ? t('goals.goalAchieved')
-                      : `${Math.abs(remaining)} ${t('goals.overGoal')}`}
+                      ? t("goals.goalAchieved")
+                      : `${Math.abs(remaining)} ${t("goals.overGoal")}`}
                 </span>
               </div>
             </div>
@@ -125,12 +124,12 @@ export default function GoalsPage() {
           {/* Tips */}
           <div className="rounded-xl bg-tg-secondary-bg p-4">
             <p className="mb-2 text-sm font-medium text-tg-text">
-              {t('goals.tips')}
+              {t("goals.tips")}
             </p>
             <div className="flex flex-col gap-1 text-xs text-tg-hint">
-              <p>{t('goals.tip1')}</p>
-              <p>{t('goals.tip2')}</p>
-              <p>{t('goals.tip3')}</p>
+              <p>{t("goals.tip1")}</p>
+              <p>{t("goals.tip2")}</p>
+              <p>{t("goals.tip3")}</p>
             </div>
           </div>
         </>
@@ -140,12 +139,12 @@ export default function GoalsPage() {
       <Modal
         open={editing}
         onClose={() => setEditing(false)}
-        title={t('goals.setDailyGoal')}
+        title={t("goals.setDailyGoal")}
       >
         <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1">
             <span className="text-sm text-tg-hint">
-              {t('goals.dailyTarget')}
+              {t("goals.dailyTarget")}
             </span>
             <input
               type="number"
@@ -154,7 +153,7 @@ export default function GoalsPage() {
               value={goalInput}
               onChange={(e) => {
                 setGoalInput(e.target.value);
-                setError('');
+                setError("");
               }}
               className="rounded-lg border border-tg-hint/30 bg-tg-secondary-bg px-3 py-2 text-tg-text"
             />
@@ -166,7 +165,7 @@ export default function GoalsPage() {
               onClick={() => setEditing(false)}
               className="flex-1 rounded-lg border border-tg-hint/30 py-2 text-sm text-tg-text"
             >
-              {t('goals.cancel')}
+              {t("goals.cancel")}
             </button>
             <button
               type="button"
@@ -175,8 +174,8 @@ export default function GoalsPage() {
               className="flex-1 rounded-lg bg-tg-button py-2 text-sm font-medium text-tg-button-text disabled:opacity-50"
             >
               {updateGoal.isPending || createGoal.isPending
-                ? t('goals.saving')
-                : t('goals.save')}
+                ? t("goals.saving")
+                : t("goals.save")}
             </button>
           </div>
         </div>

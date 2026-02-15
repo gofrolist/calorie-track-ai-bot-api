@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { Theme } from './theme';
-import type { ThemeSource } from './themeSource';
+import type { Theme } from "./theme";
+import type { ThemeSource } from "./themeSource";
 
 export interface ThemeDetectionResponse {
   theme: Theme;

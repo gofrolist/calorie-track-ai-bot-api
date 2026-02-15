@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type MealType = typeof MealType[keyof typeof MealType];
-
+export type MealType = (typeof MealType)[keyof typeof MealType];
 
 export const MealType = {
-  breakfast: 'breakfast',
-  lunch: 'lunch',
-  dinner: 'dinner',
-  snack: 'snack',
+  breakfast: "breakfast",
+  lunch: "lunch",
+  dinner: "dinner",
+  snack: "snack",
 } as const;

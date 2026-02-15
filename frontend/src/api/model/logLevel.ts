@@ -5,13 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
-
+export type LogLevel = (typeof LogLevel)[keyof typeof LogLevel];
 
 export const LogLevel = {
-  DEBUG: 'DEBUG',
-  INFO: 'INFO',
-  WARNING: 'WARNING',
-  ERROR: 'ERROR',
-  CRITICAL: 'CRITICAL',
+  DEBUG: "DEBUG",
+  INFO: "INFO",
+  WARNING: "WARNING",
+  ERROR: "ERROR",
+  CRITICAL: "CRITICAL",
 } as const;

@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { EstimateItem } from './estimateItem';
-import type { Status } from './status';
+import type { EstimateItem } from "./estimateItem";
+import type { Status } from "./status";
 
 export interface EstimateResponse {
   /** Estimate ID */

@@ -4,28 +4,23 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation
-} from '@tanstack/react-query';
+import { useMutation } from "@tanstack/react-query";
 import type {
   MutationFunction,
   QueryClient,
   UseMutationOptions,
-  UseMutationResult
-} from '@tanstack/react-query';
+  UseMutationResult,
+} from "@tanstack/react-query";
 
 import type {
   HTTPValidationError,
   MultiPhotoCreateRequest,
   MultiPhotoResponse,
   PhotoCreateRequest,
-  PresignResponse
-} from '../../model';
+  PresignResponse,
+} from "../../model";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * Create photo upload request(s) with support for both single and multi-photo uploads.
@@ -35,88 +30,118 @@ For multiple photos: Send {"photos": [{"content_type": "image/jpeg"}, ...]}
  * @summary Create Photo
  */
 export type createPhotoApiV1PhotosPostResponse200 = {
-  data: PresignResponse | MultiPhotoResponse
-  status: 200
-}
+  data: PresignResponse | MultiPhotoResponse;
+  status: 200;
+};
 
 export type createPhotoApiV1PhotosPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type createPhotoApiV1PhotosPostResponseSuccess = (createPhotoApiV1PhotosPostResponse200) & {
-  headers: Headers;
-};
-export type createPhotoApiV1PhotosPostResponseError = (createPhotoApiV1PhotosPostResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type createPhotoApiV1PhotosPostResponse = (createPhotoApiV1PhotosPostResponseSuccess | createPhotoApiV1PhotosPostResponseError)
+export type createPhotoApiV1PhotosPostResponseSuccess =
+  createPhotoApiV1PhotosPostResponse200 & {
+    headers: Headers;
+  };
+export type createPhotoApiV1PhotosPostResponseError =
+  createPhotoApiV1PhotosPostResponse422 & {
+    headers: Headers;
+  };
+
+export type createPhotoApiV1PhotosPostResponse =
+  | createPhotoApiV1PhotosPostResponseSuccess
+  | createPhotoApiV1PhotosPostResponseError;
 
 export const getCreatePhotoApiV1PhotosPostUrl = () => {
+  return `/api/v1/photos`;
+};
 
+export const createPhotoApiV1PhotosPost = async (
+  photoCreateRequestMultiPhotoCreateRequest:
+    | PhotoCreateRequest
+    | MultiPhotoCreateRequest,
+  options?: RequestInit,
+): Promise<createPhotoApiV1PhotosPostResponse> => {
+  return customFetch<createPhotoApiV1PhotosPostResponse>(
+    getCreatePhotoApiV1PhotosPostUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(photoCreateRequestMultiPhotoCreateRequest),
+    },
+  );
+};
 
+export const getCreatePhotoApiV1PhotosPostMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
+    TError,
+    { data: PhotoCreateRequest | MultiPhotoCreateRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
+  TError,
+  { data: PhotoCreateRequest | MultiPhotoCreateRequest },
+  TContext
+> => {
+  const mutationKey = ["createPhotoApiV1PhotosPost"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
+    { data: PhotoCreateRequest | MultiPhotoCreateRequest }
+  > = (props) => {
+    const { data } = props ?? {};
 
-  return `/api/v1/photos`
-}
+    return createPhotoApiV1PhotosPost(data);
+  };
 
-export const createPhotoApiV1PhotosPost = async (photoCreateRequestMultiPhotoCreateRequest: PhotoCreateRequest | MultiPhotoCreateRequest, options?: RequestInit): Promise<createPhotoApiV1PhotosPostResponse> => {
+  return { mutationFn, ...mutationOptions };
+};
 
-  return customFetch<createPhotoApiV1PhotosPostResponse>(getCreatePhotoApiV1PhotosPostUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      photoCreateRequestMultiPhotoCreateRequest,)
-  }
-);}
+export type CreatePhotoApiV1PhotosPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>
+>;
+export type CreatePhotoApiV1PhotosPostMutationBody =
+  | PhotoCreateRequest
+  | MultiPhotoCreateRequest;
+export type CreatePhotoApiV1PhotosPostMutationError = HTTPValidationError;
 
-
-
-
-export const getCreatePhotoApiV1PhotosPostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>, TError,{data: PhotoCreateRequest | MultiPhotoCreateRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>, TError,{data: PhotoCreateRequest | MultiPhotoCreateRequest}, TContext> => {
-
-const mutationKey = ['createPhotoApiV1PhotosPost'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>, {data: PhotoCreateRequest | MultiPhotoCreateRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createPhotoApiV1PhotosPost(data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreatePhotoApiV1PhotosPostMutationResult = NonNullable<Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>>
-    export type CreatePhotoApiV1PhotosPostMutationBody = PhotoCreateRequest | MultiPhotoCreateRequest
-    export type CreatePhotoApiV1PhotosPostMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Create Photo
  */
-export const useCreatePhotoApiV1PhotosPost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>, TError,{data: PhotoCreateRequest | MultiPhotoCreateRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
-        TError,
-        {data: PhotoCreateRequest | MultiPhotoCreateRequest},
-        TContext
-      > => {
-      return useMutation(getCreatePhotoApiV1PhotosPostMutationOptions(options), queryClient);
-    }
+export const useCreatePhotoApiV1PhotosPost = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
+      TError,
+      { data: PhotoCreateRequest | MultiPhotoCreateRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createPhotoApiV1PhotosPost>>,
+  TError,
+  { data: PhotoCreateRequest | MultiPhotoCreateRequest },
+  TContext
+> => {
+  return useMutation(
+    getCreatePhotoApiV1PhotosPostMutationOptions(options),
+    queryClient,
+  );
+};

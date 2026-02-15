@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { PhotoCreateRequest } from './photoCreateRequest';
+import type { PhotoCreateRequest } from "./photoCreateRequest";
 
 export interface MultiPhotoCreateRequest {
   /**

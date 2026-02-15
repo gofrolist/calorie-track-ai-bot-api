@@ -9,7 +9,7 @@
  *   npm run i18n:validate
  */
 
-import i18n from './index.js';
+import i18n from "./index.js";
 
 interface TranslationObject {
   [key: string]: string | TranslationObject;
@@ -18,12 +18,12 @@ interface TranslationObject {
 /**
  * Recursively flatten nested translation object into dot-notation keys
  */
-function flattenKeys(obj: TranslationObject, prefix = ''): string[] {
+function flattenKeys(obj: TranslationObject, prefix = ""): string[] {
   return Object.keys(obj).reduce((acc: string[], key: string) => {
     const newPrefix = prefix ? `${prefix}.${key}` : key;
     const value = obj[key];
 
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       return [...acc, ...flattenKeys(value, newPrefix)];
     }
     return [...acc, newPrefix];
@@ -34,14 +34,20 @@ function flattenKeys(obj: TranslationObject, prefix = ''): string[] {
  * Main validation logic
  */
 function validateTranslations(): void {
-  console.log('\n🔍 Validating translation keys...\n');
+  console.log("\n🔍 Validating translation keys...\n");
 
   // Get translations from i18n instance
-  const enTranslation = i18n.getResourceBundle('en', 'translation') as TranslationObject;
-  const ruTranslation = i18n.getResourceBundle('ru', 'translation') as TranslationObject;
+  const enTranslation = i18n.getResourceBundle(
+    "en",
+    "translation",
+  ) as TranslationObject;
+  const ruTranslation = i18n.getResourceBundle(
+    "ru",
+    "translation",
+  ) as TranslationObject;
 
   if (!enTranslation || !ruTranslation) {
-    console.error('❌ Failed to load translation resources');
+    console.error("❌ Failed to load translation resources");
     process.exit(1);
   }
 
@@ -51,38 +57,42 @@ function validateTranslations(): void {
 
   console.log(`  📄 en: ${enKeys.size} keys loaded`);
   console.log(`  📄 ru: ${ruKeys.size} keys loaded`);
-  console.log('');
+  console.log("");
 
   let hasErrors = false;
 
   // Find keys missing in ru
-  const missingInRu = Array.from(enKeys).filter(k => !ruKeys.has(k));
+  const missingInRu = Array.from(enKeys).filter((k) => !ruKeys.has(k));
   if (missingInRu.length > 0) {
     hasErrors = true;
-    console.error('❌ Missing in ru (present in en):');
-    missingInRu.forEach(key => console.error(`   - ${key}`));
-    console.error('');
+    console.error("❌ Missing in ru (present in en):");
+    missingInRu.forEach((key) => console.error(`   - ${key}`));
+    console.error("");
   }
 
   // Find keys missing in en
-  const missingInEn = Array.from(ruKeys).filter(k => !enKeys.has(k));
+  const missingInEn = Array.from(ruKeys).filter((k) => !enKeys.has(k));
   if (missingInEn.length > 0) {
     hasErrors = true;
-    console.error('❌ Missing in en (present in ru):');
-    missingInEn.forEach(key => console.error(`   - ${key}`));
-    console.error('');
+    console.error("❌ Missing in en (present in ru):");
+    missingInEn.forEach((key) => console.error(`   - ${key}`));
+    console.error("");
   }
 
   // Check for empty values (optional warning, not fatal)
-  const checkEmptyValues = (obj: TranslationObject, prefix = '', lang: string): string[] => {
+  const checkEmptyValues = (
+    obj: TranslationObject,
+    prefix = "",
+    lang: string,
+  ): string[] => {
     const emptyKeys: string[] = [];
 
     for (const [key, value] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
 
-      if (typeof value === 'string' && value.trim() === '') {
+      if (typeof value === "string" && value.trim() === "") {
         emptyKeys.push(fullKey);
-      } else if (typeof value === 'object' && value !== null) {
+      } else if (typeof value === "object" && value !== null) {
         emptyKeys.push(...checkEmptyValues(value, fullKey, lang));
       }
     }
@@ -90,31 +100,31 @@ function validateTranslations(): void {
     return emptyKeys;
   };
 
-  const enEmpty = checkEmptyValues(enTranslation, '', 'en');
-  const ruEmpty = checkEmptyValues(ruTranslation, '', 'ru');
+  const enEmpty = checkEmptyValues(enTranslation, "", "en");
+  const ruEmpty = checkEmptyValues(ruTranslation, "", "ru");
 
   if (enEmpty.length > 0) {
     console.warn(`⚠️  Warning: en has ${enEmpty.length} empty values:`);
-    enEmpty.forEach(key => console.warn(`   - ${key}`));
-    console.warn('');
+    enEmpty.forEach((key) => console.warn(`   - ${key}`));
+    console.warn("");
   }
 
   if (ruEmpty.length > 0) {
     console.warn(`⚠️  Warning: ru has ${ruEmpty.length} empty values:`);
-    ruEmpty.forEach(key => console.warn(`   - ${key}`));
-    console.warn('');
+    ruEmpty.forEach((key) => console.warn(`   - ${key}`));
+    console.warn("");
   }
 
   // Final result
   if (hasErrors) {
-    console.error('❌ Translation validation FAILED\n');
-    console.error('Please add missing keys to maintain consistency.\n');
+    console.error("❌ Translation validation FAILED\n");
+    console.error("Please add missing keys to maintain consistency.\n");
     process.exit(1);
   } else {
-    console.log('✅ All translation keys validated successfully!\n');
+    console.log("✅ All translation keys validated successfully!\n");
     console.log(`   Total keys: ${enKeys.size}`);
     console.log(`   Languages: en, ru`);
-    console.log('');
+    console.log("");
     process.exit(0);
   }
 }

@@ -4,11 +4,11 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { Environment } from './environment';
-import type { LanguageSource } from './languageSource';
-import type { Theme } from './theme';
-import type { ThemeSource } from './themeSource';
-import type { UIConfigurationUpdateFeatures } from './uIConfigurationUpdateFeatures';
+import type { Environment } from "./environment";
+import type { LanguageSource } from "./languageSource";
+import type { Theme } from "./theme";
+import type { ThemeSource } from "./themeSource";
+import type { UIConfigurationUpdateFeatures } from "./uIConfigurationUpdateFeatures";
 
 export interface UIConfigurationUpdate {
   environment?: Environment | null;

@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { StatisticsPeriod } from './statisticsPeriod';
+import type { StatisticsPeriod } from "./statisticsPeriod";
 
 export interface MacroStatisticsResponse {
   /**

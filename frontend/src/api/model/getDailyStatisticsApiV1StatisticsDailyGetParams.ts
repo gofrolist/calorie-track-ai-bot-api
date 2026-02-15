@@ -6,12 +6,12 @@
  */
 
 export type GetDailyStatisticsApiV1StatisticsDailyGetParams = {
-/**
- * Start date (inclusive) in YYYY-MM-DD format
- */
-start_date: string;
-/**
- * End date (exclusive) in YYYY-MM-DD format
- */
-end_date: string;
+  /**
+   * Start date (inclusive) in YYYY-MM-DD format
+   */
+  start_date: string;
+  /**
+   * End date (exclusive) in YYYY-MM-DD format
+   */
+  end_date: string;
 };

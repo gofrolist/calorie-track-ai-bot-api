@@ -6,12 +6,12 @@
  */
 
 export type GetMealsCalendarApiV1MealsCalendarGetParams = {
-/**
- * Start date (YYYY-MM-DD)
- */
-start_date: string;
-/**
- * End date (YYYY-MM-DD)
- */
-end_date: string;
+  /**
+   * Start date (YYYY-MM-DD)
+   */
+  start_date: string;
+  /**
+   * End date (YYYY-MM-DD)
+   */
+  end_date: string;
 };

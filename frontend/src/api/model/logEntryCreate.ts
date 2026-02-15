@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { LogEntryCreateContext } from './logEntryCreateContext';
-import type { LogLevel } from './logLevel';
+import type { LogEntryCreateContext } from "./logEntryCreateContext";
+import type { LogLevel } from "./logLevel";
 
 export interface LogEntryCreate {
   level: LogLevel;

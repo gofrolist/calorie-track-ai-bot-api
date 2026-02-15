@@ -4,9 +4,9 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { DailyDataPoint } from './dailyDataPoint';
-import type { StatisticsPeriod } from './statisticsPeriod';
-import type { StatisticsSummary } from './statisticsSummary';
+import type { DailyDataPoint } from "./dailyDataPoint";
+import type { StatisticsPeriod } from "./statisticsPeriod";
+import type { StatisticsSummary } from "./statisticsSummary";
 
 export interface DailyStatisticsResponse {
   data: DailyDataPoint[];

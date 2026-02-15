@@ -5,12 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type Status = typeof Status[keyof typeof Status];
-
+export type Status = (typeof Status)[keyof typeof Status];
 
 export const Status = {
-  queued: 'queued',
-  running: 'running',
-  done: 'done',
-  failed: 'failed',
+  queued: "queued",
+  running: "running",
+  done: "done",
+  failed: "failed",
 } as const;

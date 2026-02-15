@@ -14,7 +14,7 @@ interface TelegramWebApp {
     auth_date?: number;
     hash?: string;
   };
-  colorScheme: 'light' | 'dark';
+  colorScheme: "light" | "dark";
   themeParams: Record<string, string>;
   isExpanded: boolean;
   viewportHeight: number;

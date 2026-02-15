@@ -6,8 +6,8 @@
  */
 
 export type GetWeeklySummaryApiV1WeeklySummaryGetParams = {
-/**
- * Start date in YYYY-MM-DD format
- */
-start_date: string;
+  /**
+   * Start date in YYYY-MM-DD format
+   */
+  start_date: string;
 };

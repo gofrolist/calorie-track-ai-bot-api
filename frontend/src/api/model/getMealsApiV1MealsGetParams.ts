@@ -6,22 +6,22 @@
  */
 
 export type GetMealsApiV1MealsGetParams = {
-/**
- * Specific date (YYYY-MM-DD)
- */
-date?: string | null;
-/**
- * Start date for range (YYYY-MM-DD)
- */
-start_date?: string | null;
-/**
- * End date for range (YYYY-MM-DD)
- */
-end_date?: string | null;
-/**
- * Maximum number of meals to return
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
+  /**
+   * Specific date (YYYY-MM-DD)
+   */
+  date?: string | null;
+  /**
+   * Start date for range (YYYY-MM-DD)
+   */
+  start_date?: string | null;
+  /**
+   * End date for range (YYYY-MM-DD)
+   */
+  end_date?: string | null;
+  /**
+   * Maximum number of meals to return
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
 };

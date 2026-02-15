@@ -5,4 +5,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UIConfigurationFeatures = {[key: string]: boolean} | null;
+export type UIConfigurationFeatures = { [key: string]: boolean } | null;

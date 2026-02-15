@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { Status } from './status';
+import type { Status } from "./status";
 
 export interface EstimateQueuedResponse {
   estimate_id: string;

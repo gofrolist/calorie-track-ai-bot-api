@@ -4,10 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,218 +17,324 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   EstimateQueuedResponse,
   EstimateResponse,
-  HTTPValidationError
-} from '../../model';
+  HTTPValidationError,
+} from "../../model";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * @summary Estimate Photo
  */
 export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse200 = {
-  data: EstimateQueuedResponse
-  status: 200
-}
+  data: EstimateQueuedResponse;
+  status: 200;
+};
 
 export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseSuccess = (estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse200) & {
-  headers: Headers;
-};
-export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseError = (estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse = (estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseSuccess | estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseError)
+export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseSuccess =
+  estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse200 & {
+    headers: Headers;
+  };
+export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseError =
+  estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse422 & {
+    headers: Headers;
+  };
 
-export const getEstimatePhotoApiV1PhotosPhotoIdEstimatePostUrl = (photoId: string,) => {
+export type estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse =
+  | estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseSuccess
+  | estimatePhotoApiV1PhotosPhotoIdEstimatePostResponseError;
 
+export const getEstimatePhotoApiV1PhotosPhotoIdEstimatePostUrl = (
+  photoId: string,
+) => {
+  return `/api/v1/photos/${photoId}/estimate`;
+};
 
+export const estimatePhotoApiV1PhotosPhotoIdEstimatePost = async (
+  photoId: string,
+  options?: RequestInit,
+): Promise<estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse> => {
+  return customFetch<estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse>(
+    getEstimatePhotoApiV1PhotosPhotoIdEstimatePostUrl(photoId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
 
+export const getEstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
+    TError,
+    { photoId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
+  TError,
+  { photoId: string },
+  TContext
+> => {
+  const mutationKey = ["estimatePhotoApiV1PhotosPhotoIdEstimatePost"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-  return `/api/v1/photos/${photoId}/estimate`
-}
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
+    { photoId: string }
+  > = (props) => {
+    const { photoId } = props ?? {};
 
-export const estimatePhotoApiV1PhotosPhotoIdEstimatePost = async (photoId: string, options?: RequestInit): Promise<estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse> => {
+    return estimatePhotoApiV1PhotosPhotoIdEstimatePost(photoId);
+  };
 
-  return customFetch<estimatePhotoApiV1PhotosPhotoIdEstimatePostResponse>(getEstimatePhotoApiV1PhotosPhotoIdEstimatePostUrl(photoId),
-  {
-    ...options,
-    method: 'POST'
+  return { mutationFn, ...mutationOptions };
+};
 
+export type EstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationResult =
+  NonNullable<
+    Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>
+  >;
 
-  }
-);}
+export type EstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationError =
+  HTTPValidationError;
 
-
-
-
-export const getEstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>, TError,{photoId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>, TError,{photoId: string}, TContext> => {
-
-const mutationKey = ['estimatePhotoApiV1PhotosPhotoIdEstimatePost'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>, {photoId: string}> = (props) => {
-          const {photoId} = props ?? {};
-
-          return  estimatePhotoApiV1PhotosPhotoIdEstimatePost(photoId,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type EstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationResult = NonNullable<Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>>
-
-    export type EstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Estimate Photo
  */
-export const useEstimatePhotoApiV1PhotosPhotoIdEstimatePost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>, TError,{photoId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
-        TError,
-        {photoId: string},
-        TContext
-      > => {
-      return useMutation(getEstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationOptions(options), queryClient);
-    }
-    /**
+export const useEstimatePhotoApiV1PhotosPhotoIdEstimatePost = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
+      TError,
+      { photoId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof estimatePhotoApiV1PhotosPhotoIdEstimatePost>>,
+  TError,
+  { photoId: string },
+  TContext
+> => {
+  return useMutation(
+    getEstimatePhotoApiV1PhotosPhotoIdEstimatePostMutationOptions(options),
+    queryClient,
+  );
+};
+/**
  * @summary Get Estimate
  */
 export type getEstimateApiV1EstimatesEstimateIdGetResponse200 = {
-  data: EstimateResponse
-  status: 200
-}
+  data: EstimateResponse;
+  status: 200;
+};
 
 export type getEstimateApiV1EstimatesEstimateIdGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getEstimateApiV1EstimatesEstimateIdGetResponseSuccess = (getEstimateApiV1EstimatesEstimateIdGetResponse200) & {
-  headers: Headers;
-};
-export type getEstimateApiV1EstimatesEstimateIdGetResponseError = (getEstimateApiV1EstimatesEstimateIdGetResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type getEstimateApiV1EstimatesEstimateIdGetResponse = (getEstimateApiV1EstimatesEstimateIdGetResponseSuccess | getEstimateApiV1EstimatesEstimateIdGetResponseError)
+export type getEstimateApiV1EstimatesEstimateIdGetResponseSuccess =
+  getEstimateApiV1EstimatesEstimateIdGetResponse200 & {
+    headers: Headers;
+  };
+export type getEstimateApiV1EstimatesEstimateIdGetResponseError =
+  getEstimateApiV1EstimatesEstimateIdGetResponse422 & {
+    headers: Headers;
+  };
 
-export const getGetEstimateApiV1EstimatesEstimateIdGetUrl = (estimateId: string,) => {
+export type getEstimateApiV1EstimatesEstimateIdGetResponse =
+  | getEstimateApiV1EstimatesEstimateIdGetResponseSuccess
+  | getEstimateApiV1EstimatesEstimateIdGetResponseError;
 
-
-
-
-  return `/api/v1/estimates/${estimateId}`
-}
-
-export const getEstimateApiV1EstimatesEstimateIdGet = async (estimateId: string, options?: RequestInit): Promise<getEstimateApiV1EstimatesEstimateIdGetResponse> => {
-
-  return customFetch<getEstimateApiV1EstimatesEstimateIdGetResponse>(getGetEstimateApiV1EstimatesEstimateIdGetUrl(estimateId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetEstimateApiV1EstimatesEstimateIdGetQueryKey = (estimateId: string,) => {
-    return [
-    `/api/v1/estimates/${estimateId}`
-    ] as const;
-    }
-
-
-export const getGetEstimateApiV1EstimatesEstimateIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError = HTTPValidationError>(estimateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError, TData>>, }
+export const getGetEstimateApiV1EstimatesEstimateIdGetUrl = (
+  estimateId: string,
 ) => {
+  return `/api/v1/estimates/${estimateId}`;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getEstimateApiV1EstimatesEstimateIdGet = async (
+  estimateId: string,
+  options?: RequestInit,
+): Promise<getEstimateApiV1EstimatesEstimateIdGetResponse> => {
+  return customFetch<getEstimateApiV1EstimatesEstimateIdGetResponse>(
+    getGetEstimateApiV1EstimatesEstimateIdGetUrl(estimateId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetEstimateApiV1EstimatesEstimateIdGetQueryKey(estimateId);
+export const getGetEstimateApiV1EstimatesEstimateIdGetQueryKey = (
+  estimateId: string,
+) => {
+  return [`/api/v1/estimates/${estimateId}`] as const;
+};
 
+export const getGetEstimateApiV1EstimatesEstimateIdGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+  TError = HTTPValidationError,
+>(
+  estimateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetEstimateApiV1EstimatesEstimateIdGetQueryKey(estimateId);
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>> = ({ signal }) => getEstimateApiV1EstimatesEstimateIdGet(estimateId, { signal });
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>
+  > = ({ signal }) =>
+    getEstimateApiV1EstimatesEstimateIdGet(estimateId, { signal });
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!estimateId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type GetEstimateApiV1EstimatesEstimateIdGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>
+>;
+export type GetEstimateApiV1EstimatesEstimateIdGetQueryError =
+  HTTPValidationError;
 
-
-
-   return  { queryKey, queryFn, enabled: !!(estimateId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetEstimateApiV1EstimatesEstimateIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>>
-export type GetEstimateApiV1EstimatesEstimateIdGetQueryError = HTTPValidationError
-
-
-export function useGetEstimateApiV1EstimatesEstimateIdGet<TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError = HTTPValidationError>(
- estimateId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError, TData>> & Pick<
+export function useGetEstimateApiV1EstimatesEstimateIdGet<
+  TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+  TError = HTTPValidationError,
+>(
+  estimateId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
           TError,
           Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetEstimateApiV1EstimatesEstimateIdGet<TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError = HTTPValidationError>(
- estimateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetEstimateApiV1EstimatesEstimateIdGet<
+  TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+  TError = HTTPValidationError,
+>(
+  estimateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
           TError,
           Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetEstimateApiV1EstimatesEstimateIdGet<TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError = HTTPValidationError>(
- estimateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetEstimateApiV1EstimatesEstimateIdGet<
+  TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+  TError = HTTPValidationError,
+>(
+  estimateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Estimate
  */
 
-export function useGetEstimateApiV1EstimatesEstimateIdGet<TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError = HTTPValidationError>(
- estimateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetEstimateApiV1EstimatesEstimateIdGet<
+  TData = Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+  TError = HTTPValidationError,
+>(
+  estimateId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getEstimateApiV1EstimatesEstimateIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetEstimateApiV1EstimatesEstimateIdGetQueryOptions(
+    estimateId,
+    options,
+  );
 
-  const queryOptions = getGetEstimateApiV1EstimatesEstimateIdGetQueryOptions(estimateId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

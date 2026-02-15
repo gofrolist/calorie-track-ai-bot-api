@@ -5,11 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type FeedbackStatus = typeof FeedbackStatus[keyof typeof FeedbackStatus];
-
+export type FeedbackStatus =
+  (typeof FeedbackStatus)[keyof typeof FeedbackStatus];
 
 export const FeedbackStatus = {
-  new: 'new',
-  reviewed: 'reviewed',
-  resolved: 'resolved',
+  new: "new",
+  reviewed: "reviewed",
+  resolved: "resolved",
 } as const;

@@ -6,7 +6,7 @@
  */
 
 export type GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams = {
-range_start?: string | null;
-range_end?: string | null;
-chat_type?: string | null;
+  range_start?: string | null;
+  range_end?: string | null;
+  chat_type?: string | null;
 };

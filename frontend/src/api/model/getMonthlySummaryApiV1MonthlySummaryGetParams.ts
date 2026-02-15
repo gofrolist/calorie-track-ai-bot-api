@@ -6,12 +6,12 @@
  */
 
 export type GetMonthlySummaryApiV1MonthlySummaryGetParams = {
-/**
- * Year
- */
-year: number;
-/**
- * Month (1-12)
- */
-month: number;
+  /**
+   * Year
+   */
+  year: number;
+  /**
+   * Month (1-12)
+   */
+  month: number;
 };

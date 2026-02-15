@@ -1,23 +1,23 @@
-import { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useGetDailyStatisticsApiV1StatisticsDailyGet } from '@/api/queries/statistics/statistics';
-import { useGetMacroStatisticsApiV1StatisticsMacrosGet } from '@/api/queries/statistics/statistics';
-import { StatsCharts } from '@/components/stats/StatsCharts';
-import { PeriodSelector } from '@/components/stats/PeriodSelector';
-import type { Period } from '@/components/stats/PeriodSelector';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { useGetDailyStatisticsApiV1StatisticsDailyGet } from "@/api/queries/statistics/statistics";
+import { useGetMacroStatisticsApiV1StatisticsMacrosGet } from "@/api/queries/statistics/statistics";
+import { StatsCharts } from "@/components/stats/StatsCharts";
+import { PeriodSelector } from "@/components/stats/PeriodSelector";
+import type { Period } from "@/components/stats/PeriodSelector";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
-} from '@/api/model';
+} from "@/api/model";
 
 function getDateRange(days: number) {
   const end = new Date();
   const start = new Date();
   start.setDate(end.getDate() - days);
   return {
-    start_date: start.toISOString().split('T')[0],
-    end_date: end.toISOString().split('T')[0],
+    start_date: start.toISOString().split("T")[0],
+    end_date: end.toISOString().split("T")[0],
   };
 }
 
@@ -29,7 +29,7 @@ function getDateRange(days: number) {
 function unwrap<T>(response: unknown): T | undefined {
   if (!response) return undefined;
   const r = response as Record<string, unknown>;
-  if ('data' in r && 'status' in r) {
+  if ("data" in r && "status" in r) {
     return r.data as T;
   }
   return response as T;
@@ -53,7 +53,7 @@ export default function StatsPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-lg font-semibold text-tg-text">
-        {t('statistics.title')}
+        {t("statistics.title")}
       </h1>
       <PeriodSelector selected={period} onChange={setPeriod} />
 

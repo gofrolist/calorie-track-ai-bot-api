@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { ConnectionStatus } from './connectionStatus';
-import type { ConnectivityResponseServices } from './connectivityResponseServices';
+import type { ConnectionStatus } from "./connectionStatus";
+import type { ConnectivityResponseServices } from "./connectivityResponseServices";
 
 export interface ConnectivityResponse {
   status: ConnectionStatus;

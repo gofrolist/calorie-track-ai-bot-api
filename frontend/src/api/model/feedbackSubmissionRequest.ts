@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { FeedbackMessageType } from './feedbackMessageType';
-import type { FeedbackSubmissionRequestUserContext } from './feedbackSubmissionRequestUserContext';
+import type { FeedbackMessageType } from "./feedbackMessageType";
+import type { FeedbackSubmissionRequestUserContext } from "./feedbackSubmissionRequestUserContext";
 
 export interface FeedbackSubmissionRequest {
   message_type: FeedbackMessageType;

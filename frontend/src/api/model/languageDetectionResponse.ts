@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { LanguageSource } from './languageSource';
+import type { LanguageSource } from "./languageSource";
 
 export interface LanguageDetectionResponse {
   language: string;

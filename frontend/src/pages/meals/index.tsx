@@ -1,24 +1,24 @@
-import { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useGetMealsApiV1MealsGet,
   useUpdateMealApiV1MealsMealIdPatch,
   useDeleteMealApiV1MealsMealIdDelete,
-} from '@/api/queries/meals/meals';
-import { useGetDailySummaryApiV1DailySummaryDateGet } from '@/api/queries/daily-summary/daily-summary';
-import { useGetGoalApiV1GoalsGet } from '@/api/queries/goals/goals';
-import { MealCard } from '@/components/meal/MealCard';
-import { MealEditor } from '@/components/meal/MealEditor';
-import type { MealFormData } from '@/components/meal/MealEditor';
-import { Modal } from '@/components/ui/Modal';
-import { Skeleton } from '@/components/ui/Skeleton';
-import type { MealWithPhotos } from '@/api/model';
-import type { MealsListResponse } from '@/api/model';
-import type { DailySummary } from '@/api/model';
-import type { GoalResponse } from '@/api/model';
+} from "@/api/queries/meals/meals";
+import { useGetDailySummaryApiV1DailySummaryDateGet } from "@/api/queries/daily-summary/daily-summary";
+import { useGetGoalApiV1GoalsGet } from "@/api/queries/goals/goals";
+import { MealCard } from "@/components/meal/MealCard";
+import { MealEditor } from "@/components/meal/MealEditor";
+import type { MealFormData } from "@/components/meal/MealEditor";
+import { Modal } from "@/components/ui/Modal";
+import { Skeleton } from "@/components/ui/Skeleton";
+import type { MealWithPhotos } from "@/api/model";
+import type { MealsListResponse } from "@/api/model";
+import type { DailySummary } from "@/api/model";
+import type { GoalResponse } from "@/api/model";
 
 function formatDate(d: Date): string {
-  return d.toISOString().split('T')[0];
+  return d.toISOString().split("T")[0];
 }
 
 /**
@@ -29,7 +29,7 @@ function formatDate(d: Date): string {
 function unwrap<T>(response: unknown): T | undefined {
   if (!response) return undefined;
   const r = response as Record<string, unknown>;
-  if ('data' in r && 'status' in r) {
+  if ("data" in r && "status" in r) {
     return r.data as T;
   }
   return response as T;
@@ -43,7 +43,8 @@ export default function MealsPage() {
   const { data: mealsRaw, isLoading } = useGetMealsApiV1MealsGet({
     date: selectedDate,
   });
-  const { data: summaryRaw } = useGetDailySummaryApiV1DailySummaryDateGet(selectedDate);
+  const { data: summaryRaw } =
+    useGetDailySummaryApiV1DailySummaryDateGet(selectedDate);
   const { data: goalRaw } = useGetGoalApiV1GoalsGet();
   const updateMeal = useUpdateMealApiV1MealsMealIdPatch();
   const deleteMeal = useDeleteMealApiV1MealsMealIdDelete();
@@ -62,7 +63,7 @@ export default function MealsPage() {
 
   const handleDelete = useCallback(
     (id: string) => {
-      if (window.confirm(t('meals.confirmDelete'))) {
+      if (window.confirm(t("meals.confirmDelete"))) {
         deleteMeal.mutate({ mealId: id });
       }
     },
@@ -90,7 +91,7 @@ export default function MealsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-lg font-semibold text-tg-text">{t('meals.title')}</h1>
+      <h1 className="text-lg font-semibold text-tg-text">{t("meals.title")}</h1>
 
       {/* Daily summary */}
       {summary && (
@@ -101,7 +102,7 @@ export default function MealsPage() {
             </p>
             {goal && (
               <p className="text-sm text-tg-hint">
-                {t('meals.summary.goal', {
+                {t("meals.summary.goal", {
                   target: goal.daily_kcal_target,
                 })}
               </p>
@@ -109,13 +110,13 @@ export default function MealsPage() {
           </div>
           <div className="flex gap-4 text-xs text-tg-hint">
             <span>
-              {t('today.macros.protein')}: {summary.macros_totals.protein_g}g
+              {t("today.macros.protein")}: {summary.macros_totals.protein_g}g
             </span>
             <span>
-              {t('today.macros.fat')}: {summary.macros_totals.fat_g}g
+              {t("today.macros.fat")}: {summary.macros_totals.fat_g}g
             </span>
             <span>
-              {t('today.macros.carbs')}: {summary.macros_totals.carbs_g}g
+              {t("today.macros.carbs")}: {summary.macros_totals.carbs_g}g
             </span>
           </div>
         </div>
@@ -140,7 +141,7 @@ export default function MealsPage() {
         </div>
       ) : (
         <p className="py-8 text-center text-sm text-tg-hint">
-          {t('meals.list.empty')}
+          {t("meals.list.empty")}
         </p>
       )}
 
@@ -148,12 +149,12 @@ export default function MealsPage() {
       <Modal
         open={!!editingMeal}
         onClose={() => setEditingMeal(null)}
-        title={t('mealDetail.edit')}
+        title={t("mealDetail.edit")}
       >
         {editingMeal && (
           <MealEditor
             meal={{
-              description: editingMeal.description ?? '',
+              description: editingMeal.description ?? "",
               calories: editingMeal.calories,
               protein: editingMeal.macronutrients.protein,
               carbs: editingMeal.macronutrients.carbs,

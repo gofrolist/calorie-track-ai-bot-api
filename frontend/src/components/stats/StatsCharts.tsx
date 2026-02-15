@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
   LineChart,
@@ -9,18 +9,18 @@ import {
   PieChart,
   Pie,
   Cell,
-} from 'recharts';
+} from "recharts";
 import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
-} from '@/api/model';
+} from "@/api/model";
 
 interface StatsChartsProps {
   dailyStats: DailyStatisticsResponse;
   macroStats: MacroStatisticsResponse | null;
 }
 
-const MACRO_COLORS = ['#4CAF50', '#FF9800', '#2196F3'];
+const MACRO_COLORS = ["#4CAF50", "#FF9800", "#2196F3"];
 
 export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
   const { t } = useTranslation();
@@ -29,10 +29,10 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
     return (
       <div className="flex flex-col items-center gap-2 py-12 text-center">
         <p className="text-lg font-medium text-tg-text">
-          {t('statistics.emptyState.title')}
+          {t("statistics.emptyState.title")}
         </p>
         <p className="text-sm text-tg-hint">
-          {t('statistics.emptyState.message')}
+          {t("statistics.emptyState.message")}
         </p>
       </div>
     );
@@ -48,12 +48,16 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
           <p className="text-2xl font-bold text-tg-text">
             {Math.round(summary.average_daily_calories)}
           </p>
-          <p className="text-xs text-tg-hint">{t('statistics.summary.avgDaily')}</p>
+          <p className="text-xs text-tg-hint">
+            {t("statistics.summary.avgDaily")}
+          </p>
         </div>
         <div className="rounded-xl bg-tg-secondary-bg p-4 text-center">
-          <p className="text-2xl font-bold text-tg-text">{summary.total_meals}</p>
+          <p className="text-2xl font-bold text-tg-text">
+            {summary.total_meals}
+          </p>
           <p className="text-xs text-tg-hint">
-            {t('statistics.summary.totalMeals')}
+            {t("statistics.summary.totalMeals")}
           </p>
         </div>
       </div>
@@ -61,7 +65,7 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
       {/* Calories line chart */}
       <div>
         <h3 className="mb-2 text-sm font-medium text-tg-text">
-          {t('statistics.caloriesOverTime')}
+          {t("statistics.caloriesOverTime")}
         </h3>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={dailyStats.data}>
@@ -69,8 +73,8 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
               dataKey="date"
               tickFormatter={(d) =>
                 new Date(d).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
+                  month: "short",
+                  day: "numeric",
                 })
               }
               tick={{ fontSize: 10 }}
@@ -100,7 +104,7 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
       {macroStats && (
         <div>
           <h3 className="mb-2 text-sm font-medium text-tg-text">
-            {t('statistics.macroBreakdown')}
+            {t("statistics.macroBreakdown")}
           </h3>
           <div className="flex items-center gap-4">
             <ResponsiveContainer width={120} height={120}>
@@ -108,15 +112,15 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
                 <Pie
                   data={[
                     {
-                      name: t('statistics.chart.protein'),
+                      name: t("statistics.chart.protein"),
                       value: macroStats.protein_percent,
                     },
                     {
-                      name: t('statistics.chart.fat'),
+                      name: t("statistics.chart.fat"),
                       value: macroStats.fat_percent,
                     },
                     {
-                      name: t('statistics.chart.carbs'),
+                      name: t("statistics.chart.carbs"),
                       value: macroStats.carbs_percent,
                     },
                   ]}
@@ -132,15 +136,15 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
             </ResponsiveContainer>
             <div className="flex flex-col gap-1 text-sm">
               <span style={{ color: MACRO_COLORS[0] }}>
-                {t('statistics.chart.protein')}: {macroStats.protein_grams}g (
+                {t("statistics.chart.protein")}: {macroStats.protein_grams}g (
                 {macroStats.protein_percent}%)
               </span>
               <span style={{ color: MACRO_COLORS[1] }}>
-                {t('statistics.chart.fat')}: {macroStats.fat_grams}g (
+                {t("statistics.chart.fat")}: {macroStats.fat_grams}g (
                 {macroStats.fat_percent}%)
               </span>
               <span style={{ color: MACRO_COLORS[2] }}>
-                {t('statistics.chart.carbs')}: {macroStats.carbs_grams}g (
+                {t("statistics.chart.carbs")}: {macroStats.carbs_grams}g (
                 {macroStats.carbs_percent}%)
               </span>
             </div>

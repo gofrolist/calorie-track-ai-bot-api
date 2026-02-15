@@ -1,9 +1,9 @@
-import { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
-import { I18nextProvider } from 'react-i18next';
-import i18n from '@/i18n';
+import { ReactElement } from "react";
+import { render, RenderOptions } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import { I18nextProvider } from "react-i18next";
+import i18n from "@/i18n";
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -21,9 +21,9 @@ interface WrapperOptions {
 
 export function renderWithProviders(
   ui: ReactElement,
-  options?: WrapperOptions & Omit<RenderOptions, 'wrapper'>,
+  options?: WrapperOptions & Omit<RenderOptions, "wrapper">,
 ) {
-  const { queryClient, initialRoute = '/', ...renderOptions } = options ?? {};
+  const { queryClient, initialRoute = "/", ...renderOptions } = options ?? {};
   const testQueryClient = queryClient ?? createTestQueryClient();
 
   function Wrapper({ children }: { children: React.ReactNode }) {

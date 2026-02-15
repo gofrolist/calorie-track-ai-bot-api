@@ -5,12 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type FeedbackMessageType = typeof FeedbackMessageType[keyof typeof FeedbackMessageType];
-
+export type FeedbackMessageType =
+  (typeof FeedbackMessageType)[keyof typeof FeedbackMessageType];
 
 export const FeedbackMessageType = {
-  feedback: 'feedback',
-  bug: 'bug',
-  question: 'question',
-  support: 'support',
+  feedback: "feedback",
+  bug: "bug",
+  question: "question",
+  support: "support",
 } as const;

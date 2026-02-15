@@ -4,10 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,8 +17,8 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   GetMealsApiV1MealsGetParams,
@@ -33,104 +30,133 @@ import type {
   MealUpdate,
   MealWithPhotos,
   MealsCalendarResponse,
-  MealsListResponse
-} from '../../model';
+  MealsListResponse,
+} from "../../model";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * @summary Create Meal
  */
 export type createMealApiV1MealsPostResponse200 = {
-  data: MealCreateResponse
-  status: 200
-}
+  data: MealCreateResponse;
+  status: 200;
+};
 
 export type createMealApiV1MealsPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type createMealApiV1MealsPostResponseSuccess = (createMealApiV1MealsPostResponse200) & {
-  headers: Headers;
-};
-export type createMealApiV1MealsPostResponseError = (createMealApiV1MealsPostResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type createMealApiV1MealsPostResponse = (createMealApiV1MealsPostResponseSuccess | createMealApiV1MealsPostResponseError)
+export type createMealApiV1MealsPostResponseSuccess =
+  createMealApiV1MealsPostResponse200 & {
+    headers: Headers;
+  };
+export type createMealApiV1MealsPostResponseError =
+  createMealApiV1MealsPostResponse422 & {
+    headers: Headers;
+  };
+
+export type createMealApiV1MealsPostResponse =
+  | createMealApiV1MealsPostResponseSuccess
+  | createMealApiV1MealsPostResponseError;
 
 export const getCreateMealApiV1MealsPostUrl = () => {
+  return `/api/v1/meals`;
+};
 
+export const createMealApiV1MealsPost = async (
+  mealCreateManualRequestMealCreateFromEstimateRequest:
+    | MealCreateManualRequest
+    | MealCreateFromEstimateRequest,
+  options?: RequestInit,
+): Promise<createMealApiV1MealsPostResponse> => {
+  return customFetch<createMealApiV1MealsPostResponse>(
+    getCreateMealApiV1MealsPostUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(
+        mealCreateManualRequestMealCreateFromEstimateRequest,
+      ),
+    },
+  );
+};
 
+export const getCreateMealApiV1MealsPostMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
+    TError,
+    { data: MealCreateManualRequest | MealCreateFromEstimateRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
+  TError,
+  { data: MealCreateManualRequest | MealCreateFromEstimateRequest },
+  TContext
+> => {
+  const mutationKey = ["createMealApiV1MealsPost"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
+    { data: MealCreateManualRequest | MealCreateFromEstimateRequest }
+  > = (props) => {
+    const { data } = props ?? {};
 
-  return `/api/v1/meals`
-}
+    return createMealApiV1MealsPost(data);
+  };
 
-export const createMealApiV1MealsPost = async (mealCreateManualRequestMealCreateFromEstimateRequest: MealCreateManualRequest | MealCreateFromEstimateRequest, options?: RequestInit): Promise<createMealApiV1MealsPostResponse> => {
+  return { mutationFn, ...mutationOptions };
+};
 
-  return customFetch<createMealApiV1MealsPostResponse>(getCreateMealApiV1MealsPostUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      mealCreateManualRequestMealCreateFromEstimateRequest,)
-  }
-);}
+export type CreateMealApiV1MealsPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createMealApiV1MealsPost>>
+>;
+export type CreateMealApiV1MealsPostMutationBody =
+  | MealCreateManualRequest
+  | MealCreateFromEstimateRequest;
+export type CreateMealApiV1MealsPostMutationError = HTTPValidationError;
 
-
-
-
-export const getCreateMealApiV1MealsPostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMealApiV1MealsPost>>, TError,{data: MealCreateManualRequest | MealCreateFromEstimateRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createMealApiV1MealsPost>>, TError,{data: MealCreateManualRequest | MealCreateFromEstimateRequest}, TContext> => {
-
-const mutationKey = ['createMealApiV1MealsPost'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMealApiV1MealsPost>>, {data: MealCreateManualRequest | MealCreateFromEstimateRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createMealApiV1MealsPost(data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateMealApiV1MealsPostMutationResult = NonNullable<Awaited<ReturnType<typeof createMealApiV1MealsPost>>>
-    export type CreateMealApiV1MealsPostMutationBody = MealCreateManualRequest | MealCreateFromEstimateRequest
-    export type CreateMealApiV1MealsPostMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Create Meal
  */
-export const useCreateMealApiV1MealsPost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMealApiV1MealsPost>>, TError,{data: MealCreateManualRequest | MealCreateFromEstimateRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
-        TError,
-        {data: MealCreateManualRequest | MealCreateFromEstimateRequest},
-        TContext
-      > => {
-      return useMutation(getCreateMealApiV1MealsPostMutationOptions(options), queryClient);
-    }
-    /**
+export const useCreateMealApiV1MealsPost = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
+      TError,
+      { data: MealCreateManualRequest | MealCreateFromEstimateRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createMealApiV1MealsPost>>,
+  TError,
+  { data: MealCreateManualRequest | MealCreateFromEstimateRequest },
+  TContext
+> => {
+  return useMutation(
+    getCreateMealApiV1MealsPostMutationOptions(options),
+    queryClient,
+  );
+};
+/**
  * Get meals with photos and macronutrients.
 
 Feature: 003-update-logic-for (Multi-photo support)
@@ -141,125 +167,196 @@ Supports:
  * @summary Get Meals
  */
 export type getMealsApiV1MealsGetResponse200 = {
-  data: MealsListResponse
-  status: 200
-}
+  data: MealsListResponse;
+  status: 200;
+};
 
 export type getMealsApiV1MealsGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getMealsApiV1MealsGetResponseSuccess = (getMealsApiV1MealsGetResponse200) & {
-  headers: Headers;
-};
-export type getMealsApiV1MealsGetResponseError = (getMealsApiV1MealsGetResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type getMealsApiV1MealsGetResponse = (getMealsApiV1MealsGetResponseSuccess | getMealsApiV1MealsGetResponseError)
+export type getMealsApiV1MealsGetResponseSuccess =
+  getMealsApiV1MealsGetResponse200 & {
+    headers: Headers;
+  };
+export type getMealsApiV1MealsGetResponseError =
+  getMealsApiV1MealsGetResponse422 & {
+    headers: Headers;
+  };
 
-export const getGetMealsApiV1MealsGetUrl = (params?: GetMealsApiV1MealsGetParams,) => {
+export type getMealsApiV1MealsGetResponse =
+  | getMealsApiV1MealsGetResponseSuccess
+  | getMealsApiV1MealsGetResponseError;
+
+export const getGetMealsApiV1MealsGetUrl = (
+  params?: GetMealsApiV1MealsGetParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/v1/meals?${stringifiedParams}` : `/api/v1/meals`
-}
+  return stringifiedParams.length > 0
+    ? `/api/v1/meals?${stringifiedParams}`
+    : `/api/v1/meals`;
+};
 
-export const getMealsApiV1MealsGet = async (params?: GetMealsApiV1MealsGetParams, options?: RequestInit): Promise<getMealsApiV1MealsGetResponse> => {
+export const getMealsApiV1MealsGet = async (
+  params?: GetMealsApiV1MealsGetParams,
+  options?: RequestInit,
+): Promise<getMealsApiV1MealsGetResponse> => {
+  return customFetch<getMealsApiV1MealsGetResponse>(
+    getGetMealsApiV1MealsGetUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
-  return customFetch<getMealsApiV1MealsGetResponse>(getGetMealsApiV1MealsGetUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetMealsApiV1MealsGetQueryKey = (params?: GetMealsApiV1MealsGetParams,) => {
-    return [
-    `/api/v1/meals`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetMealsApiV1MealsGetQueryOptions = <TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError = HTTPValidationError>(params?: GetMealsApiV1MealsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError, TData>>, }
+export const getGetMealsApiV1MealsGetQueryKey = (
+  params?: GetMealsApiV1MealsGetParams,
 ) => {
+  return [`/api/v1/meals`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getGetMealsApiV1MealsGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetMealsApiV1MealsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMealsApiV1MealsGetQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMealsApiV1MealsGetQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMealsApiV1MealsGet>>
+  > = ({ signal }) => getMealsApiV1MealsGet(params, { signal });
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>> = ({ signal }) => getMealsApiV1MealsGet(params, { signal });
+export type GetMealsApiV1MealsGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMealsApiV1MealsGet>>
+>;
+export type GetMealsApiV1MealsGetQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetMealsApiV1MealsGetQueryResult = NonNullable<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>>
-export type GetMealsApiV1MealsGetQueryError = HTTPValidationError
-
-
-export function useGetMealsApiV1MealsGet<TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError = HTTPValidationError>(
- params: undefined |  GetMealsApiV1MealsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError, TData>> & Pick<
+export function useGetMealsApiV1MealsGet<
+  TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+  TError = HTTPValidationError,
+>(
+  params: undefined | GetMealsApiV1MealsGetParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
           TError,
           Awaited<ReturnType<typeof getMealsApiV1MealsGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetMealsApiV1MealsGet<TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError = HTTPValidationError>(
- params?: GetMealsApiV1MealsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetMealsApiV1MealsGet<
+  TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetMealsApiV1MealsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
           TError,
           Awaited<ReturnType<typeof getMealsApiV1MealsGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetMealsApiV1MealsGet<TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError = HTTPValidationError>(
- params?: GetMealsApiV1MealsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetMealsApiV1MealsGet<
+  TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetMealsApiV1MealsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Meals
  */
 
-export function useGetMealsApiV1MealsGet<TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError = HTTPValidationError>(
- params?: GetMealsApiV1MealsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsApiV1MealsGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetMealsApiV1MealsGet<
+  TData = Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+  TError = HTTPValidationError,
+>(
+  params?: GetMealsApiV1MealsGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsApiV1MealsGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetMealsApiV1MealsGetQueryOptions(params, options);
 
-  const queryOptions = getGetMealsApiV1MealsGetQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 /**
  * Get daily meal summaries for calendar view.
@@ -269,125 +366,201 @@ Returns aggregated nutrition data by date.
  * @summary Get Meals Calendar
  */
 export type getMealsCalendarApiV1MealsCalendarGetResponse200 = {
-  data: MealsCalendarResponse
-  status: 200
-}
+  data: MealsCalendarResponse;
+  status: 200;
+};
 
 export type getMealsCalendarApiV1MealsCalendarGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getMealsCalendarApiV1MealsCalendarGetResponseSuccess = (getMealsCalendarApiV1MealsCalendarGetResponse200) & {
-  headers: Headers;
-};
-export type getMealsCalendarApiV1MealsCalendarGetResponseError = (getMealsCalendarApiV1MealsCalendarGetResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type getMealsCalendarApiV1MealsCalendarGetResponse = (getMealsCalendarApiV1MealsCalendarGetResponseSuccess | getMealsCalendarApiV1MealsCalendarGetResponseError)
+export type getMealsCalendarApiV1MealsCalendarGetResponseSuccess =
+  getMealsCalendarApiV1MealsCalendarGetResponse200 & {
+    headers: Headers;
+  };
+export type getMealsCalendarApiV1MealsCalendarGetResponseError =
+  getMealsCalendarApiV1MealsCalendarGetResponse422 & {
+    headers: Headers;
+  };
 
-export const getGetMealsCalendarApiV1MealsCalendarGetUrl = (params: GetMealsCalendarApiV1MealsCalendarGetParams,) => {
+export type getMealsCalendarApiV1MealsCalendarGetResponse =
+  | getMealsCalendarApiV1MealsCalendarGetResponseSuccess
+  | getMealsCalendarApiV1MealsCalendarGetResponseError;
+
+export const getGetMealsCalendarApiV1MealsCalendarGetUrl = (
+  params: GetMealsCalendarApiV1MealsCalendarGetParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/v1/meals/calendar?${stringifiedParams}` : `/api/v1/meals/calendar`
-}
+  return stringifiedParams.length > 0
+    ? `/api/v1/meals/calendar?${stringifiedParams}`
+    : `/api/v1/meals/calendar`;
+};
 
-export const getMealsCalendarApiV1MealsCalendarGet = async (params: GetMealsCalendarApiV1MealsCalendarGetParams, options?: RequestInit): Promise<getMealsCalendarApiV1MealsCalendarGetResponse> => {
+export const getMealsCalendarApiV1MealsCalendarGet = async (
+  params: GetMealsCalendarApiV1MealsCalendarGetParams,
+  options?: RequestInit,
+): Promise<getMealsCalendarApiV1MealsCalendarGetResponse> => {
+  return customFetch<getMealsCalendarApiV1MealsCalendarGetResponse>(
+    getGetMealsCalendarApiV1MealsCalendarGetUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
-  return customFetch<getMealsCalendarApiV1MealsCalendarGetResponse>(getGetMealsCalendarApiV1MealsCalendarGetUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetMealsCalendarApiV1MealsCalendarGetQueryKey = (params?: GetMealsCalendarApiV1MealsCalendarGetParams,) => {
-    return [
-    `/api/v1/meals/calendar`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetMealsCalendarApiV1MealsCalendarGetQueryOptions = <TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError = HTTPValidationError>(params: GetMealsCalendarApiV1MealsCalendarGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError, TData>>, }
+export const getGetMealsCalendarApiV1MealsCalendarGetQueryKey = (
+  params?: GetMealsCalendarApiV1MealsCalendarGetParams,
 ) => {
+  return [`/api/v1/meals/calendar`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getGetMealsCalendarApiV1MealsCalendarGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetMealsCalendarApiV1MealsCalendarGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMealsCalendarApiV1MealsCalendarGetQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetMealsCalendarApiV1MealsCalendarGetQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>
+  > = ({ signal }) => getMealsCalendarApiV1MealsCalendarGet(params, { signal });
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>> = ({ signal }) => getMealsCalendarApiV1MealsCalendarGet(params, { signal });
+export type GetMealsCalendarApiV1MealsCalendarGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>
+>;
+export type GetMealsCalendarApiV1MealsCalendarGetQueryError =
+  HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetMealsCalendarApiV1MealsCalendarGetQueryResult = NonNullable<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>>
-export type GetMealsCalendarApiV1MealsCalendarGetQueryError = HTTPValidationError
-
-
-export function useGetMealsCalendarApiV1MealsCalendarGet<TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError = HTTPValidationError>(
- params: GetMealsCalendarApiV1MealsCalendarGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError, TData>> & Pick<
+export function useGetMealsCalendarApiV1MealsCalendarGet<
+  TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetMealsCalendarApiV1MealsCalendarGetParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
           TError,
           Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetMealsCalendarApiV1MealsCalendarGet<TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError = HTTPValidationError>(
- params: GetMealsCalendarApiV1MealsCalendarGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetMealsCalendarApiV1MealsCalendarGet<
+  TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetMealsCalendarApiV1MealsCalendarGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
           TError,
           Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetMealsCalendarApiV1MealsCalendarGet<TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError = HTTPValidationError>(
- params: GetMealsCalendarApiV1MealsCalendarGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetMealsCalendarApiV1MealsCalendarGet<
+  TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetMealsCalendarApiV1MealsCalendarGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Meals Calendar
  */
 
-export function useGetMealsCalendarApiV1MealsCalendarGet<TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError = HTTPValidationError>(
- params: GetMealsCalendarApiV1MealsCalendarGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetMealsCalendarApiV1MealsCalendarGet<
+  TData = Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+  TError = HTTPValidationError,
+>(
+  params: GetMealsCalendarApiV1MealsCalendarGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealsCalendarApiV1MealsCalendarGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetMealsCalendarApiV1MealsCalendarGetQueryOptions(
+    params,
+    options,
+  );
 
-  const queryOptions = getGetMealsCalendarApiV1MealsCalendarGetQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 /**
  * Get a specific meal with photos and macronutrients.
@@ -396,118 +569,188 @@ Feature: 003-update-logic-for (Multi-photo support)
  * @summary Get Meal
  */
 export type getMealApiV1MealsMealIdGetResponse200 = {
-  data: MealWithPhotos
-  status: 200
-}
+  data: MealWithPhotos;
+  status: 200;
+};
 
 export type getMealApiV1MealsMealIdGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getMealApiV1MealsMealIdGetResponseSuccess = (getMealApiV1MealsMealIdGetResponse200) & {
-  headers: Headers;
-};
-export type getMealApiV1MealsMealIdGetResponseError = (getMealApiV1MealsMealIdGetResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type getMealApiV1MealsMealIdGetResponse = (getMealApiV1MealsMealIdGetResponseSuccess | getMealApiV1MealsMealIdGetResponseError)
+export type getMealApiV1MealsMealIdGetResponseSuccess =
+  getMealApiV1MealsMealIdGetResponse200 & {
+    headers: Headers;
+  };
+export type getMealApiV1MealsMealIdGetResponseError =
+  getMealApiV1MealsMealIdGetResponse422 & {
+    headers: Headers;
+  };
 
-export const getGetMealApiV1MealsMealIdGetUrl = (mealId: string,) => {
+export type getMealApiV1MealsMealIdGetResponse =
+  | getMealApiV1MealsMealIdGetResponseSuccess
+  | getMealApiV1MealsMealIdGetResponseError;
 
+export const getGetMealApiV1MealsMealIdGetUrl = (mealId: string) => {
+  return `/api/v1/meals/${mealId}`;
+};
 
+export const getMealApiV1MealsMealIdGet = async (
+  mealId: string,
+  options?: RequestInit,
+): Promise<getMealApiV1MealsMealIdGetResponse> => {
+  return customFetch<getMealApiV1MealsMealIdGetResponse>(
+    getGetMealApiV1MealsMealIdGetUrl(mealId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
+export const getGetMealApiV1MealsMealIdGetQueryKey = (mealId: string) => {
+  return [`/api/v1/meals/${mealId}`] as const;
+};
 
-  return `/api/v1/meals/${mealId}`
-}
-
-export const getMealApiV1MealsMealIdGet = async (mealId: string, options?: RequestInit): Promise<getMealApiV1MealsMealIdGetResponse> => {
-
-  return customFetch<getMealApiV1MealsMealIdGetResponse>(getGetMealApiV1MealsMealIdGetUrl(mealId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetMealApiV1MealsMealIdGetQueryKey = (mealId: string,) => {
-    return [
-    `/api/v1/meals/${mealId}`
-    ] as const;
-    }
-
-
-export const getGetMealApiV1MealsMealIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError = HTTPValidationError>(mealId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError, TData>>, }
+export const getGetMealApiV1MealsMealIdGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+  TError = HTTPValidationError,
+>(
+  mealId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMealApiV1MealsMealIdGetQueryKey(mealId);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMealApiV1MealsMealIdGetQueryKey(mealId);
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>
+  > = ({ signal }) => getMealApiV1MealsMealIdGet(mealId, { signal });
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!mealId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type GetMealApiV1MealsMealIdGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>
+>;
+export type GetMealApiV1MealsMealIdGetQueryError = HTTPValidationError;
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>> = ({ signal }) => getMealApiV1MealsMealIdGet(mealId, { signal });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(mealId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetMealApiV1MealsMealIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>>
-export type GetMealApiV1MealsMealIdGetQueryError = HTTPValidationError
-
-
-export function useGetMealApiV1MealsMealIdGet<TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError = HTTPValidationError>(
- mealId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError, TData>> & Pick<
+export function useGetMealApiV1MealsMealIdGet<
+  TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+  TError = HTTPValidationError,
+>(
+  mealId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
           TError,
           Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetMealApiV1MealsMealIdGet<TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError = HTTPValidationError>(
- mealId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetMealApiV1MealsMealIdGet<
+  TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+  TError = HTTPValidationError,
+>(
+  mealId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
           TError,
           Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetMealApiV1MealsMealIdGet<TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError = HTTPValidationError>(
- mealId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetMealApiV1MealsMealIdGet<
+  TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+  TError = HTTPValidationError,
+>(
+  mealId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Meal
  */
 
-export function useGetMealApiV1MealsMealIdGet<TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError = HTTPValidationError>(
- mealId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetMealApiV1MealsMealIdGet<
+  TData = Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+  TError = HTTPValidationError,
+>(
+  mealId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getMealApiV1MealsMealIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetMealApiV1MealsMealIdGetQueryOptions(
+    mealId,
+    options,
+  );
 
-  const queryOptions = getGetMealApiV1MealsMealIdGetQueryOptions(mealId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 /**
  * Update meal description or macronutrients.
@@ -517,93 +760,119 @@ Automatically recalculates calories from macros if updated.
  * @summary Update Meal
  */
 export type updateMealApiV1MealsMealIdPatchResponse200 = {
-  data: MealWithPhotos
-  status: 200
-}
+  data: MealWithPhotos;
+  status: 200;
+};
 
 export type updateMealApiV1MealsMealIdPatchResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type updateMealApiV1MealsMealIdPatchResponseSuccess = (updateMealApiV1MealsMealIdPatchResponse200) & {
-  headers: Headers;
-};
-export type updateMealApiV1MealsMealIdPatchResponseError = (updateMealApiV1MealsMealIdPatchResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type updateMealApiV1MealsMealIdPatchResponse = (updateMealApiV1MealsMealIdPatchResponseSuccess | updateMealApiV1MealsMealIdPatchResponseError)
+export type updateMealApiV1MealsMealIdPatchResponseSuccess =
+  updateMealApiV1MealsMealIdPatchResponse200 & {
+    headers: Headers;
+  };
+export type updateMealApiV1MealsMealIdPatchResponseError =
+  updateMealApiV1MealsMealIdPatchResponse422 & {
+    headers: Headers;
+  };
 
-export const getUpdateMealApiV1MealsMealIdPatchUrl = (mealId: string,) => {
+export type updateMealApiV1MealsMealIdPatchResponse =
+  | updateMealApiV1MealsMealIdPatchResponseSuccess
+  | updateMealApiV1MealsMealIdPatchResponseError;
 
+export const getUpdateMealApiV1MealsMealIdPatchUrl = (mealId: string) => {
+  return `/api/v1/meals/${mealId}`;
+};
 
+export const updateMealApiV1MealsMealIdPatch = async (
+  mealId: string,
+  mealUpdate: MealUpdate,
+  options?: RequestInit,
+): Promise<updateMealApiV1MealsMealIdPatchResponse> => {
+  return customFetch<updateMealApiV1MealsMealIdPatchResponse>(
+    getUpdateMealApiV1MealsMealIdPatchUrl(mealId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(mealUpdate),
+    },
+  );
+};
 
+export const getUpdateMealApiV1MealsMealIdPatchMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
+    TError,
+    { mealId: string; data: MealUpdate },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
+  TError,
+  { mealId: string; data: MealUpdate },
+  TContext
+> => {
+  const mutationKey = ["updateMealApiV1MealsMealIdPatch"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-  return `/api/v1/meals/${mealId}`
-}
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
+    { mealId: string; data: MealUpdate }
+  > = (props) => {
+    const { mealId, data } = props ?? {};
 
-export const updateMealApiV1MealsMealIdPatch = async (mealId: string,
-    mealUpdate: MealUpdate, options?: RequestInit): Promise<updateMealApiV1MealsMealIdPatchResponse> => {
+    return updateMealApiV1MealsMealIdPatch(mealId, data);
+  };
 
-  return customFetch<updateMealApiV1MealsMealIdPatchResponse>(getUpdateMealApiV1MealsMealIdPatchUrl(mealId),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      mealUpdate,)
-  }
-);}
+  return { mutationFn, ...mutationOptions };
+};
 
+export type UpdateMealApiV1MealsMealIdPatchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>
+>;
+export type UpdateMealApiV1MealsMealIdPatchMutationBody = MealUpdate;
+export type UpdateMealApiV1MealsMealIdPatchMutationError = HTTPValidationError;
 
-
-
-export const getUpdateMealApiV1MealsMealIdPatchMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>, TError,{mealId: string;data: MealUpdate}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>, TError,{mealId: string;data: MealUpdate}, TContext> => {
-
-const mutationKey = ['updateMealApiV1MealsMealIdPatch'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>, {mealId: string;data: MealUpdate}> = (props) => {
-          const {mealId,data} = props ?? {};
-
-          return  updateMealApiV1MealsMealIdPatch(mealId,data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateMealApiV1MealsMealIdPatchMutationResult = NonNullable<Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>>
-    export type UpdateMealApiV1MealsMealIdPatchMutationBody = MealUpdate
-    export type UpdateMealApiV1MealsMealIdPatchMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Update Meal
  */
-export const useUpdateMealApiV1MealsMealIdPatch = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>, TError,{mealId: string;data: MealUpdate}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
-        TError,
-        {mealId: string;data: MealUpdate},
-        TContext
-      > => {
-      return useMutation(getUpdateMealApiV1MealsMealIdPatchMutationOptions(options), queryClient);
-    }
-    /**
+export const useUpdateMealApiV1MealsMealIdPatch = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
+      TError,
+      { mealId: string; data: MealUpdate },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMealApiV1MealsMealIdPatch>>,
+  TError,
+  { mealId: string; data: MealUpdate },
+  TContext
+> => {
+  return useMutation(
+    getUpdateMealApiV1MealsMealIdPatchMutationOptions(options),
+    queryClient,
+  );
+};
+/**
  * Delete a meal and update daily summary.
 
 Feature: 003-update-logic-for (Meal management)
@@ -611,87 +880,112 @@ Cascades to photos and recalculates daily stats.
  * @summary Delete Meal
  */
 export type deleteMealApiV1MealsMealIdDeleteResponse204 = {
-  data: void
-  status: 204
-}
+  data: void;
+  status: 204;
+};
 
 export type deleteMealApiV1MealsMealIdDeleteResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type deleteMealApiV1MealsMealIdDeleteResponseSuccess = (deleteMealApiV1MealsMealIdDeleteResponse204) & {
-  headers: Headers;
-};
-export type deleteMealApiV1MealsMealIdDeleteResponseError = (deleteMealApiV1MealsMealIdDeleteResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type deleteMealApiV1MealsMealIdDeleteResponse = (deleteMealApiV1MealsMealIdDeleteResponseSuccess | deleteMealApiV1MealsMealIdDeleteResponseError)
+export type deleteMealApiV1MealsMealIdDeleteResponseSuccess =
+  deleteMealApiV1MealsMealIdDeleteResponse204 & {
+    headers: Headers;
+  };
+export type deleteMealApiV1MealsMealIdDeleteResponseError =
+  deleteMealApiV1MealsMealIdDeleteResponse422 & {
+    headers: Headers;
+  };
 
-export const getDeleteMealApiV1MealsMealIdDeleteUrl = (mealId: string,) => {
+export type deleteMealApiV1MealsMealIdDeleteResponse =
+  | deleteMealApiV1MealsMealIdDeleteResponseSuccess
+  | deleteMealApiV1MealsMealIdDeleteResponseError;
 
+export const getDeleteMealApiV1MealsMealIdDeleteUrl = (mealId: string) => {
+  return `/api/v1/meals/${mealId}`;
+};
 
+export const deleteMealApiV1MealsMealIdDelete = async (
+  mealId: string,
+  options?: RequestInit,
+): Promise<deleteMealApiV1MealsMealIdDeleteResponse> => {
+  return customFetch<deleteMealApiV1MealsMealIdDeleteResponse>(
+    getDeleteMealApiV1MealsMealIdDeleteUrl(mealId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
 
+export const getDeleteMealApiV1MealsMealIdDeleteMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
+    TError,
+    { mealId: string },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
+  TError,
+  { mealId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteMealApiV1MealsMealIdDelete"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-  return `/api/v1/meals/${mealId}`
-}
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
+    { mealId: string }
+  > = (props) => {
+    const { mealId } = props ?? {};
 
-export const deleteMealApiV1MealsMealIdDelete = async (mealId: string, options?: RequestInit): Promise<deleteMealApiV1MealsMealIdDeleteResponse> => {
+    return deleteMealApiV1MealsMealIdDelete(mealId);
+  };
 
-  return customFetch<deleteMealApiV1MealsMealIdDeleteResponse>(getDeleteMealApiV1MealsMealIdDeleteUrl(mealId),
-  {
-    ...options,
-    method: 'DELETE'
+  return { mutationFn, ...mutationOptions };
+};
 
+export type DeleteMealApiV1MealsMealIdDeleteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>
+>;
 
-  }
-);}
+export type DeleteMealApiV1MealsMealIdDeleteMutationError = HTTPValidationError;
 
-
-
-
-export const getDeleteMealApiV1MealsMealIdDeleteMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>, TError,{mealId: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>, TError,{mealId: string}, TContext> => {
-
-const mutationKey = ['deleteMealApiV1MealsMealIdDelete'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>, {mealId: string}> = (props) => {
-          const {mealId} = props ?? {};
-
-          return  deleteMealApiV1MealsMealIdDelete(mealId,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteMealApiV1MealsMealIdDeleteMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>>
-
-    export type DeleteMealApiV1MealsMealIdDeleteMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Delete Meal
  */
-export const useDeleteMealApiV1MealsMealIdDelete = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>, TError,{mealId: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
-        TError,
-        {mealId: string},
-        TContext
-      > => {
-      return useMutation(getDeleteMealApiV1MealsMealIdDeleteMutationOptions(options), queryClient);
-    }
+export const useDeleteMealApiV1MealsMealIdDelete = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
+      TError,
+      { mealId: string },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteMealApiV1MealsMealIdDelete>>,
+  TError,
+  { mealId: string },
+  TContext
+> => {
+  return useMutation(
+    getDeleteMealApiV1MealsMealIdDeleteMutationOptions(options),
+    queryClient,
+  );
+};

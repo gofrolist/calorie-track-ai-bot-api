@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { MacrosTotals } from './macrosTotals';
+import type { MacrosTotals } from "./macrosTotals";
 
 export interface DailySummary {
   user_id: string;

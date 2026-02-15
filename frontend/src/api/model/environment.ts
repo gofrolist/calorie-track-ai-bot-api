@@ -5,10 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type Environment = typeof Environment[keyof typeof Environment];
-
+export type Environment = (typeof Environment)[keyof typeof Environment];
 
 export const Environment = {
-  development: 'development',
-  production: 'production',
+  development: "development",
+  production: "production",
 } as const;

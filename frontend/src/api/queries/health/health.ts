@@ -4,9 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -16,343 +14,495 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
-import type {
-  ConnectivityResponse,
-  HealthResponse
-} from '../../model';
+import type { ConnectivityResponse, HealthResponse } from "../../model";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * @summary Live
  */
 export type liveHealthLiveGetResponse200 = {
-  data: HealthResponse
-  status: 200
-}
+  data: HealthResponse;
+  status: 200;
+};
 
-export type liveHealthLiveGetResponseSuccess = (liveHealthLiveGetResponse200) & {
+export type liveHealthLiveGetResponseSuccess = liveHealthLiveGetResponse200 & {
   headers: Headers;
 };
-;
-
-export type liveHealthLiveGetResponse = (liveHealthLiveGetResponseSuccess)
+export type liveHealthLiveGetResponse = liveHealthLiveGetResponseSuccess;
 
 export const getLiveHealthLiveGetUrl = () => {
+  return `/health/live`;
+};
 
-
-
-
-  return `/health/live`
-}
-
-export const liveHealthLiveGet = async ( options?: RequestInit): Promise<liveHealthLiveGetResponse> => {
-
-  return customFetch<liveHealthLiveGetResponse>(getLiveHealthLiveGetUrl(),
-  {
+export const liveHealthLiveGet = async (
+  options?: RequestInit,
+): Promise<liveHealthLiveGetResponse> => {
+  return customFetch<liveHealthLiveGetResponse>(getLiveHealthLiveGetUrl(), {
     ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
+    method: "GET",
+  });
+};
 
 export const getLiveHealthLiveGetQueryKey = () => {
-    return [
-    `/health/live`
-    ] as const;
-    }
+  return [`/health/live`] as const;
+};
 
+export const getLiveHealthLiveGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof liveHealthLiveGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof liveHealthLiveGet>>,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-export const getLiveHealthLiveGetQueryOptions = <TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, }
-) => {
+  const queryKey = queryOptions?.queryKey ?? getLiveHealthLiveGetQueryKey();
 
-const {query: queryOptions} = options ?? {};
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof liveHealthLiveGet>>
+  > = ({ signal }) => liveHealthLiveGet({ signal });
 
-  const queryKey =  queryOptions?.queryKey ?? getLiveHealthLiveGetQueryKey();
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof liveHealthLiveGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type LiveHealthLiveGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof liveHealthLiveGet>>
+>;
+export type LiveHealthLiveGetQueryError = unknown;
 
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof liveHealthLiveGet>>> = ({ signal }) => liveHealthLiveGet({ signal });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type LiveHealthLiveGetQueryResult = NonNullable<Awaited<ReturnType<typeof liveHealthLiveGet>>>
-export type LiveHealthLiveGetQueryError = unknown
-
-
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+export function useLiveHealthLiveGet<
+  TData = Awaited<ReturnType<typeof liveHealthLiveGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof liveHealthLiveGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof liveHealthLiveGet>>,
           TError,
           Awaited<ReturnType<typeof liveHealthLiveGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useLiveHealthLiveGet<
+  TData = Awaited<ReturnType<typeof liveHealthLiveGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof liveHealthLiveGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof liveHealthLiveGet>>,
           TError,
           Awaited<ReturnType<typeof liveHealthLiveGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useLiveHealthLiveGet<
+  TData = Awaited<ReturnType<typeof liveHealthLiveGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof liveHealthLiveGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Live
  */
 
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useLiveHealthLiveGet<
+  TData = Awaited<ReturnType<typeof liveHealthLiveGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof liveHealthLiveGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getLiveHealthLiveGetQueryOptions(options);
 
-  const queryOptions = getLiveHealthLiveGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 /**
  * @summary Ready
  */
 export type readyHealthReadyGetResponse200 = {
-  data: HealthResponse
-  status: 200
-}
-
-export type readyHealthReadyGetResponseSuccess = (readyHealthReadyGetResponse200) & {
-  headers: Headers;
+  data: HealthResponse;
+  status: 200;
 };
-;
 
-export type readyHealthReadyGetResponse = (readyHealthReadyGetResponseSuccess)
+export type readyHealthReadyGetResponseSuccess =
+  readyHealthReadyGetResponse200 & {
+    headers: Headers;
+  };
+export type readyHealthReadyGetResponse = readyHealthReadyGetResponseSuccess;
 
 export const getReadyHealthReadyGetUrl = () => {
+  return `/health/ready`;
+};
 
-
-
-
-  return `/health/ready`
-}
-
-export const readyHealthReadyGet = async ( options?: RequestInit): Promise<readyHealthReadyGetResponse> => {
-
-  return customFetch<readyHealthReadyGetResponse>(getReadyHealthReadyGetUrl(),
-  {
+export const readyHealthReadyGet = async (
+  options?: RequestInit,
+): Promise<readyHealthReadyGetResponse> => {
+  return customFetch<readyHealthReadyGetResponse>(getReadyHealthReadyGetUrl(), {
     ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
+    method: "GET",
+  });
+};
 
 export const getReadyHealthReadyGetQueryKey = () => {
-    return [
-    `/health/ready`
-    ] as const;
-    }
+  return [`/health/ready`] as const;
+};
 
+export const getReadyHealthReadyGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof readyHealthReadyGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof readyHealthReadyGet>>,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-export const getReadyHealthReadyGetQueryOptions = <TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, }
-) => {
+  const queryKey = queryOptions?.queryKey ?? getReadyHealthReadyGetQueryKey();
 
-const {query: queryOptions} = options ?? {};
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof readyHealthReadyGet>>
+  > = ({ signal }) => readyHealthReadyGet({ signal });
 
-  const queryKey =  queryOptions?.queryKey ?? getReadyHealthReadyGetQueryKey();
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof readyHealthReadyGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type ReadyHealthReadyGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof readyHealthReadyGet>>
+>;
+export type ReadyHealthReadyGetQueryError = unknown;
 
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyHealthReadyGet>>> = ({ signal }) => readyHealthReadyGet({ signal });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type ReadyHealthReadyGetQueryResult = NonNullable<Awaited<ReturnType<typeof readyHealthReadyGet>>>
-export type ReadyHealthReadyGetQueryError = unknown
-
-
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+export function useReadyHealthReadyGet<
+  TData = Awaited<ReturnType<typeof readyHealthReadyGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof readyHealthReadyGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof readyHealthReadyGet>>,
           TError,
           Awaited<ReturnType<typeof readyHealthReadyGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useReadyHealthReadyGet<
+  TData = Awaited<ReturnType<typeof readyHealthReadyGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof readyHealthReadyGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof readyHealthReadyGet>>,
           TError,
           Awaited<ReturnType<typeof readyHealthReadyGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useReadyHealthReadyGet<
+  TData = Awaited<ReturnType<typeof readyHealthReadyGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof readyHealthReadyGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Ready
  */
 
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useReadyHealthReadyGet<
+  TData = Awaited<ReturnType<typeof readyHealthReadyGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof readyHealthReadyGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getReadyHealthReadyGetQueryOptions(options);
 
-  const queryOptions = getReadyHealthReadyGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 /**
  * Check connectivity between frontend and backend.
  * @summary Get Connectivity Status
  */
 export type getConnectivityStatusHealthConnectivityGetResponse200 = {
-  data: ConnectivityResponse
-  status: 200
-}
-
-export type getConnectivityStatusHealthConnectivityGetResponseSuccess = (getConnectivityStatusHealthConnectivityGetResponse200) & {
-  headers: Headers;
+  data: ConnectivityResponse;
+  status: 200;
 };
-;
 
-export type getConnectivityStatusHealthConnectivityGetResponse = (getConnectivityStatusHealthConnectivityGetResponseSuccess)
+export type getConnectivityStatusHealthConnectivityGetResponseSuccess =
+  getConnectivityStatusHealthConnectivityGetResponse200 & {
+    headers: Headers;
+  };
+export type getConnectivityStatusHealthConnectivityGetResponse =
+  getConnectivityStatusHealthConnectivityGetResponseSuccess;
 
 export const getGetConnectivityStatusHealthConnectivityGetUrl = () => {
+  return `/health/connectivity`;
+};
 
-
-
-
-  return `/health/connectivity`
-}
-
-export const getConnectivityStatusHealthConnectivityGet = async ( options?: RequestInit): Promise<getConnectivityStatusHealthConnectivityGetResponse> => {
-
-  return customFetch<getConnectivityStatusHealthConnectivityGetResponse>(getGetConnectivityStatusHealthConnectivityGetUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
+export const getConnectivityStatusHealthConnectivityGet = async (
+  options?: RequestInit,
+): Promise<getConnectivityStatusHealthConnectivityGetResponse> => {
+  return customFetch<getConnectivityStatusHealthConnectivityGetResponse>(
+    getGetConnectivityStatusHealthConnectivityGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
 export const getGetConnectivityStatusHealthConnectivityGetQueryKey = () => {
-    return [
-    `/health/connectivity`
-    ] as const;
-    }
+  return [`/health/connectivity`] as const;
+};
 
+export const getGetConnectivityStatusHealthConnectivityGetQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof getConnectivityStatusHealthConnectivityGet>
+  >,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-export const getGetConnectivityStatusHealthConnectivityGetQueryOptions = <TData = Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError, TData>>, }
-) => {
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetConnectivityStatusHealthConnectivityGetQueryKey();
 
-const {query: queryOptions} = options ?? {};
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>
+  > = ({ signal }) => getConnectivityStatusHealthConnectivityGet({ signal });
 
-  const queryKey =  queryOptions?.queryKey ?? getGetConnectivityStatusHealthConnectivityGetQueryKey();
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type GetConnectivityStatusHealthConnectivityGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>
+>;
+export type GetConnectivityStatusHealthConnectivityGetQueryError = unknown;
 
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>> = ({ signal }) => getConnectivityStatusHealthConnectivityGet({ signal });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetConnectivityStatusHealthConnectivityGetQueryResult = NonNullable<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>>
-export type GetConnectivityStatusHealthConnectivityGetQueryError = unknown
-
-
-export function useGetConnectivityStatusHealthConnectivityGet<TData = Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError, TData>> & Pick<
+export function useGetConnectivityStatusHealthConnectivityGet<
+  TData = Awaited<
+    ReturnType<typeof getConnectivityStatusHealthConnectivityGet>
+  >,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+          Awaited<
+            ReturnType<typeof getConnectivityStatusHealthConnectivityGet>
+          >,
           TError,
           Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetConnectivityStatusHealthConnectivityGet<TData = Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetConnectivityStatusHealthConnectivityGet<
+  TData = Awaited<
+    ReturnType<typeof getConnectivityStatusHealthConnectivityGet>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+          Awaited<
+            ReturnType<typeof getConnectivityStatusHealthConnectivityGet>
+          >,
           TError,
           Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetConnectivityStatusHealthConnectivityGet<TData = Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetConnectivityStatusHealthConnectivityGet<
+  TData = Awaited<
+    ReturnType<typeof getConnectivityStatusHealthConnectivityGet>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Connectivity Status
  */
 
-export function useGetConnectivityStatusHealthConnectivityGet<TData = Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetConnectivityStatusHealthConnectivityGet<
+  TData = Awaited<
+    ReturnType<typeof getConnectivityStatusHealthConnectivityGet>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getConnectivityStatusHealthConnectivityGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions =
+    getGetConnectivityStatusHealthConnectivityGetQueryOptions(options);
 
-  const queryOptions = getGetConnectivityStatusHealthConnectivityGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

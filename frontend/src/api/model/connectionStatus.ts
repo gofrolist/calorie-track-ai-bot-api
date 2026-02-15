@@ -5,11 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConnectionStatus = typeof ConnectionStatus[keyof typeof ConnectionStatus];
-
+export type ConnectionStatus =
+  (typeof ConnectionStatus)[keyof typeof ConnectionStatus];
 
 export const ConnectionStatus = {
-  connected: 'connected',
-  disconnected: 'disconnected',
-  error: 'error',
+  connected: "connected",
+  disconnected: "disconnected",
+  error: "error",
 } as const;

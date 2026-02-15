@@ -1,5 +1,5 @@
-import { DayPicker } from 'react-day-picker';
-import type { MealCalendarDay } from '@/api/model';
+import { DayPicker } from "react-day-picker";
+import type { MealCalendarDay } from "@/api/model";
 
 interface CalendarPickerProps {
   selected: Date;
@@ -27,7 +27,7 @@ export function CalendarPicker({
         selected={selected}
         onSelect={(date) => date && onSelect(date)}
         modifiers={modifiers}
-        modifiersClassNames={{ hasMeals: 'font-bold text-tg-button' }}
+        modifiersClassNames={{ hasMeals: "font-bold text-tg-button" }}
         className="text-tg-text"
       />
     </div>

@@ -5,11 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type Theme = typeof Theme[keyof typeof Theme];
-
+export type Theme = (typeof Theme)[keyof typeof Theme];
 
 export const Theme = {
-  light: 'light',
-  dark: 'dark',
-  auto: 'auto',
+  light: "light",
+  dark: "dark",
+  auto: "auto",
 } as const;

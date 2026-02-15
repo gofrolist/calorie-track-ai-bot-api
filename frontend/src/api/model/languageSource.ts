@@ -5,11 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type LanguageSource = typeof LanguageSource[keyof typeof LanguageSource];
-
+export type LanguageSource =
+  (typeof LanguageSource)[keyof typeof LanguageSource];
 
 export const LanguageSource = {
-  telegram: 'telegram',
-  browser: 'browser',
-  manual: 'manual',
+  telegram: "telegram",
+  browser: "browser",
+  manual: "manual",
 } as const;

@@ -1,4 +1,4 @@
-import type { MealPhotoInfo } from '@/api/model';
+import type { MealPhotoInfo } from "@/api/model";
 
 interface PhotoCarouselProps {
   photos: MealPhotoInfo[];

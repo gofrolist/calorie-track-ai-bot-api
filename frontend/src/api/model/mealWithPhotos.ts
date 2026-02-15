@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { Macronutrients } from './macronutrients';
-import type { MealPhotoInfo } from './mealPhotoInfo';
+import type { Macronutrients } from "./macronutrients";
+import type { MealPhotoInfo } from "./mealPhotoInfo";
 
 export interface MealWithPhotos {
   id: string;

@@ -4,9 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -16,137 +14,247 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   GetInlineSummaryApiV1AnalyticsInlineSummaryGet200,
   GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
-  HTTPValidationError
-} from '../../model';
+  HTTPValidationError,
+} from "../../model";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * @summary Get Inline Summary
  */
 export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse200 = {
-  data: GetInlineSummaryApiV1AnalyticsInlineSummaryGet200
-  status: 200
-}
+  data: GetInlineSummaryApiV1AnalyticsInlineSummaryGet200;
+  status: 200;
+};
 
 export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseSuccess = (getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse200) & {
-  headers: Headers;
-};
-export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseError = (getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse = (getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseSuccess | getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseError)
+export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseSuccess =
+  getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse200 & {
+    headers: Headers;
+  };
+export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseError =
+  getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse422 & {
+    headers: Headers;
+  };
 
-export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetUrl = (params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,) => {
+export type getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse =
+  | getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseSuccess
+  | getInlineSummaryApiV1AnalyticsInlineSummaryGetResponseError;
+
+export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetUrl = (
+  params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : value.toString())
+      normalizedParams.append(key, value === null ? "null" : value.toString());
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/v1/analytics/inline-summary?${stringifiedParams}` : `/api/v1/analytics/inline-summary`
-}
+  return stringifiedParams.length > 0
+    ? `/api/v1/analytics/inline-summary?${stringifiedParams}`
+    : `/api/v1/analytics/inline-summary`;
+};
 
-export const getInlineSummaryApiV1AnalyticsInlineSummaryGet = async (params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams, options?: RequestInit): Promise<getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse> => {
+export const getInlineSummaryApiV1AnalyticsInlineSummaryGet = async (
+  params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
+  options?: RequestInit,
+): Promise<getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse> => {
+  return customFetch<getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse>(
+    getGetInlineSummaryApiV1AnalyticsInlineSummaryGetUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
-  return customFetch<getInlineSummaryApiV1AnalyticsInlineSummaryGetResponse>(getGetInlineSummaryApiV1AnalyticsInlineSummaryGetUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryKey = (params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,) => {
-    return [
-    `/api/v1/analytics/inline-summary`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryOptions = <TData = Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError = HTTPValidationError>(params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError, TData>>, }
+export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryKey = (
+  params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
 ) => {
+  return [
+    `/api/v1/analytics/inline-summary`,
+    ...(params ? [params] : []),
+  ] as const;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+  >,
+  TError = HTTPValidationError,
+>(
+  params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryKey(params);
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryKey(params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>
+  > = ({ signal }) =>
+    getInlineSummaryApiV1AnalyticsInlineSummaryGet(params, { signal });
 
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>> = ({ signal }) => getInlineSummaryApiV1AnalyticsInlineSummaryGet(params, { signal });
+export type GetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>
+  >;
+export type GetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryError =
+  HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryResult = NonNullable<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>>
-export type GetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryError = HTTPValidationError
-
-
-export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<TData = Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError = HTTPValidationError>(
- params: undefined |  GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError, TData>> & Pick<
+export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
+  TData = Awaited<
+    ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+  >,
+  TError = HTTPValidationError,
+>(
+  params: undefined | GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>,
+          Awaited<
+            ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+          >,
           TError,
-          Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<TData = Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError = HTTPValidationError>(
- params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError, TData>> & Pick<
+          Awaited<
+            ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+          >
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
+  TData = Awaited<
+    ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+  >,
+  TError = HTTPValidationError,
+>(
+  params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>,
+          Awaited<
+            ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+          >,
           TError,
-          Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<TData = Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError = HTTPValidationError>(
- params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+          Awaited<
+            ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+          >
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
+  TData = Awaited<
+    ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+  >,
+  TError = HTTPValidationError,
+>(
+  params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Inline Summary
  */
 
-export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<TData = Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError = HTTPValidationError>(
- params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetInlineSummaryApiV1AnalyticsInlineSummaryGet<
+  TData = Awaited<
+    ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+  >,
+  TError = HTTPValidationError,
+>(
+  params?: GetInlineSummaryApiV1AnalyticsInlineSummaryGetParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getInlineSummaryApiV1AnalyticsInlineSummaryGet>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions =
+    getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryOptions(
+      params,
+      options,
+    );
 
-  const queryOptions = getGetInlineSummaryApiV1AnalyticsInlineSummaryGetQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

@@ -4,10 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,20 +17,17 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   FeedbackSubmission,
   FeedbackSubmissionRequest,
   FeedbackSubmissionResponse,
-  HTTPValidationError
-} from '../../model';
+  HTTPValidationError,
+} from "../../model";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * Submit user feedback, bug report, question, or support request.
@@ -52,92 +46,119 @@ Raises:
  * @summary Submit Feedback
  */
 export type submitFeedbackApiV1FeedbackPostResponse201 = {
-  data: FeedbackSubmissionResponse
-  status: 201
-}
+  data: FeedbackSubmissionResponse;
+  status: 201;
+};
 
 export type submitFeedbackApiV1FeedbackPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type submitFeedbackApiV1FeedbackPostResponseSuccess = (submitFeedbackApiV1FeedbackPostResponse201) & {
-  headers: Headers;
-};
-export type submitFeedbackApiV1FeedbackPostResponseError = (submitFeedbackApiV1FeedbackPostResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type submitFeedbackApiV1FeedbackPostResponse = (submitFeedbackApiV1FeedbackPostResponseSuccess | submitFeedbackApiV1FeedbackPostResponseError)
+export type submitFeedbackApiV1FeedbackPostResponseSuccess =
+  submitFeedbackApiV1FeedbackPostResponse201 & {
+    headers: Headers;
+  };
+export type submitFeedbackApiV1FeedbackPostResponseError =
+  submitFeedbackApiV1FeedbackPostResponse422 & {
+    headers: Headers;
+  };
+
+export type submitFeedbackApiV1FeedbackPostResponse =
+  | submitFeedbackApiV1FeedbackPostResponseSuccess
+  | submitFeedbackApiV1FeedbackPostResponseError;
 
 export const getSubmitFeedbackApiV1FeedbackPostUrl = () => {
+  return `/api/v1/feedback`;
+};
 
+export const submitFeedbackApiV1FeedbackPost = async (
+  feedbackSubmissionRequest: FeedbackSubmissionRequest,
+  options?: RequestInit,
+): Promise<submitFeedbackApiV1FeedbackPostResponse> => {
+  return customFetch<submitFeedbackApiV1FeedbackPostResponse>(
+    getSubmitFeedbackApiV1FeedbackPostUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(feedbackSubmissionRequest),
+    },
+  );
+};
 
+export const getSubmitFeedbackApiV1FeedbackPostMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
+    TError,
+    { data: FeedbackSubmissionRequest },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
+  TError,
+  { data: FeedbackSubmissionRequest },
+  TContext
+> => {
+  const mutationKey = ["submitFeedbackApiV1FeedbackPost"];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
+    { data: FeedbackSubmissionRequest }
+  > = (props) => {
+    const { data } = props ?? {};
 
-  return `/api/v1/feedback`
-}
+    return submitFeedbackApiV1FeedbackPost(data);
+  };
 
-export const submitFeedbackApiV1FeedbackPost = async (feedbackSubmissionRequest: FeedbackSubmissionRequest, options?: RequestInit): Promise<submitFeedbackApiV1FeedbackPostResponse> => {
+  return { mutationFn, ...mutationOptions };
+};
 
-  return customFetch<submitFeedbackApiV1FeedbackPostResponse>(getSubmitFeedbackApiV1FeedbackPostUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      feedbackSubmissionRequest,)
-  }
-);}
+export type SubmitFeedbackApiV1FeedbackPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>
+>;
+export type SubmitFeedbackApiV1FeedbackPostMutationBody =
+  FeedbackSubmissionRequest;
+export type SubmitFeedbackApiV1FeedbackPostMutationError = HTTPValidationError;
 
-
-
-
-export const getSubmitFeedbackApiV1FeedbackPostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>, TError,{data: FeedbackSubmissionRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>, TError,{data: FeedbackSubmissionRequest}, TContext> => {
-
-const mutationKey = ['submitFeedbackApiV1FeedbackPost'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>, {data: FeedbackSubmissionRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  submitFeedbackApiV1FeedbackPost(data,)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SubmitFeedbackApiV1FeedbackPostMutationResult = NonNullable<Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>>
-    export type SubmitFeedbackApiV1FeedbackPostMutationBody = FeedbackSubmissionRequest
-    export type SubmitFeedbackApiV1FeedbackPostMutationError = HTTPValidationError
-
-    /**
+/**
  * @summary Submit Feedback
  */
-export const useSubmitFeedbackApiV1FeedbackPost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>, TError,{data: FeedbackSubmissionRequest}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
-        TError,
-        {data: FeedbackSubmissionRequest},
-        TContext
-      > => {
-      return useMutation(getSubmitFeedbackApiV1FeedbackPostMutationOptions(options), queryClient);
-    }
-    /**
+export const useSubmitFeedbackApiV1FeedbackPost = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
+      TError,
+      { data: FeedbackSubmissionRequest },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof submitFeedbackApiV1FeedbackPost>>,
+  TError,
+  { data: FeedbackSubmissionRequest },
+  TContext
+> => {
+  return useMutation(
+    getSubmitFeedbackApiV1FeedbackPostMutationOptions(options),
+    queryClient,
+  );
+};
+/**
  * Get feedback submission by ID (admin only).
 
 Args:
@@ -152,112 +173,192 @@ Raises:
  * @summary Get Feedback
  */
 export type getFeedbackApiV1FeedbackFeedbackIdGetResponse200 = {
-  data: FeedbackSubmission
-  status: 200
-}
+  data: FeedbackSubmission;
+  status: 200;
+};
 
 export type getFeedbackApiV1FeedbackFeedbackIdGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getFeedbackApiV1FeedbackFeedbackIdGetResponseSuccess = (getFeedbackApiV1FeedbackFeedbackIdGetResponse200) & {
-  headers: Headers;
-};
-export type getFeedbackApiV1FeedbackFeedbackIdGetResponseError = (getFeedbackApiV1FeedbackFeedbackIdGetResponse422) & {
-  headers: Headers;
+  data: HTTPValidationError;
+  status: 422;
 };
 
-export type getFeedbackApiV1FeedbackFeedbackIdGetResponse = (getFeedbackApiV1FeedbackFeedbackIdGetResponseSuccess | getFeedbackApiV1FeedbackFeedbackIdGetResponseError)
+export type getFeedbackApiV1FeedbackFeedbackIdGetResponseSuccess =
+  getFeedbackApiV1FeedbackFeedbackIdGetResponse200 & {
+    headers: Headers;
+  };
+export type getFeedbackApiV1FeedbackFeedbackIdGetResponseError =
+  getFeedbackApiV1FeedbackFeedbackIdGetResponse422 & {
+    headers: Headers;
+  };
 
-export const getGetFeedbackApiV1FeedbackFeedbackIdGetUrl = (feedbackId: string,) => {
+export type getFeedbackApiV1FeedbackFeedbackIdGetResponse =
+  | getFeedbackApiV1FeedbackFeedbackIdGetResponseSuccess
+  | getFeedbackApiV1FeedbackFeedbackIdGetResponseError;
 
-
-
-
-  return `/api/v1/feedback/${feedbackId}`
-}
-
-export const getFeedbackApiV1FeedbackFeedbackIdGet = async (feedbackId: string, options?: RequestInit): Promise<getFeedbackApiV1FeedbackFeedbackIdGetResponse> => {
-
-  return customFetch<getFeedbackApiV1FeedbackFeedbackIdGetResponse>(getGetFeedbackApiV1FeedbackFeedbackIdGetUrl(feedbackId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetFeedbackApiV1FeedbackFeedbackIdGetQueryKey = (feedbackId: string,) => {
-    return [
-    `/api/v1/feedback/${feedbackId}`
-    ] as const;
-    }
-
-
-export const getGetFeedbackApiV1FeedbackFeedbackIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError = HTTPValidationError>(feedbackId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError, TData>>, }
+export const getGetFeedbackApiV1FeedbackFeedbackIdGetUrl = (
+  feedbackId: string,
 ) => {
+  return `/api/v1/feedback/${feedbackId}`;
+};
 
-const {query: queryOptions} = options ?? {};
+export const getFeedbackApiV1FeedbackFeedbackIdGet = async (
+  feedbackId: string,
+  options?: RequestInit,
+): Promise<getFeedbackApiV1FeedbackFeedbackIdGetResponse> => {
+  return customFetch<getFeedbackApiV1FeedbackFeedbackIdGetResponse>(
+    getGetFeedbackApiV1FeedbackFeedbackIdGetUrl(feedbackId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetFeedbackApiV1FeedbackFeedbackIdGetQueryKey(feedbackId);
+export const getGetFeedbackApiV1FeedbackFeedbackIdGetQueryKey = (
+  feedbackId: string,
+) => {
+  return [`/api/v1/feedback/${feedbackId}`] as const;
+};
 
+export const getGetFeedbackApiV1FeedbackFeedbackIdGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+  TError = HTTPValidationError,
+>(
+  feedbackId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetFeedbackApiV1FeedbackFeedbackIdGetQueryKey(feedbackId);
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>> = ({ signal }) => getFeedbackApiV1FeedbackFeedbackIdGet(feedbackId, { signal });
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>
+  > = ({ signal }) =>
+    getFeedbackApiV1FeedbackFeedbackIdGet(feedbackId, { signal });
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!feedbackId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type GetFeedbackApiV1FeedbackFeedbackIdGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>
+>;
+export type GetFeedbackApiV1FeedbackFeedbackIdGetQueryError =
+  HTTPValidationError;
 
-
-
-   return  { queryKey, queryFn, enabled: !!(feedbackId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetFeedbackApiV1FeedbackFeedbackIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>>
-export type GetFeedbackApiV1FeedbackFeedbackIdGetQueryError = HTTPValidationError
-
-
-export function useGetFeedbackApiV1FeedbackFeedbackIdGet<TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError = HTTPValidationError>(
- feedbackId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError, TData>> & Pick<
+export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
+  TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+  TError = HTTPValidationError,
+>(
+  feedbackId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
           TError,
           Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetFeedbackApiV1FeedbackFeedbackIdGet<TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError = HTTPValidationError>(
- feedbackId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
+  TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+  TError = HTTPValidationError,
+>(
+  feedbackId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
           TError,
           Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetFeedbackApiV1FeedbackFeedbackIdGet<TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError = HTTPValidationError>(
- feedbackId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
+  TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+  TError = HTTPValidationError,
+>(
+  feedbackId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Feedback
  */
 
-export function useGetFeedbackApiV1FeedbackFeedbackIdGet<TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError = HTTPValidationError>(
- feedbackId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetFeedbackApiV1FeedbackFeedbackIdGet<
+  TData = Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+  TError = HTTPValidationError,
+>(
+  feedbackId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getFeedbackApiV1FeedbackFeedbackIdGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetFeedbackApiV1FeedbackFeedbackIdGetQueryOptions(
+    feedbackId,
+    options,
+  );
 
-  const queryOptions = getGetFeedbackApiV1FeedbackFeedbackIdGetQueryOptions(feedbackId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

@@ -5,11 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ThemeSource = typeof ThemeSource[keyof typeof ThemeSource];
-
+export type ThemeSource = (typeof ThemeSource)[keyof typeof ThemeSource];
 
 export const ThemeSource = {
-  telegram: 'telegram',
-  system: 'system',
-  manual: 'manual',
+  telegram: "telegram",
+  system: "system",
+  manual: "manual",
 } as const;

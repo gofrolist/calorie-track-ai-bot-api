@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { MealWithPhotos } from './mealWithPhotos';
+import type { MealWithPhotos } from "./mealWithPhotos";
 
 export interface MealsListResponse {
   meals: MealWithPhotos[];

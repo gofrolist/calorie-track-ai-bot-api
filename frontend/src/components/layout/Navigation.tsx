@@ -1,10 +1,10 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const NAV_ITEMS = [
-  { path: '/', labelKey: 'navigation.meals' },
-  { path: '/stats', labelKey: 'navigation.stats' },
-  { path: '/goals', labelKey: 'navigation.goals' },
+  { path: "/", labelKey: "navigation.meals" },
+  { path: "/stats", labelKey: "navigation.stats" },
+  { path: "/goals", labelKey: "navigation.goals" },
 ] as const;
 
 export function Navigation() {
@@ -24,9 +24,9 @@ export function Navigation() {
             key={path}
             type="button"
             onClick={() => navigate(path)}
-            aria-current={isActive ? 'page' : undefined}
+            aria-current={isActive ? "page" : undefined}
             className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-              isActive ? 'text-tg-button' : 'text-tg-hint'
+              isActive ? "text-tg-button" : "text-tg-hint"
             }`}
           >
             <span>{t(labelKey)}</span>

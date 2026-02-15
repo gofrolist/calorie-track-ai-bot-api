@@ -4,7 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { FeedbackStatus } from './feedbackStatus';
+import type { FeedbackStatus } from "./feedbackStatus";
 
 export interface FeedbackSubmissionResponse {
   id: string;

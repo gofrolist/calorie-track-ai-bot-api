@@ -1,16 +1,16 @@
-import { describe, it, expect } from 'vitest';
-import { screen } from '@testing-library/react';
-import { renderWithProviders } from '@/test/utils';
-import { StatsCharts } from '../StatsCharts';
+import { describe, it, expect } from "vitest";
+import { screen } from "@testing-library/react";
+import { renderWithProviders } from "@/test/utils";
+import { StatsCharts } from "../StatsCharts";
 import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
-} from '@/api/model';
+} from "@/api/model";
 
 const mockDailyStats: DailyStatisticsResponse = {
   data: [
     {
-      date: '2026-02-13',
+      date: "2026-02-13",
       total_calories: 1800,
       total_protein: 120,
       total_fat: 60,
@@ -20,7 +20,7 @@ const mockDailyStats: DailyStatisticsResponse = {
       goal_achievement: 0.9,
     },
     {
-      date: '2026-02-14',
+      date: "2026-02-14",
       total_calories: 2100,
       total_protein: 130,
       total_fat: 70,
@@ -31,8 +31,8 @@ const mockDailyStats: DailyStatisticsResponse = {
     },
   ],
   period: {
-    start_date: '2026-02-13',
-    end_date: '2026-02-14',
+    start_date: "2026-02-13",
+    end_date: "2026-02-14",
     total_days: 2,
   },
   summary: {
@@ -51,14 +51,14 @@ const mockMacroStats: MacroStatisticsResponse = {
   carbs_grams: 210,
   total_calories: 1950,
   period: {
-    start_date: '2026-02-13',
-    end_date: '2026-02-14',
+    start_date: "2026-02-13",
+    end_date: "2026-02-14",
     total_days: 2,
   },
 };
 
-describe('StatsCharts', () => {
-  it('renders summary stats', () => {
+describe("StatsCharts", () => {
+  it("renders summary stats", () => {
     renderWithProviders(
       <StatsCharts dailyStats={mockDailyStats} macroStats={mockMacroStats} />,
     );
@@ -66,12 +66,12 @@ describe('StatsCharts', () => {
     expect(screen.getByText(/7/)).toBeInTheDocument();
   });
 
-  it('renders empty state when no data', () => {
+  it("renders empty state when no data", () => {
     const emptyDaily: DailyStatisticsResponse = {
       data: [],
       period: {
-        start_date: '2026-02-13',
-        end_date: '2026-02-14',
+        start_date: "2026-02-13",
+        end_date: "2026-02-14",
         total_days: 2,
       },
       summary: {

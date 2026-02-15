@@ -4,9 +4,7 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useQuery
-} from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -16,234 +14,367 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   DevelopmentEnvironment,
-  GetDbStatusApiV1DevDbStatusGet200
-} from '../../model';
+  GetDbStatusApiV1DevDbStatusGet200,
+} from "../../model";
 
-import { customFetch } from '../../client';
-
-
-
+import { customFetch } from "../../client";
 
 /**
  * Get current development environment configuration.
  * @summary Get Development Environment
  */
 export type getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse200 = {
-  data: DevelopmentEnvironment
-  status: 200
-}
-
-export type getDevelopmentEnvironmentApiV1DevEnvironmentGetResponseSuccess = (getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse200) & {
-  headers: Headers;
+  data: DevelopmentEnvironment;
+  status: 200;
 };
-;
 
-export type getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse = (getDevelopmentEnvironmentApiV1DevEnvironmentGetResponseSuccess)
+export type getDevelopmentEnvironmentApiV1DevEnvironmentGetResponseSuccess =
+  getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse200 & {
+    headers: Headers;
+  };
+export type getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse =
+  getDevelopmentEnvironmentApiV1DevEnvironmentGetResponseSuccess;
 
 export const getGetDevelopmentEnvironmentApiV1DevEnvironmentGetUrl = () => {
+  return `/api/v1/dev/environment`;
+};
 
+export const getDevelopmentEnvironmentApiV1DevEnvironmentGet = async (
+  options?: RequestInit,
+): Promise<getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse> => {
+  return customFetch<getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse>(
+    getGetDevelopmentEnvironmentApiV1DevEnvironmentGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
+export const getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryKey =
+  () => {
+    return [`/api/v1/dev/environment`] as const;
+  };
 
+export const getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+  >,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<
+        ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+      >,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-  return `/api/v1/dev/environment`
-}
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryKey();
 
-export const getDevelopmentEnvironmentApiV1DevEnvironmentGet = async ( options?: RequestInit): Promise<getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse> => {
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>
+  > = ({ signal }) =>
+    getDevelopmentEnvironmentApiV1DevEnvironmentGet({ signal });
 
-  return customFetch<getDevelopmentEnvironmentApiV1DevEnvironmentGetResponse>(getGetDevelopmentEnvironmentApiV1DevEnvironmentGetUrl(),
-  {
-    ...options,
-    method: 'GET'
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type GetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>
+  >;
+export type GetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryError = unknown;
 
-  }
-);}
-
-
-
-
-
-export const getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryKey = () => {
-    return [
-    `/api/v1/dev/environment`
-    ] as const;
-    }
-
-
-export const getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryOptions = <TData = Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>> = ({ signal }) => getDevelopmentEnvironmentApiV1DevEnvironmentGet({ signal });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryResult = NonNullable<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>>
-export type GetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryError = unknown
-
-
-export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<TData = Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError, TData>> & Pick<
+export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
+  TData = Awaited<
+    ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+  >,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>,
+          Awaited<
+            ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+          >,
           TError,
-          Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<TData = Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError, TData>> & Pick<
+          Awaited<
+            ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+          >
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
+  TData = Awaited<
+    ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>,
+          Awaited<
+            ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+          >,
           TError,
-          Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<TData = Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+          Awaited<
+            ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+          >
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
+  TData = Awaited<
+    ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Development Environment
  */
 
-export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<TData = Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetDevelopmentEnvironmentApiV1DevEnvironmentGet<
+  TData = Awaited<
+    ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+  >,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof getDevelopmentEnvironmentApiV1DevEnvironmentGet>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions =
+    getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryOptions(options);
 
-  const queryOptions = getGetDevelopmentEnvironmentApiV1DevEnvironmentGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
-
-
 
 /**
  * Get database connection pool status.
  * @summary Get Db Status
  */
 export type getDbStatusApiV1DevDbStatusGetResponse200 = {
-  data: GetDbStatusApiV1DevDbStatusGet200
-  status: 200
-}
-
-export type getDbStatusApiV1DevDbStatusGetResponseSuccess = (getDbStatusApiV1DevDbStatusGetResponse200) & {
-  headers: Headers;
+  data: GetDbStatusApiV1DevDbStatusGet200;
+  status: 200;
 };
-;
 
-export type getDbStatusApiV1DevDbStatusGetResponse = (getDbStatusApiV1DevDbStatusGetResponseSuccess)
+export type getDbStatusApiV1DevDbStatusGetResponseSuccess =
+  getDbStatusApiV1DevDbStatusGetResponse200 & {
+    headers: Headers;
+  };
+export type getDbStatusApiV1DevDbStatusGetResponse =
+  getDbStatusApiV1DevDbStatusGetResponseSuccess;
 
 export const getGetDbStatusApiV1DevDbStatusGetUrl = () => {
+  return `/api/v1/dev/db/status`;
+};
 
-
-
-
-  return `/api/v1/dev/db/status`
-}
-
-export const getDbStatusApiV1DevDbStatusGet = async ( options?: RequestInit): Promise<getDbStatusApiV1DevDbStatusGetResponse> => {
-
-  return customFetch<getDbStatusApiV1DevDbStatusGetResponse>(getGetDbStatusApiV1DevDbStatusGetUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
+export const getDbStatusApiV1DevDbStatusGet = async (
+  options?: RequestInit,
+): Promise<getDbStatusApiV1DevDbStatusGetResponse> => {
+  return customFetch<getDbStatusApiV1DevDbStatusGetResponse>(
+    getGetDbStatusApiV1DevDbStatusGetUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
 export const getGetDbStatusApiV1DevDbStatusGetQueryKey = () => {
-    return [
-    `/api/v1/dev/db/status`
-    ] as const;
-    }
+  return [`/api/v1/dev/db/status`] as const;
+};
 
+export const getGetDbStatusApiV1DevDbStatusGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+  TError = unknown,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-export const getGetDbStatusApiV1DevDbStatusGetQueryOptions = <TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError, TData>>, }
-) => {
+  const queryKey =
+    queryOptions?.queryKey ?? getGetDbStatusApiV1DevDbStatusGetQueryKey();
 
-const {query: queryOptions} = options ?? {};
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>
+  > = ({ signal }) => getDbStatusApiV1DevDbStatusGet({ signal });
 
-  const queryKey =  queryOptions?.queryKey ?? getGetDbStatusApiV1DevDbStatusGetQueryKey();
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData> };
+};
 
+export type GetDbStatusApiV1DevDbStatusGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>
+>;
+export type GetDbStatusApiV1DevDbStatusGetQueryError = unknown;
 
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>> = ({ signal }) => getDbStatusApiV1DevDbStatusGet({ signal });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData> }
-}
-
-export type GetDbStatusApiV1DevDbStatusGetQueryResult = NonNullable<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>>
-export type GetDbStatusApiV1DevDbStatusGetQueryError = unknown
-
-
-export function useGetDbStatusApiV1DevDbStatusGet<TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError, TData>> & Pick<
+export function useGetDbStatusApiV1DevDbStatusGet<
+  TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+  TError = unknown,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
           TError,
           Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetDbStatusApiV1DevDbStatusGet<TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData>;
+};
+export function useGetDbStatusApiV1DevDbStatusGet<
+  TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
           TError,
           Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
-export function useGetDbStatusApiV1DevDbStatusGet<TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> }
+        >,
+        "initialData"
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+export function useGetDbStatusApiV1DevDbStatusGet<
+  TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
 /**
  * @summary Get Db Status
  */
 
-export function useGetDbStatusApiV1DevDbStatusGet<TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+export function useGetDbStatusApiV1DevDbStatusGet<
+  TData = Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+  TError = unknown,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof getDbStatusApiV1DevDbStatusGet>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> } {
+  const queryOptions = getGetDbStatusApiV1DevDbStatusGetQueryOptions(options);
 
-  const queryOptions = getGetDbStatusApiV1DevDbStatusGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }

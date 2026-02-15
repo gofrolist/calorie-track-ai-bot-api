@@ -4,8 +4,8 @@
  * Calories Count API
  * OpenAPI spec version: 0.1.0
  */
-import type { DailySummary } from './dailySummary';
-import type { TodayResponseMealsItem } from './todayResponseMealsItem';
+import type { DailySummary } from "./dailySummary";
+import type { TodayResponseMealsItem } from "./todayResponseMealsItem";
 
 export interface TodayResponse {
   meals: TodayResponseMealsItem[];
