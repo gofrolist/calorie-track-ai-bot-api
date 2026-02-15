@@ -1,0 +1,3215 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Calories Count API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Live",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/connectivity": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Get Connectivity Status",
+        "description": "Check connectivity between frontend and backend.",
+        "operationId": "get_connectivity_status_health_connectivity_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectivityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config/ui": {
+      "get": {
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Get Ui Configuration",
+        "description": "Get current UI configuration for the user.",
+        "operationId": "get_ui_configuration_api_v1_config_ui_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UIConfiguration"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Update Ui Configuration",
+        "description": "Update UI configuration settings (idempotent).",
+        "operationId": "update_ui_configuration_api_v1_config_ui_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UIConfigurationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UIConfiguration"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Patch Ui Configuration",
+        "description": "Partially update UI configuration settings.",
+        "operationId": "patch_ui_configuration_api_v1_config_ui_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UIConfigurationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UIConfiguration"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config/theme": {
+      "get": {
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Detect Theme",
+        "description": "Detect and return current theme settings based on context.",
+        "operationId": "detect_theme_api_v1_config_theme_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeDetectionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config/language": {
+      "get": {
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Detect Language",
+        "description": "Detect and return current language settings based on context.",
+        "operationId": "detect_language_api_v1_config_language_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LanguageDetectionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/logs": {
+      "post": {
+        "tags": [
+          "logging"
+        ],
+        "summary": "Create Log Entry",
+        "description": "Accept a frontend log entry and forward it to structlog.",
+        "operationId": "create_log_entry_api_v1_logs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogEntryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Create Log Entry Api V1 Logs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dev/environment": {
+      "get": {
+        "tags": [
+          "development"
+        ],
+        "summary": "Get Development Environment",
+        "description": "Get current development environment configuration.",
+        "operationId": "get_development_environment_api_v1_dev_environment_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DevelopmentEnvironment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dev/db/status": {
+      "get": {
+        "tags": [
+          "development"
+        ],
+        "summary": "Get Db Status",
+        "description": "Get database connection pool status.",
+        "operationId": "get_db_status_api_v1_dev_db_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Db Status Api V1 Dev Db Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/photos": {
+      "post": {
+        "tags": [
+          "photos"
+        ],
+        "summary": "Create Photo",
+        "description": "Create photo upload request(s) with support for both single and multi-photo uploads.\n\nFor single photo: Send {\"content_type\": \"image/jpeg\"}\nFor multiple photos: Send {\"photos\": [{\"content_type\": \"image/jpeg\"}, ...]}",
+        "operationId": "create_photo_api_v1_photos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PhotoCreateRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MultiPhotoCreateRequest"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PresignResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MultiPhotoResponse"
+                    }
+                  ],
+                  "title": "Response Create Photo Api V1 Photos Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/photos/{photo_id}/estimate": {
+      "post": {
+        "tags": [
+          "estimates"
+        ],
+        "summary": "Estimate Photo",
+        "operationId": "estimate_photo_api_v1_photos__photo_id__estimate_post",
+        "parameters": [
+          {
+            "name": "photo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Photo Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstimateQueuedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/estimates/{estimate_id}": {
+      "get": {
+        "tags": [
+          "estimates"
+        ],
+        "summary": "Get Estimate",
+        "operationId": "get_estimate_api_v1_estimates__estimate_id__get",
+        "parameters": [
+          {
+            "name": "estimate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Estimate Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstimateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meals": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Create Meal",
+        "operationId": "create_meal_api_v1_meals_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/MealCreateManualRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MealCreateFromEstimateRequest"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Get Meals",
+        "description": "Get meals with photos and macronutrients.\n\nFeature: 003-update-logic-for (Multi-photo support)\nSupports:\n- Single date query: ?date=2025-09-30\n- Date range query: ?start_date=2025-09-23&end_date=2025-09-30\n- Default: today's meals",
+        "operationId": "get_meals_api_v1_meals_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Specific date (YYYY-MM-DD)",
+              "title": "Date"
+            },
+            "description": "Specific date (YYYY-MM-DD)"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date for range (YYYY-MM-DD)",
+              "title": "Start Date"
+            },
+            "description": "Start date for range (YYYY-MM-DD)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date for range (YYYY-MM-DD)",
+              "title": "End Date"
+            },
+            "description": "End date for range (YYYY-MM-DD)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Maximum number of meals to return",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Maximum number of meals to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealsListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meals/calendar": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Get Meals Calendar",
+        "description": "Get daily meal summaries for calendar view.\n\nFeature: 003-update-logic-for (Calendar navigation)\nReturns aggregated nutrition data by date.",
+        "operationId": "get_meals_calendar_api_v1_meals_calendar_get",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Start date (YYYY-MM-DD)",
+              "title": "Start Date"
+            },
+            "description": "Start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "End date (YYYY-MM-DD)",
+              "title": "End Date"
+            },
+            "description": "End date (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealsCalendarResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meals/{meal_id}": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Get Meal",
+        "description": "Get a specific meal with photos and macronutrients.\n\nFeature: 003-update-logic-for (Multi-photo support)",
+        "operationId": "get_meal_api_v1_meals__meal_id__get",
+        "parameters": [
+          {
+            "name": "meal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Meal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealWithPhotos"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Update Meal",
+        "description": "Update meal description or macronutrients.\n\nFeature: 003-update-logic-for (Meal editing)\nAutomatically recalculates calories from macros if updated.",
+        "operationId": "update_meal_api_v1_meals__meal_id__patch",
+        "parameters": [
+          {
+            "name": "meal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Meal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealWithPhotos"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Delete Meal",
+        "description": "Delete a meal and update daily summary.\n\nFeature: 003-update-logic-for (Meal management)\nCascades to photos and recalculates daily stats.",
+        "operationId": "delete_meal_api_v1_meals__meal_id__delete",
+        "parameters": [
+          {
+            "name": "meal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Meal Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/daily-summary/{date}": {
+      "get": {
+        "tags": [
+          "daily-summary"
+        ],
+        "summary": "Get Daily Summary",
+        "description": "Get daily summary for a specific date.",
+        "operationId": "get_daily_summary_api_v1_daily_summary__date__get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailySummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/weekly-summary": {
+      "get": {
+        "tags": [
+          "daily-summary"
+        ],
+        "summary": "Get Weekly Summary",
+        "description": "Get weekly summary starting from the given date.",
+        "operationId": "get_weekly_summary_api_v1_weekly_summary_get",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Start date in YYYY-MM-DD format",
+              "title": "Start Date"
+            },
+            "description": "Start date in YYYY-MM-DD format"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DailySummary"
+                  },
+                  "title": "Response Get Weekly Summary Api V1 Weekly Summary Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/monthly-summary": {
+      "get": {
+        "tags": [
+          "daily-summary"
+        ],
+        "summary": "Get Monthly Summary",
+        "description": "Get monthly summary for the given year and month.",
+        "operationId": "get_monthly_summary_api_v1_monthly_summary_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "Year",
+              "title": "Year"
+            },
+            "description": "Year"
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "Month (1-12)",
+              "title": "Month"
+            },
+            "description": "Month (1-12)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DailySummary"
+                  },
+                  "title": "Response Get Monthly Summary Api V1 Monthly Summary Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/today/{date}": {
+      "get": {
+        "tags": [
+          "daily-summary"
+        ],
+        "summary": "Get Today Data",
+        "description": "Get all data needed for the Today page (meals + daily summary) in a single request.",
+        "operationId": "get_today_data_api_v1_today__date__get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/goals": {
+      "get": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Get Goal",
+        "description": "Get user's goal.",
+        "operationId": "get_goal_api_v1_goals_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GoalResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Goal Api V1 Goals Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Create Goal",
+        "description": "Create a new goal.",
+        "operationId": "create_goal_api_v1_goals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "goals"
+        ],
+        "summary": "Update Goal",
+        "description": "Update user's goal.",
+        "operationId": "update_goal_api_v1_goals_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/inline-summary": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Get Inline Summary",
+        "operationId": "get_inline_summary_api_v1_analytics_inline_summary_get",
+        "parameters": [
+          {
+            "name": "range_start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Range Start"
+            }
+          },
+          {
+            "name": "range_end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Range End"
+            }
+          },
+          {
+            "name": "chat_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chat Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Inline Summary Api V1 Analytics Inline Summary Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback": {
+      "post": {
+        "tags": [
+          "feedback",
+          "feedback"
+        ],
+        "summary": "Submit Feedback",
+        "description": "Submit user feedback, bug report, question, or support request.\n\nStores submission in database and sends notification to admin chat/channel.\n\nArgs:\n    request: FastAPI request object (for auth headers)\n    payload: Feedback submission request body\n\nReturns:\n    Feedback submission response with ID and confirmation\n\nRaises:\n    HTTPException: If submission fails",
+        "operationId": "submit_feedback_api_v1_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackSubmissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackSubmissionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feedback/{feedback_id}": {
+      "get": {
+        "tags": [
+          "feedback",
+          "feedback"
+        ],
+        "summary": "Get Feedback",
+        "description": "Get feedback submission by ID (admin only).\n\nArgs:\n    request: FastAPI request object (for auth)\n    feedback_id: Feedback submission UUID\n\nReturns:\n    Feedback submission details\n\nRaises:\n    HTTPException: If feedback not found",
+        "operationId": "get_feedback_api_v1_feedback__feedback_id__get",
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackSubmission"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/daily": {
+      "get": {
+        "tags": [
+          "statistics",
+          "statistics"
+        ],
+        "summary": "Get Daily Statistics",
+        "description": "Get daily nutrition statistics for a date range.\n\nReturns aggregated nutrition data grouped by day with meal counts,\ncalorie totals, macronutrient breakdowns, and goal achievement metrics.\nData updates in real-time as meals are logged.\n\nArgs:\n    request: FastAPI request object (for auth)\n    start_date: Start date (inclusive)\n    end_date: End date (exclusive)\n\nReturns:\n    Daily statistics response with data points and summary\n\nRaises:\n    HTTPException: If query fails or date range invalid",
+        "operationId": "get_daily_statistics_api_v1_statistics_daily_get",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Start date (inclusive) in YYYY-MM-DD format",
+              "title": "Start Date"
+            },
+            "description": "Start date (inclusive) in YYYY-MM-DD format"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "End date (exclusive) in YYYY-MM-DD format",
+              "title": "End Date"
+            },
+            "description": "End date (exclusive) in YYYY-MM-DD format"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyStatisticsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/macros": {
+      "get": {
+        "tags": [
+          "statistics",
+          "statistics"
+        ],
+        "summary": "Get Macro Statistics",
+        "description": "Get macronutrient breakdown for a date range.\n\nReturns aggregated macronutrient distribution showing percentage\nand gram totals for protein, fat, and carbohydrates.\n\nArgs:\n    request: FastAPI request object (for auth)\n    start_date: Start date (inclusive)\n    end_date: End date (exclusive)\n\nReturns:\n    Macronutrient breakdown response\n\nRaises:\n    HTTPException: If query fails or date range invalid",
+        "operationId": "get_macro_statistics_api_v1_statistics_macros_get",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Start date (inclusive) in YYYY-MM-DD format",
+              "title": "Start Date"
+            },
+            "description": "Start date (inclusive) in YYYY-MM-DD format"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "End date (exclusive) in YYYY-MM-DD format",
+              "title": "End Date"
+            },
+            "description": "End date (exclusive) in YYYY-MM-DD format"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MacroStatisticsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot": {
+      "post": {
+        "tags": [
+          "bot"
+        ],
+        "summary": "Telegram Webhook",
+        "description": "Handle Telegram webhook updates.",
+        "operationId": "telegram_webhook_bot_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot/setup": {
+      "post": {
+        "tags": [
+          "bot"
+        ],
+        "summary": "Setup Webhook",
+        "description": "Setup Telegram webhook if configured.",
+        "operationId": "setup_webhook_bot_setup_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot/webhook-info": {
+      "get": {
+        "tags": [
+          "bot"
+        ],
+        "summary": "Get Webhook Info",
+        "description": "Get current webhook information.",
+        "operationId": "get_webhook_info_bot_webhook_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot/webhook": {
+      "delete": {
+        "tags": [
+          "bot"
+        ],
+        "summary": "Delete Webhook",
+        "description": "Delete current webhook.",
+        "operationId": "delete_webhook_bot_webhook_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "description": "Health check endpoint for Fly.io.",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConnectionStatus": {
+        "type": "string",
+        "enum": [
+          "connected",
+          "disconnected",
+          "error"
+        ],
+        "title": "ConnectionStatus"
+      },
+      "ConnectivityResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ConnectionStatus"
+          },
+          "services": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Services"
+          },
+          "response_time_ms": {
+            "type": "number",
+            "title": "Response Time Ms"
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Correlation Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "services",
+          "response_time_ms",
+          "correlation_id",
+          "timestamp"
+        ],
+        "title": "ConnectivityResponse"
+      },
+      "DailyDataPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "total_calories": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Calories"
+          },
+          "total_protein": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Protein"
+          },
+          "total_fat": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Fat"
+          },
+          "total_carbs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Carbs"
+          },
+          "meal_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Meal Count"
+          },
+          "goal_calories": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Calories"
+          },
+          "goal_achievement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Achievement"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "total_calories",
+          "total_protein",
+          "total_fat",
+          "total_carbs",
+          "meal_count"
+        ],
+        "title": "DailyDataPoint"
+      },
+      "DailyStatisticsResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/DailyDataPoint"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "period": {
+            "$ref": "#/components/schemas/StatisticsPeriod"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/StatisticsSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "period",
+          "summary"
+        ],
+        "title": "DailyStatisticsResponse"
+      },
+      "DailySummary": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "kcal_total": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Kcal Total"
+          },
+          "macros_totals": {
+            "$ref": "#/components/schemas/MacrosTotals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "date",
+          "kcal_total",
+          "macros_totals"
+        ],
+        "title": "DailySummary"
+      },
+      "DevelopmentEnvironment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "frontend_port": {
+            "type": "integer",
+            "title": "Frontend Port"
+          },
+          "backend_port": {
+            "type": "integer",
+            "title": "Backend Port"
+          },
+          "database_url": {
+            "type": "string",
+            "title": "Database Url"
+          },
+          "database_password": {
+            "type": "string",
+            "title": "Database Password"
+          },
+          "redis_url": {
+            "type": "string",
+            "title": "Redis Url"
+          },
+          "storage_endpoint": {
+            "type": "string",
+            "title": "Storage Endpoint"
+          },
+          "cors_origins": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cors Origins"
+          },
+          "log_level": {
+            "type": "string",
+            "title": "Log Level"
+          },
+          "hot_reload": {
+            "type": "boolean",
+            "title": "Hot Reload"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "frontend_port",
+          "backend_port",
+          "database_url",
+          "database_password",
+          "redis_url",
+          "storage_endpoint",
+          "cors_origins",
+          "log_level",
+          "hot_reload",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DevelopmentEnvironment"
+      },
+      "Environment": {
+        "type": "string",
+        "enum": [
+          "development",
+          "production"
+        ],
+        "title": "Environment"
+      },
+      "EstimateItem": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kcal": {
+            "type": "number",
+            "title": "Kcal"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "kcal",
+          "confidence"
+        ],
+        "title": "EstimateItem"
+      },
+      "EstimateQueuedResponse": {
+        "properties": {
+          "estimate_id": {
+            "type": "string",
+            "title": "Estimate Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estimate_id",
+          "status"
+        ],
+        "title": "EstimateQueuedResponse"
+      },
+      "EstimateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Estimate ID"
+          },
+          "photo_id": {
+            "type": "string",
+            "title": "Photo Id"
+          },
+          "kcal_mean": {
+            "type": "number",
+            "title": "Kcal Mean"
+          },
+          "kcal_min": {
+            "type": "number",
+            "title": "Kcal Min"
+          },
+          "kcal_max": {
+            "type": "number",
+            "title": "Kcal Max"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/EstimateItem"
+            },
+            "type": "array",
+            "title": "Breakdown"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Status"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "photo_id",
+          "kcal_mean",
+          "kcal_min",
+          "kcal_max",
+          "confidence",
+          "breakdown"
+        ],
+        "title": "EstimateResponse"
+      },
+      "FeedbackMessageType": {
+        "type": "string",
+        "enum": [
+          "feedback",
+          "bug",
+          "question",
+          "support"
+        ],
+        "title": "FeedbackMessageType"
+      },
+      "FeedbackStatus": {
+        "type": "string",
+        "enum": [
+          "new",
+          "reviewed",
+          "resolved"
+        ],
+        "title": "FeedbackStatus"
+      },
+      "FeedbackSubmission": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "message_type": {
+            "$ref": "#/components/schemas/FeedbackMessageType"
+          },
+          "message_content": {
+            "type": "string",
+            "title": "Message Content"
+          },
+          "user_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Context"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FeedbackStatus"
+          },
+          "admin_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "message_type",
+          "message_content",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "FeedbackSubmission"
+      },
+      "FeedbackSubmissionRequest": {
+        "properties": {
+          "message_type": {
+            "$ref": "#/components/schemas/FeedbackMessageType"
+          },
+          "message_content": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Message Content"
+          },
+          "user_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_type",
+          "message_content"
+        ],
+        "title": "FeedbackSubmissionRequest"
+      },
+      "FeedbackSubmissionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FeedbackStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "created_at",
+          "message"
+        ],
+        "title": "FeedbackSubmissionResponse"
+      },
+      "GoalRequest": {
+        "properties": {
+          "daily_kcal_target": {
+            "type": "integer",
+            "title": "Daily Kcal Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "daily_kcal_target"
+        ],
+        "title": "GoalRequest"
+      },
+      "GoalResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "daily_kcal_target": {
+            "type": "integer",
+            "title": "Daily Kcal Target"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "daily_kcal_target"
+        ],
+        "title": "GoalResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "LanguageDetectionResponse": {
+        "properties": {
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "language_source": {
+            "$ref": "#/components/schemas/LanguageSource"
+          },
+          "telegram_language_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Language Code"
+          },
+          "browser_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser Language"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Detected At"
+          },
+          "supported_languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supported Languages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "language",
+          "language_source",
+          "detected_at",
+          "supported_languages"
+        ],
+        "title": "LanguageDetectionResponse"
+      },
+      "LanguageSource": {
+        "type": "string",
+        "enum": [
+          "telegram",
+          "browser",
+          "manual"
+        ],
+        "title": "LanguageSource"
+      },
+      "LogEntryCreate": {
+        "properties": {
+          "level": {
+            "$ref": "#/components/schemas/LogLevel"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Module"
+          },
+          "function": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Function"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "inline_trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inline Trigger"
+          },
+          "inline_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inline Stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "message"
+        ],
+        "title": "LogEntryCreate"
+      },
+      "LogLevel": {
+        "type": "string",
+        "enum": [
+          "DEBUG",
+          "INFO",
+          "WARNING",
+          "ERROR",
+          "CRITICAL"
+        ],
+        "title": "LogLevel"
+      },
+      "MacroStatisticsResponse": {
+        "properties": {
+          "protein_percent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Protein Percent"
+          },
+          "fat_percent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Fat Percent"
+          },
+          "carbs_percent": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Carbs Percent"
+          },
+          "protein_grams": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Protein Grams"
+          },
+          "fat_grams": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fat Grams"
+          },
+          "carbs_grams": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Carbs Grams"
+          },
+          "total_calories": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Calories"
+          },
+          "period": {
+            "$ref": "#/components/schemas/StatisticsPeriod"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protein_percent",
+          "fat_percent",
+          "carbs_percent",
+          "protein_grams",
+          "fat_grams",
+          "carbs_grams",
+          "total_calories",
+          "period"
+        ],
+        "title": "MacroStatisticsResponse"
+      },
+      "Macronutrients": {
+        "properties": {
+          "protein": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Protein"
+          },
+          "carbs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Carbs"
+          },
+          "fats": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protein",
+          "carbs",
+          "fats"
+        ],
+        "title": "Macronutrients"
+      },
+      "MacrosTotals": {
+        "properties": {
+          "protein_g": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Protein G"
+          },
+          "fat_g": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Fat G"
+          },
+          "carbs_g": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Carbs G"
+          }
+        },
+        "type": "object",
+        "required": [
+          "protein_g",
+          "fat_g",
+          "carbs_g"
+        ],
+        "title": "MacrosTotals"
+      },
+      "MealCalendarDay": {
+        "properties": {
+          "meal_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Meal Date"
+          },
+          "meal_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Meal Count"
+          },
+          "total_calories": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Calories"
+          },
+          "total_protein": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Protein"
+          },
+          "total_carbs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Carbs"
+          },
+          "total_fats": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Fats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meal_date",
+          "meal_count",
+          "total_calories",
+          "total_protein",
+          "total_carbs",
+          "total_fats"
+        ],
+        "title": "MealCalendarDay"
+      },
+      "MealCreateFromEstimateRequest": {
+        "properties": {
+          "meal_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Meal Date"
+          },
+          "meal_type": {
+            "$ref": "#/components/schemas/MealType"
+          },
+          "estimate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Estimate Id"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overrides"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meal_date",
+          "meal_type",
+          "estimate_id"
+        ],
+        "title": "MealCreateFromEstimateRequest"
+      },
+      "MealCreateManualRequest": {
+        "properties": {
+          "meal_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Meal Date"
+          },
+          "meal_type": {
+            "$ref": "#/components/schemas/MealType"
+          },
+          "kcal_total": {
+            "type": "number",
+            "title": "Kcal Total"
+          },
+          "macros": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Macronutrients"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "meal_date",
+          "meal_type",
+          "kcal_total"
+        ],
+        "title": "MealCreateManualRequest"
+      },
+      "MealCreateResponse": {
+        "properties": {
+          "meal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Meal Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meal_id"
+        ],
+        "title": "MealCreateResponse"
+      },
+      "MealPhotoInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "title": "Thumbnailurl",
+            "description": "Presigned URL for thumbnail"
+          },
+          "fullUrl": {
+            "type": "string",
+            "title": "Fullurl",
+            "description": "Presigned URL for full-size image"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Displayorder",
+            "description": "Position in carousel (0-4)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "thumbnailUrl",
+          "fullUrl",
+          "displayOrder"
+        ],
+        "title": "MealPhotoInfo"
+      },
+      "MealType": {
+        "type": "string",
+        "enum": [
+          "breakfast",
+          "lunch",
+          "dinner",
+          "snack"
+        ],
+        "title": "MealType"
+      },
+      "MealUpdate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "protein_grams": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein Grams"
+          },
+          "carbs_grams": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carbs Grams"
+          },
+          "fats_grams": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fats Grams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MealUpdate"
+      },
+      "MealWithPhotos": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "calories": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Calories"
+          },
+          "macronutrients": {
+            "$ref": "#/components/schemas/Macronutrients"
+          },
+          "photos": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MealPhotoInfo"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photos"
+          },
+          "confidenceScore": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidencescore",
+            "description": "AI confidence (0-1)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "userId",
+          "createdAt",
+          "calories",
+          "macronutrients"
+        ],
+        "title": "MealWithPhotos"
+      },
+      "MealsCalendarResponse": {
+        "properties": {
+          "dates": {
+            "items": {
+              "$ref": "#/components/schemas/MealCalendarDay"
+            },
+            "type": "array",
+            "title": "Dates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dates"
+        ],
+        "title": "MealsCalendarResponse"
+      },
+      "MealsListResponse": {
+        "properties": {
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/MealWithPhotos"
+            },
+            "type": "array",
+            "title": "Meals"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meals",
+          "total"
+        ],
+        "title": "MealsListResponse"
+      },
+      "MultiPhotoCreateRequest": {
+        "properties": {
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/PhotoCreateRequest"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Photos",
+            "description": "List of photos to upload (1-5 photos)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "photos"
+        ],
+        "title": "MultiPhotoCreateRequest"
+      },
+      "MultiPhotoResponse": {
+        "properties": {
+          "photos": {
+            "items": {
+              "$ref": "#/components/schemas/PhotoInfo"
+            },
+            "type": "array",
+            "title": "Photos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "photos"
+        ],
+        "title": "MultiPhotoResponse"
+      },
+      "PhotoCreateRequest": {
+        "properties": {
+          "content_type": {
+            "type": "string",
+            "title": "Content Type",
+            "description": "MIME type of the image (e.g., image/jpeg)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content_type"
+        ],
+        "title": "PhotoCreateRequest"
+      },
+      "PhotoInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url"
+          },
+          "file_key": {
+            "type": "string",
+            "title": "File Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "upload_url",
+          "file_key"
+        ],
+        "title": "PhotoInfo"
+      },
+      "PresignResponse": {
+        "properties": {
+          "photo_id": {
+            "type": "string",
+            "title": "Photo Id"
+          },
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "photo_id",
+          "upload_url"
+        ],
+        "title": "PresignResponse"
+      },
+      "StatisticsPeriod": {
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "total_days": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Total Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date",
+          "total_days"
+        ],
+        "title": "StatisticsPeriod"
+      },
+      "StatisticsSummary": {
+        "properties": {
+          "total_meals": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Meals"
+          },
+          "average_daily_calories": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Average Daily Calories"
+          },
+          "average_goal_achievement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Goal Achievement"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_meals",
+          "average_daily_calories"
+        ],
+        "title": "StatisticsSummary"
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "done",
+          "failed"
+        ],
+        "title": "Status"
+      },
+      "Theme": {
+        "type": "string",
+        "enum": [
+          "light",
+          "dark",
+          "auto"
+        ],
+        "title": "Theme"
+      },
+      "ThemeDetectionResponse": {
+        "properties": {
+          "theme": {
+            "$ref": "#/components/schemas/Theme"
+          },
+          "theme_source": {
+            "$ref": "#/components/schemas/ThemeSource"
+          },
+          "telegram_color_scheme": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Color Scheme"
+          },
+          "system_prefers_dark": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System Prefers Dark"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Detected At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "theme",
+          "theme_source",
+          "detected_at"
+        ],
+        "title": "ThemeDetectionResponse"
+      },
+      "ThemeSource": {
+        "type": "string",
+        "enum": [
+          "telegram",
+          "system",
+          "manual"
+        ],
+        "title": "ThemeSource"
+      },
+      "TodayResponse": {
+        "properties": {
+          "meals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Meals"
+          },
+          "daily_summary": {
+            "$ref": "#/components/schemas/DailySummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meals",
+          "daily_summary"
+        ],
+        "title": "TodayResponse"
+      },
+      "UIConfiguration": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/Environment"
+          },
+          "api_base_url": {
+            "type": "string",
+            "title": "Api Base Url"
+          },
+          "safe_area_top": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Top",
+            "default": 0
+          },
+          "safe_area_bottom": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Bottom",
+            "default": 0
+          },
+          "safe_area_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Left",
+            "default": 0
+          },
+          "safe_area_right": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Right",
+            "default": 0
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Theme"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "theme_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThemeSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language",
+            "default": "en"
+          },
+          "language_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LanguageSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "features": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "boolean"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Features"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "environment",
+          "api_base_url",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UIConfiguration"
+      },
+      "UIConfigurationUpdate": {
+        "properties": {
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "api_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Base Url"
+          },
+          "safe_area_top": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Top"
+          },
+          "safe_area_bottom": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Bottom"
+          },
+          "safe_area_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Left"
+          },
+          "safe_area_right": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safe Area Right"
+          },
+          "theme": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Theme"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "theme_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThemeSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "language_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LanguageSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "features": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "boolean"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Features"
+          }
+        },
+        "type": "object",
+        "title": "UIConfigurationUpdate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

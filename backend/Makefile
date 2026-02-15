@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help dev worker test test-unit lint format check clean
+.PHONY: help dev worker test test-unit lint format check clean openapi-export
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -32,3 +32,6 @@ clean: ## Clean temporary files
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+
+openapi-export: ## Export OpenAPI spec to frontend/openapi.json
+	uv run python -c "import json,sys,io;_o=sys.stdout;sys.stdout=io.StringIO();from calorie_track_ai_bot.main import app;spec=app.openapi();sys.stdout=_o;print(json.dumps(spec,indent=2))" > ../frontend/openapi.json
