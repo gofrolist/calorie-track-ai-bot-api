@@ -33,7 +33,7 @@ if REDIS_URL is not None:
         decode_responses=True,
         health_check_interval=30,
         socket_connect_timeout=5,
-        socket_timeout=5,
+        socket_timeout=30,
         retry=Retry(ExponentialBackoff(), 3),
         retry_on_error=[redis.ConnectionError, redis.TimeoutError],
     )
