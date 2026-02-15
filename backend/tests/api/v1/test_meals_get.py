@@ -9,7 +9,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_get_meal_by_id_success(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals/{id} returns meal details with photos."""
     from datetime import datetime
@@ -72,7 +72,7 @@ async def test_get_meal_by_id_success(
 
 @pytest.mark.asyncio
 async def test_get_meal_includes_presigned_urls(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals/{id} includes presigned URLs for photos."""
     from datetime import datetime
@@ -118,7 +118,7 @@ async def test_get_meal_includes_presigned_urls(
 
 
 @pytest.mark.asyncio
-async def test_get_meal_not_found(api_client, authenticated_headers, mock_supabase_client):
+async def test_get_meal_not_found(api_client, authenticated_headers, mock_db_pool):
     """Test GET /api/v1/meals/{id} with non-existent ID returns 404."""
     fake_id = uuid4()
 
@@ -130,9 +130,7 @@ async def test_get_meal_not_found(api_client, authenticated_headers, mock_supaba
 
 
 @pytest.mark.asyncio
-async def test_get_meal_forbidden_other_user(
-    api_client, authenticated_headers, mock_supabase_client
-):
+async def test_get_meal_forbidden_other_user(api_client, authenticated_headers, mock_db_pool):
     """Test GET /api/v1/meals/{id} for another user's meal returns 403."""
     from datetime import datetime
 
@@ -168,7 +166,7 @@ async def test_get_meal_unauthorized(api_client):
 
 
 @pytest.mark.asyncio
-async def test_get_meal_invalid_uuid(api_client, authenticated_headers, mock_supabase_client):
+async def test_get_meal_invalid_uuid(api_client, authenticated_headers, mock_db_pool):
     """Test GET /api/v1/meals/{id} with invalid UUID returns 400 or 422."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
@@ -183,7 +181,7 @@ async def test_get_meal_invalid_uuid(api_client, authenticated_headers, mock_sup
 
 @pytest.mark.asyncio
 async def test_get_meal_with_no_photos(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals/{id} for meal with no photos returns empty photos array."""
     from datetime import datetime

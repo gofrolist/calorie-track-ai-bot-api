@@ -89,7 +89,6 @@ class TestMealsEndpoints:
     ):
         """Test meal creation from estimate without overrides."""
         mock_resolve_user_id.return_value = "user-uuid-123"
-        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal999"}
 
         payload = {
@@ -175,7 +174,6 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_content_type(self, mock_db_create, client):
         """Test that create meal returns JSON content type."""
-        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         payload = {"meal_date": "2024-01-01", "meal_type": "breakfast", "kcal_total": 300.5}
@@ -186,7 +184,6 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_response_structure(self, mock_db_create, client):
         """Test that create meal returns consistent response structure."""
-        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         payload = {"meal_date": "2024-01-01", "meal_type": "breakfast", "kcal_total": 300.5}
@@ -206,7 +203,6 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_meal_types(self, mock_db_create, client):
         """Test meal creation with different meal types."""
-        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         meal_types = ["breakfast", "lunch", "dinner", "snack"]
@@ -220,7 +216,6 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_date_formats(self, mock_db_create, client):
         """Test meal creation with different date formats."""
-        mock_db_create.return_value = {"meal_id": "meal456"}
         mock_db_create.return_value = {"meal_id": "meal123"}
 
         date_formats = ["2024-01-01", "2024-12-31", "2023-06-15"]

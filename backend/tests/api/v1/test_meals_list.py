@@ -9,7 +9,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_get_meals_without_filters(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals without any filters returns recent meals."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -34,7 +34,7 @@ async def test_get_meals_without_filters(
 
 @pytest.mark.asyncio
 async def test_get_meals_with_date_filter(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals with date filter returns meals for that date."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -58,7 +58,7 @@ async def test_get_meals_with_date_filter(
 
 @pytest.mark.asyncio
 async def test_get_meals_with_date_range(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals with start_date and end_date returns meals in range."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -87,7 +87,7 @@ async def test_get_meals_with_date_range(
 
 @pytest.mark.asyncio
 async def test_get_meals_with_limit(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals with limit parameter limits results."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -110,7 +110,7 @@ async def test_get_meals_with_limit(
 
 @pytest.mark.asyncio
 async def test_get_meals_returns_photos(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals includes photos array for each meal."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -167,7 +167,7 @@ async def test_get_meals_returns_photos(
 
 @pytest.mark.asyncio
 async def test_get_meals_returns_macronutrients(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals includes macronutrients object."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -207,7 +207,7 @@ async def test_get_meals_returns_macronutrients(
 
 @pytest.mark.asyncio
 async def test_get_meals_filters_one_year_retention(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals excludes meals older than 1 year."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -230,9 +230,7 @@ async def test_get_meals_filters_one_year_retention(
 
 
 @pytest.mark.asyncio
-async def test_get_meals_invalid_date_format(
-    api_client, authenticated_headers, mock_supabase_client
-):
+async def test_get_meals_invalid_date_format(api_client, authenticated_headers, mock_db_pool):
     """Test GET /api/v1/meals with invalid date format returns 400."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 

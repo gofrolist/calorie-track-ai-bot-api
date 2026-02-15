@@ -7,7 +7,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_create_single_photo(api_client, authenticated_headers, mock_supabase_client):
+async def test_create_single_photo(api_client, authenticated_headers, mock_db_pool):
     """Test POST /api/v1/photos with single photo returns upload URL."""
     payload = {"photos": [{"content_type": "image/jpeg"}]}
 
@@ -37,7 +37,7 @@ async def test_create_single_photo(api_client, authenticated_headers, mock_supab
 
 
 @pytest.mark.asyncio
-async def test_create_multiple_photos(api_client, authenticated_headers, mock_supabase_client):
+async def test_create_multiple_photos(api_client, authenticated_headers, mock_db_pool):
     """Test POST /api/v1/photos with multiple photos (up to 5)."""
     payload = {"photos": [{"content_type": "image/jpeg"} for i in range(3)]}
 
@@ -67,7 +67,7 @@ async def test_create_multiple_photos(api_client, authenticated_headers, mock_su
 
 
 @pytest.mark.asyncio
-async def test_create_max_photos(api_client, authenticated_headers, mock_supabase_client):
+async def test_create_max_photos(api_client, authenticated_headers, mock_db_pool):
     """Test POST /api/v1/photos with maximum 5 photos."""
     payload = {"photos": [{"content_type": "image/jpeg"} for i in range(5)]}
 
@@ -111,7 +111,7 @@ async def test_create_empty_photos_list(api_client, authenticated_headers):
 
 
 @pytest.mark.asyncio
-async def test_create_photos_without_auth(api_client, mock_supabase_client):
+async def test_create_photos_without_auth(api_client, mock_db_pool):
     """Test POST /api/v1/photos without authentication still works (endpoint is public)."""
     payload = {"photos": [{"content_type": "image/jpeg"}]}
 
@@ -130,9 +130,7 @@ async def test_create_photos_without_auth(api_client, mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_create_photos_invalid_content_type(
-    api_client, authenticated_headers, mock_supabase_client
-):
+async def test_create_photos_invalid_content_type(api_client, authenticated_headers, mock_db_pool):
     """Test POST /api/v1/photos with invalid content type."""
     payload = {"photos": [{"content_type": "invalid/type"}]}
 
@@ -151,9 +149,7 @@ async def test_create_photos_invalid_content_type(
 
 
 @pytest.mark.asyncio
-async def test_create_photos_mixed_content_types(
-    api_client, authenticated_headers, mock_supabase_client
-):
+async def test_create_photos_mixed_content_types(api_client, authenticated_headers, mock_db_pool):
     """Test POST /api/v1/photos with mixed content types."""
     payload = {
         "photos": [

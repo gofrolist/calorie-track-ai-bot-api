@@ -8,7 +8,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_get_meals_calendar_success(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test GET /api/v1/meals/calendar returns daily summaries."""
     from calorie_track_ai_bot.schemas import MealCalendarDay
@@ -63,7 +63,7 @@ async def test_get_meals_calendar_success(
 
 @pytest.mark.asyncio
 async def test_calendar_aggregates_meals_by_date(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test calendar endpoint aggregates multiple meals per date."""
     from calorie_track_ai_bot.schemas import MealCalendarDay
@@ -111,7 +111,7 @@ async def test_calendar_aggregates_meals_by_date(
 
 
 @pytest.mark.asyncio
-async def test_calendar_missing_start_date(api_client, authenticated_headers, mock_supabase_client):
+async def test_calendar_missing_start_date(api_client, authenticated_headers, mock_db_pool):
     """Test calendar endpoint without start_date returns 422."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
@@ -125,7 +125,7 @@ async def test_calendar_missing_start_date(api_client, authenticated_headers, mo
 
 
 @pytest.mark.asyncio
-async def test_calendar_missing_end_date(api_client, authenticated_headers, mock_supabase_client):
+async def test_calendar_missing_end_date(api_client, authenticated_headers, mock_db_pool):
     """Test calendar endpoint without end_date returns 422."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
@@ -139,9 +139,7 @@ async def test_calendar_missing_end_date(api_client, authenticated_headers, mock
 
 
 @pytest.mark.asyncio
-async def test_calendar_invalid_date_format(
-    api_client, authenticated_headers, mock_supabase_client
-):
+async def test_calendar_invalid_date_format(api_client, authenticated_headers, mock_db_pool):
     """Test calendar endpoint with invalid date format returns 400."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
@@ -155,7 +153,7 @@ async def test_calendar_invalid_date_format(
 
 
 @pytest.mark.asyncio
-async def test_calendar_max_one_year_range(api_client, authenticated_headers, mock_supabase_client):
+async def test_calendar_max_one_year_range(api_client, authenticated_headers, mock_db_pool):
     """Test calendar endpoint rejects range > 1 year."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
@@ -174,7 +172,7 @@ async def test_calendar_max_one_year_range(api_client, authenticated_headers, mo
 
 @pytest.mark.asyncio
 async def test_calendar_filters_one_year_retention(
-    api_client, authenticated_headers, test_user_data, mock_supabase_client
+    api_client, authenticated_headers, test_user_data, mock_db_pool
 ):
     """Test calendar rejects date ranges > 1 year."""
     from calorie_track_ai_bot.schemas import MealCalendarDay

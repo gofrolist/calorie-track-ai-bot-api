@@ -11,7 +11,7 @@ from uuid import uuid4
 class TestMealsDeleteEndpoint:
     """Test meal deletion API contract"""
 
-    def test_delete_meal_success(self, api_client, authenticated_headers, mock_supabase_client):
+    def test_delete_meal_success(self, api_client, authenticated_headers, mock_db_pool):
         """Should delete meal and return 204 No Content"""
         from datetime import UTC, datetime
 
@@ -50,7 +50,7 @@ class TestMealsDeleteEndpoint:
 
         assert response.status_code == 401
 
-    def test_delete_meal_not_found(self, api_client, authenticated_headers, mock_supabase_client):
+    def test_delete_meal_not_found(self, api_client, authenticated_headers, mock_db_pool):
         """Should return 404 for non-existent meal"""
         from fastapi import HTTPException
 
@@ -73,7 +73,7 @@ class TestMealsDeleteEndpoint:
         assert "not found" in response.json()["detail"].lower()
 
     def test_delete_meal_forbidden_for_other_user(
-        self, api_client, authenticated_headers, mock_supabase_client
+        self, api_client, authenticated_headers, mock_db_pool
     ):
         """Should return 403 when trying to delete another user's meal"""
         from fastapi import HTTPException
@@ -96,9 +96,7 @@ class TestMealsDeleteEndpoint:
         # Should be 403 Forbidden or 404 Not Found
         assert response.status_code in [403, 404]
 
-    def test_delete_meal_cascades_to_photos(
-        self, api_client, authenticated_headers, mock_supabase_client
-    ):
+    def test_delete_meal_cascades_to_photos(self, api_client, authenticated_headers, mock_db_pool):
         """Should cascade delete to associated photos"""
         meal_id = str(uuid4())
         user_uuid = "550e8400-e29b-41d4-a716-446655440000"
@@ -114,7 +112,7 @@ class TestMealsDeleteEndpoint:
         assert response.status_code in [204, 404]
 
     def test_delete_meal_updates_daily_summary(
-        self, api_client, authenticated_headers, mock_supabase_client
+        self, api_client, authenticated_headers, mock_db_pool
     ):
         """Should update daily summary stats when meal deleted"""
         meal_id = str(uuid4())

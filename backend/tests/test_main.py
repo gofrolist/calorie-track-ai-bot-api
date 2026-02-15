@@ -1,6 +1,7 @@
 """Tests for main application."""
 
 from unittest.mock import patch
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -174,3 +175,49 @@ class TestMainApplication:
 
         for path in expected_paths:
             assert path in paths, f"Path {path} not found in OpenAPI schema"
+
+
+class TestHealthConnectivity:
+    """Contract tests for the /health/connectivity endpoint."""
+
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        return TestClient(app)
+
+    def test_connectivity_returns_valid_schema(self, client):
+        """Test that GET /health/connectivity returns 200 with valid response schema."""
+        response = client.get("/health/connectivity")
+
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "status" in data
+        assert "response_time_ms" in data
+        assert "timestamp" in data
+        assert "correlation_id" in data
+
+        # Validate field types and constraints
+        assert data["status"] in ["connected", "disconnected", "error"]
+        assert isinstance(data["response_time_ms"], int | float)
+        assert data["response_time_ms"] >= 0
+        assert isinstance(data["timestamp"], str)
+        assert isinstance(data["correlation_id"], str)
+
+        # Validate correlation_id is a valid UUID
+        UUID(data["correlation_id"])
+
+        # Validate timestamp format (ISO 8601)
+        from datetime import datetime
+
+        datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
+
+    def test_connectivity_idempotency(self, client):
+        """Test that multiple calls return unique correlation IDs."""
+        responses = [client.get("/health/connectivity") for _ in range(3)]
+
+        for response in responses:
+            assert response.status_code == 200
+
+        correlation_ids = [response.json()["correlation_id"] for response in responses]
+        assert len(set(correlation_ids)) == 3
