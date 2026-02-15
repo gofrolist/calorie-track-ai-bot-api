@@ -56,6 +56,10 @@ src/calorie_track_ai_bot/
 
 **Database:** Schema defined in `infra/schema.sql`. Tables: `users`, `photos`, `estimates`, `meals`, `goals`. All PKs are UUID via `gen_random_uuid()`. Users are keyed by `telegram_id` (bigint, unique).
 
+## Deployment
+
+Do NOT offer to deploy to Fly.io unless explicitly asked. GitHub CI deploys automatically on push to main.
+
 ## Code Style
 
 - **Package manager:** `uv` (not pip) — use `uv run` to execute commands
