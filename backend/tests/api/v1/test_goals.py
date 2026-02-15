@@ -81,7 +81,7 @@ class TestGoalsEndpoints:
         response = client.get("/goals", headers=headers)
 
         assert response.status_code == 500
-        assert "Database connection failed" in response.json()["detail"]
+        assert response.json()["detail"] == "Internal server error"
 
     @patch("calorie_track_ai_bot.api.v1.goals.db_get_goal")
     def test_get_goal_table_not_found(self, mock_db_get_goal, client):
@@ -126,7 +126,7 @@ class TestGoalsEndpoints:
         response = client.post("/goals", json=payload, headers=headers)
 
         assert response.status_code == 500
-        assert "Database connection failed" in response.json()["detail"]
+        assert response.json()["detail"] == "Internal server error"
 
     @patch("calorie_track_ai_bot.api.v1.goals.db_create_or_update_goal")
     def test_create_goal_table_not_found(self, mock_db_create_goal, client):
@@ -172,7 +172,7 @@ class TestGoalsEndpoints:
         response = client.patch("/goals", json=payload, headers=headers)
 
         assert response.status_code == 500
-        assert "Database connection failed" in response.json()["detail"]
+        assert response.json()["detail"] == "Internal server error"
 
     @patch("calorie_track_ai_bot.api.v1.goals.db_create_or_update_goal")
     def test_update_goal_table_not_found(self, mock_db_create_goal, client):

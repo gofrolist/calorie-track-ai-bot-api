@@ -41,7 +41,7 @@ def handle_api_errors(operation_name: str = "operation", log_level: int = loggin
                 # Log the error with context
                 logger.log(log_level, f"Error in {operation_name}: {e}", exc_info=True)
                 # Convert to HTTP 500 error
-                raise HTTPException(status_code=500, detail=str(e)) from e
+                raise HTTPException(status_code=500, detail="Internal server error") from e
 
         return wrapper  # type: ignore
 

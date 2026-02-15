@@ -115,7 +115,7 @@ class TestDailySummaryEndpoints:
         response = client.get("/daily-summary/2025-09-28", headers=headers)
 
         assert response.status_code == 500
-        assert "Database connection failed" in response.json()["detail"]
+        assert response.json()["detail"] == "Internal server error"
 
     @patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_today_data")
     def test_get_today_data_with_telegram_user_id(
@@ -149,7 +149,7 @@ class TestDailySummaryEndpoints:
         response = client.get("/today/2025-09-28", headers=headers)
 
         assert response.status_code == 500
-        assert "Database connection failed" in response.json()["detail"]
+        assert response.json()["detail"] == "Internal server error"
 
     @patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_daily_summary")
     def test_invalid_date_format(self, mock_db_get_daily_summary, client):
