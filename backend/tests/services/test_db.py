@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-import calorie_track_ai_bot.services.db as db_module
+import calorie_track_ai_bot.services.db.inline_analytics as inline_analytics_module
 from calorie_track_ai_bot.schemas import (
     InlineAnalyticsDaily,
     InlineChatType,
@@ -62,7 +62,7 @@ class TestDatabaseFunctions:
         async def _get_pool():
             return pool
 
-        with patch("calorie_track_ai_bot.services.db.get_pool", side_effect=_get_pool):
+        with patch("calorie_track_ai_bot.services.database.get_pool", side_effect=_get_pool):
             yield pool, conn, cursor
 
     # ------------------------------------------------------------------
@@ -206,7 +206,7 @@ class TestDatabaseFunctions:
         mock_estimate = {"kcal_mean": 400, "kcal_min": 350, "kcal_max": 450}
 
         with patch(
-            "calorie_track_ai_bot.services.db.db_get_estimate",
+            "calorie_track_ai_bot.services.db.meals.db_get_estimate",
             return_value=mock_estimate,
         ):
             data = MealCreateFromEstimateRequest(
@@ -237,7 +237,7 @@ class TestDatabaseFunctions:
         mock_estimate = {"kcal_mean": 600, "kcal_min": 550, "kcal_max": 650}
 
         with patch(
-            "calorie_track_ai_bot.services.db.db_get_estimate",
+            "calorie_track_ai_bot.services.db.meals.db_get_estimate",
             return_value=mock_estimate,
         ):
             data = MealCreateFromEstimateRequest(
@@ -262,7 +262,7 @@ class TestDatabaseFunctions:
         _pool, _conn, _cursor = mock_pool
 
         with patch(
-            "calorie_track_ai_bot.services.db.db_get_estimate",
+            "calorie_track_ai_bot.services.db.meals.db_get_estimate",
             return_value=None,
         ):
             data = MealCreateFromEstimateRequest(
@@ -354,23 +354,25 @@ class TestDatabaseFunctions:
             last_updated_at=datetime.now(UTC),
         )
 
+        mock_fetch = AsyncMock(return_value=[])
+        mock_upsert = AsyncMock(return_value=saved_daily)
         monkeypatch.setattr(
-            db_module,
+            inline_analytics_module,
             "db_fetch_inline_analytics",
-            AsyncMock(return_value=[]),
+            mock_fetch,
         )
         monkeypatch.setattr(
-            db_module,
+            inline_analytics_module,
             "db_upsert_inline_analytics",
-            AsyncMock(return_value=saved_daily),
+            mock_upsert,
         )
 
         result = await db_increment_inline_permission_block(
             date_value=date(2024, 3, 1), chat_type=InlineChatType.group
         )
 
-        db_module.db_fetch_inline_analytics.assert_awaited_once()
-        db_module.db_upsert_inline_analytics.assert_awaited_once()
+        mock_fetch.assert_awaited_once()
+        mock_upsert.assert_awaited_once()
         assert result.permission_block_count == 1
 
     @pytest.mark.asyncio
@@ -396,21 +398,23 @@ class TestDatabaseFunctions:
         async def fake_upsert(daily: InlineAnalyticsDaily) -> InlineAnalyticsDaily:
             return daily
 
+        mock_fetch = AsyncMock(return_value=[existing_daily])
+        mock_upsert = AsyncMock(side_effect=fake_upsert)
         monkeypatch.setattr(
-            db_module,
+            inline_analytics_module,
             "db_fetch_inline_analytics",
-            AsyncMock(return_value=[existing_daily]),
+            mock_fetch,
         )
         monkeypatch.setattr(
-            db_module,
+            inline_analytics_module,
             "db_upsert_inline_analytics",
-            AsyncMock(side_effect=fake_upsert),
+            mock_upsert,
         )
 
         result = await db_increment_inline_permission_block(
             date_value=date(2024, 4, 1), chat_type=InlineChatType.group, increment=3
         )
 
-        db_module.db_fetch_inline_analytics.assert_awaited_once()
-        db_module.db_upsert_inline_analytics.assert_awaited_once()
+        mock_fetch.assert_awaited_once()
+        mock_upsert.assert_awaited_once()
         assert result.permission_block_count == 5

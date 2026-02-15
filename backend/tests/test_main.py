@@ -64,7 +64,7 @@ class TestMainApplication:
         """Test that estimates endpoints are available."""
         with (
             patch("calorie_track_ai_bot.services.queue.enqueue_estimate_job") as mock_enqueue,
-            patch("calorie_track_ai_bot.services.db.get_pool"),
+            patch("calorie_track_ai_bot.services.database.get_pool"),
             patch("calorie_track_ai_bot.api.v1.estimates.db_get_estimate") as mock_get_est,
         ):
             mock_enqueue.return_value = "job-123"

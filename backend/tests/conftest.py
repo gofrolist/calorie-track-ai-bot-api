@@ -130,12 +130,7 @@ def mock_db_pool():
         "calorie_track_ai_bot.services.database.get_pool", new_callable=AsyncMock
     ) as mock_get_pool:
         mock_get_pool.return_value = mock_pool
-        # Also patch get_pool in db.py since it's imported there
-        with patch(
-            "calorie_track_ai_bot.services.db.get_pool", new_callable=AsyncMock
-        ) as mock_db_get_pool:
-            mock_db_get_pool.return_value = mock_pool
-            yield mock_pool, mock_conn
+        yield mock_pool, mock_conn
 
 
 @pytest.fixture

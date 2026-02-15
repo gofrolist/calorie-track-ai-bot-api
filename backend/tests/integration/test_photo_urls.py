@@ -49,18 +49,18 @@ class TestPhotoUrlGeneration:
 
         with (
             patch(
-                "calorie_track_ai_bot.services.db.get_pool",
+                "calorie_track_ai_bot.services.database.get_pool",
                 new_callable=AsyncMock,
                 return_value=mock_pool,
             ),
             patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve,
             patch(
-                "calorie_track_ai_bot.services.db.db_get_estimate", new_callable=AsyncMock
+                "calorie_track_ai_bot.services.db.meals.db_get_estimate", new_callable=AsyncMock
             ) as mock_get_estimate,
             patch(
-                "calorie_track_ai_bot.services.db.db_get_photo", new_callable=AsyncMock
+                "calorie_track_ai_bot.services.db.meals.db_get_photo", new_callable=AsyncMock
             ) as mock_get_photo,
-            patch("calorie_track_ai_bot.services.db.s3") as mock_s3,
+            patch("calorie_track_ai_bot.services.db.meals.s3") as mock_s3,
         ):
             # Setup mock database responses
             mock_meal_data = {
@@ -223,12 +223,12 @@ class TestPhotoUrlGeneration:
 
         with (
             patch(
-                "calorie_track_ai_bot.services.db.get_pool",
+                "calorie_track_ai_bot.services.database.get_pool",
                 new_callable=AsyncMock,
                 return_value=mock_pool,
             ),
             patch(
-                "calorie_track_ai_bot.services.db.db_get_estimate", new_callable=AsyncMock
+                "calorie_track_ai_bot.services.db.meals.db_get_estimate", new_callable=AsyncMock
             ) as mock_get_estimate,
         ):
             mock_get_estimate.return_value = {
@@ -259,12 +259,12 @@ class TestPhotoUrlGeneration:
 
         with (
             patch(
-                "calorie_track_ai_bot.services.db.get_pool",
+                "calorie_track_ai_bot.services.database.get_pool",
                 new_callable=AsyncMock,
                 return_value=mock_pool,
             ),
             patch(
-                "calorie_track_ai_bot.services.db.db_get_estimate", new_callable=AsyncMock
+                "calorie_track_ai_bot.services.db.meals.db_get_estimate", new_callable=AsyncMock
             ) as mock_get_estimate,
         ):
             mock_get_estimate.return_value = {
