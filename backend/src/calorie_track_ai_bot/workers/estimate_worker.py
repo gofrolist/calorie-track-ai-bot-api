@@ -307,7 +307,8 @@ async def send_estimate_to_user(
         # Send message via Telegram
         bot = telegram.get_bot()
         await bot.send_message(chat_id=telegram_id, text=message, parse_mode="HTML")
-        logger.info(f"Estimate sent to user {telegram_id} for photo {photo_record['id']}")
+        user_label = user_record.get("handle") or telegram_id
+        logger.info(f"Estimate sent to user {user_label} for photo {photo_record['id']}")
 
     except Exception as e:
         logger.error(f"Error sending estimate to user: {e}", exc_info=True)
@@ -367,8 +368,9 @@ async def send_multiphotos_estimate_to_user(
         # Send message
         bot = telegram.get_bot()
         await bot.send_message(chat_id=telegram_id, text=message, parse_mode="HTML")
+        user_label = user_record.get("handle") or telegram_id
         logger.info(
-            f"Multi-photo estimate sent to user {telegram_id}: "
+            f"Multi-photo estimate sent to user {user_label}: "
             f"{photo_count} photos, {calories:.0f} kcal"
         )
 

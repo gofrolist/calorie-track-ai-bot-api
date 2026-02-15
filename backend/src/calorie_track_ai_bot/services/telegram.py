@@ -45,7 +45,7 @@ class TelegramBot:
             result = response.json()
 
             if result.get("ok"):
-                logger.info(f"Message sent successfully to chat {chat_id}")
+                logger.debug(f"Message sent successfully to chat {chat_id}")
                 return result["result"]
             else:
                 logger.error(f"Failed to send message: {result.get('description')}")
