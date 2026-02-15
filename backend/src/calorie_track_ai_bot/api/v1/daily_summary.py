@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
+from ...schemas import DailySummary, TodayResponse
 from ...services.db import db_get_daily_summary, db_get_summaries_by_date_range, db_get_today_data
 from ...utils.error_handling import handle_api_errors
 from .deps import get_telegram_user_id
@@ -11,7 +12,7 @@ from .deps import get_telegram_user_id
 router = APIRouter()
 
 
-@router.get("/daily-summary/{date}")
+@router.get("/daily-summary/{date}", response_model=DailySummary)
 @handle_api_errors("daily summary")
 async def get_daily_summary(
     date: str, telegram_user_id: str = Depends(get_telegram_user_id)
@@ -29,7 +30,7 @@ async def get_daily_summary(
     return summary
 
 
-@router.get("/weekly-summary")
+@router.get("/weekly-summary", response_model=list[DailySummary])
 @handle_api_errors("weekly summary")
 async def get_weekly_summary(
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
@@ -69,7 +70,7 @@ async def get_weekly_summary(
     return summaries
 
 
-@router.get("/monthly-summary")
+@router.get("/monthly-summary", response_model=list[DailySummary])
 @handle_api_errors("monthly summary")
 async def get_monthly_summary(
     year: int = Query(..., description="Year"),
@@ -109,7 +110,7 @@ async def get_monthly_summary(
     return summaries
 
 
-@router.get("/today/{date}")
+@router.get("/today/{date}", response_model=TodayResponse)
 @handle_api_errors("today data")
 async def get_today_data(date: str, telegram_user_id: str = Depends(get_telegram_user_id)):
     """Get all data needed for the Today page (meals + daily summary) in a single request."""

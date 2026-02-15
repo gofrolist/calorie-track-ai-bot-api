@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from ...schemas import GoalRequest
+from ...schemas import GoalRequest, GoalResponse
 from ...services.db import db_create_or_update_goal, db_get_goal
 from ...utils.error_handling import handle_api_errors
 from .deps import get_telegram_user_id
@@ -8,7 +8,7 @@ from .deps import get_telegram_user_id
 router = APIRouter()
 
 
-@router.get("/goals")
+@router.get("/goals", response_model=GoalResponse | None)
 @handle_api_errors("goal retrieval")
 async def get_goal(telegram_user_id: str = Depends(get_telegram_user_id)):
     """Get user's goal."""
@@ -16,7 +16,7 @@ async def get_goal(telegram_user_id: str = Depends(get_telegram_user_id)):
     return goal
 
 
-@router.post("/goals")
+@router.post("/goals", response_model=GoalResponse)
 @handle_api_errors("goal creation")
 async def create_goal(
     goal_data: GoalRequest, telegram_user_id: str = Depends(get_telegram_user_id)
@@ -26,7 +26,7 @@ async def create_goal(
     return goal
 
 
-@router.patch("/goals")
+@router.patch("/goals", response_model=GoalResponse)
 @handle_api_errors("goal update")
 async def update_goal(
     goal_data: GoalRequest, telegram_user_id: str = Depends(get_telegram_user_id)

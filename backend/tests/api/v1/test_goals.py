@@ -24,8 +24,8 @@ class TestGoalsEndpoints:
     def mock_goal_data(self):
         """Sample goal data for testing."""
         return {
-            "id": "goal-123",
-            "user_id": "59357664",
+            "id": "00000000-0000-0000-0000-000000000001",
+            "user_id": "00000000-0000-0000-0000-000000000002",
             "daily_kcal_target": 2000,
             "created_at": "2024-01-01T00:00:00Z",
             "updated_at": "2024-01-01T00:00:00Z",

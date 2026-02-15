@@ -41,6 +41,10 @@ class ConnectionStatus(StrEnum):
     error = "error"
 
 
+class HealthResponse(BaseModel):
+    status: str
+
+
 class ErrorResponse(BaseModel):
     detail: str
 
