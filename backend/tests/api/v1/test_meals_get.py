@@ -45,7 +45,7 @@ async def test_get_meal_by_id_success(
 
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meal_with_photos", return_value=mock_meal),
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
     ):
         response = api_client.get(f"/api/v1/meals/{meal_id}", headers=authenticated_headers)
 
@@ -101,7 +101,7 @@ async def test_get_meal_includes_presigned_urls(
 
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meal_with_photos", return_value=mock_meal),
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
     ):
         response = api_client.get(f"/api/v1/meals/{meal_id}", headers=authenticated_headers)
 
@@ -174,7 +174,7 @@ async def test_get_meal_invalid_uuid(api_client, authenticated_headers, mock_sup
 
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meal_with_photos", return_value=None),
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
     ):
         response = api_client.get("/api/v1/meals/not-a-uuid", headers=authenticated_headers)
 
@@ -206,7 +206,7 @@ async def test_get_meal_with_no_photos(
 
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meal_with_photos", return_value=mock_meal),
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
     ):
         response = api_client.get(f"/api/v1/meals/{meal_id}", headers=authenticated_headers)
 

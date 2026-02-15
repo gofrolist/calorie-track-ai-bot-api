@@ -6,13 +6,13 @@ Provides endpoints for retrieving aggregated nutrition statistics.
 
 from datetime import date
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Query, Request
 
 from ...schemas import DailyStatisticsResponse, MacroStatisticsResponse
 from ...services.config import logger
-from ...services.db import resolve_user_id
 from ...services.statistics_service import get_statistics_service
-from ...utils.error_handling import handle_api_errors, validate_user_authentication
+from ...utils.error_handling import handle_api_errors
+from .deps import get_authenticated_user_id
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 
@@ -41,50 +41,26 @@ async def get_daily_statistics(
     Raises:
         HTTPException: If query fails or date range invalid
     """
-    # Get user ID from authentication
-    telegram_user_id = validate_user_authentication(request)
-    user_id = await resolve_user_id(telegram_user_id)
+    user_id = await get_authenticated_user_id(request)
 
-    if not user_id:
-        raise HTTPException(status_code=400, detail="User not found")
+    statistics_service = get_statistics_service()
+    response = await statistics_service.get_daily_statistics(
+        user_id=user_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
-    try:
-        statistics_service = get_statistics_service()
-        response = await statistics_service.get_daily_statistics(
-            user_id=user_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
+    logger.info(
+        f"Daily statistics retrieved for user {user_id[:8]}",
+        extra={
+            "user_id": user_id,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "data_points": len(response.data),
+        },
+    )
 
-        logger.info(
-            f"Daily statistics retrieved for user {user_id[:8]}",
-            extra={
-                "user_id": user_id,
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat(),
-                "data_points": len(response.data),
-            },
-        )
-
-        return response
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        logger.error(
-            f"Failed to retrieve daily statistics: {e}",
-            extra={
-                "user_id": user_id,
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat(),
-                "error": str(e),
-            },
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve statistics. Please try again.",
-        ) from e
+    return response
 
 
 @router.get("/macros", response_model=MacroStatisticsResponse)
@@ -110,46 +86,22 @@ async def get_macro_statistics(
     Raises:
         HTTPException: If query fails or date range invalid
     """
-    # Get user ID from authentication
-    telegram_user_id = validate_user_authentication(request)
-    user_id = await resolve_user_id(telegram_user_id)
+    user_id = await get_authenticated_user_id(request)
 
-    if not user_id:
-        raise HTTPException(status_code=400, detail="User not found")
+    statistics_service = get_statistics_service()
+    response = await statistics_service.get_macro_statistics(
+        user_id=user_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
-    try:
-        statistics_service = get_statistics_service()
-        response = await statistics_service.get_macro_statistics(
-            user_id=user_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
+    logger.info(
+        f"Macro statistics retrieved for user {user_id[:8]}",
+        extra={
+            "user_id": user_id,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        },
+    )
 
-        logger.info(
-            f"Macro statistics retrieved for user {user_id[:8]}",
-            extra={
-                "user_id": user_id,
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat(),
-            },
-        )
-
-        return response
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        logger.error(
-            f"Failed to retrieve macro statistics: {e}",
-            extra={
-                "user_id": user_id,
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat(),
-                "error": str(e),
-            },
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve macro statistics. Please try again.",
-        ) from e
+    return response

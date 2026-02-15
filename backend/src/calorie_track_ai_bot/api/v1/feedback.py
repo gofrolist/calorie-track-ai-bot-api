@@ -10,9 +10,9 @@ from fastapi import APIRouter, HTTPException, Request
 
 from ...schemas import FeedbackSubmission, FeedbackSubmissionRequest, FeedbackSubmissionResponse
 from ...services.config import logger
-from ...services.db import resolve_user_id
 from ...services.feedback_service import get_feedback_service
-from ...utils.error_handling import handle_api_errors, validate_user_authentication
+from ...utils.error_handling import handle_api_errors
+from .deps import get_authenticated_user_id
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
@@ -38,11 +38,7 @@ async def submit_feedback(
         HTTPException: If submission fails
     """
     # Get user ID from Telegram authentication
-    telegram_user_id = validate_user_authentication(request)
-    user_id = await resolve_user_id(telegram_user_id)
-
-    if not user_id:
-        raise HTTPException(status_code=400, detail="User not found")
+    user_id = await get_authenticated_user_id(request)
 
     logger.info(
         f"Feedback submission request from user {user_id[:8]}...",
@@ -81,11 +77,7 @@ async def get_feedback(
         HTTPException: If feedback not found
     """
     # Validate authentication (admin access would be checked here in production)
-    telegram_user_id = validate_user_authentication(request)
-    user_id = await resolve_user_id(telegram_user_id)
-
-    if not user_id:
-        raise HTTPException(status_code=400, detail="User not found")
+    await get_authenticated_user_id(request)
 
     feedback_service = get_feedback_service()
     feedback = await feedback_service.get_feedback(feedback_id)

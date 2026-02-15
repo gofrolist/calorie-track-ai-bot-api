@@ -53,7 +53,7 @@ class TestPhotoUrlGeneration:
                 new_callable=AsyncMock,
                 return_value=mock_pool,
             ),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve,
             patch(
                 "calorie_track_ai_bot.services.db.db_get_estimate", new_callable=AsyncMock
             ) as mock_get_estimate,

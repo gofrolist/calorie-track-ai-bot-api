@@ -48,44 +48,6 @@ def handle_api_errors(operation_name: str = "operation", log_level: int = loggin
     return decorator
 
 
-def handle_database_errors(
-    operation_name: str = "database operation", not_found_message: str = "Resource not found"
-):
-    """
-    Decorator to handle database-specific errors.
-
-    Args:
-        operation_name: Name of the operation for logging
-        not_found_message: Message to return for 404 errors
-
-    Returns:
-        Decorated function with database error handling
-    """
-
-    def decorator(func: F) -> F:
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            try:
-                return await func(*args, **kwargs)
-            except HTTPException:
-                raise
-            except Exception as e:
-                error_str = str(e)
-
-                # Handle specific database errors
-                if "Could not find the table" in error_str:
-                    logger.warning(f"Database table not found in {operation_name}: {e}")
-                    raise HTTPException(status_code=404, detail=not_found_message) from e
-
-                # Handle other database errors
-                logger.error(f"Database error in {operation_name}: {e}", exc_info=True)
-                raise HTTPException(status_code=500, detail=str(e)) from e
-
-        return wrapper  # type: ignore
-
-    return decorator
-
-
 def validate_user_authentication(request) -> str:
     """
     Extract and validate user ID from request headers.

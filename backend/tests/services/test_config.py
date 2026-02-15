@@ -7,7 +7,6 @@ from calorie_track_ai_bot.services.config import (
     AWS_REGION,
     AWS_SECRET_ACCESS_KEY,
     BUCKET_NAME,
-    DATABASE_URL,
     OPENAI_API_KEY,
     OPENAI_MODEL,
     REDIS_URL,
@@ -40,7 +39,6 @@ class TestConfig:
     def test_optional_env_vars_can_be_none(self):
         """Test that optional environment variables can be None."""
         assert OPENAI_API_KEY is None or isinstance(OPENAI_API_KEY, str)
-        assert DATABASE_URL is None or isinstance(DATABASE_URL, str)
         assert REDIS_URL is None or isinstance(REDIS_URL, str)
         assert AWS_ENDPOINT_URL_S3 is None or isinstance(AWS_ENDPOINT_URL_S3, str)
         assert AWS_ACCESS_KEY_ID is None or isinstance(AWS_ACCESS_KEY_ID, str)
@@ -50,10 +48,6 @@ class TestConfig:
     def test_openai_api_key_from_env(self):
         """Test OPENAI_API_KEY can be set from environment."""
         assert OPENAI_API_KEY == "test-openai-key"
-
-    def test_database_url_from_env(self):
-        """Test DATABASE_URL can be set from environment."""
-        assert DATABASE_URL == "postgresql://test:test@localhost:5432/testdb"
 
     def test_redis_url_from_env(self):
         """Test REDIS_URL can be set from environment."""

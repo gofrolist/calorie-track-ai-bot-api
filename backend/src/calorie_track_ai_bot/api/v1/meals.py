@@ -21,10 +21,8 @@ from ...services.db import (
     db_get_meals_with_photos,
     db_update_meal_with_macros,
 )
-from ...utils.error_handling import (
-    handle_api_errors,
-    validate_user_authentication,
-)
+from ...utils.error_handling import handle_api_errors
+from .deps import get_authenticated_user_id
 
 router = APIRouter()
 
@@ -38,14 +36,7 @@ async def create_meal(
         return await db_create_meal_from_manual(payload)
 
     # For estimate-based meals, we need to get the user_id from headers
-    telegram_user_id = validate_user_authentication(request)
-
-    # Resolve telegram_user_id to database user_id
-    from ...services.db import resolve_user_id
-
-    user_id = await resolve_user_id(telegram_user_id)
-    if not user_id:
-        raise HTTPException(400, "User not found")
+    user_id = await get_authenticated_user_id(request)
 
     return await db_create_meal_from_estimate(payload, user_id)
 
@@ -67,14 +58,7 @@ async def get_meals(
     - Date range query: ?start_date=2025-09-23&end_date=2025-09-30
     - Default: today's meals
     """
-    # Get user ID from request (assumes auth middleware sets this)
-    telegram_user_id = validate_user_authentication(request)
-
-    from ...services.db import resolve_user_id
-
-    user_id = await resolve_user_id(telegram_user_id)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="User not found")
+    user_id = await get_authenticated_user_id(request)
 
     # Parse date parameters
     query_date = None
@@ -108,6 +92,7 @@ async def get_meals(
 
 
 @router.get("/meals/calendar", response_model=MealsCalendarResponse)
+@handle_api_errors("meals calendar")
 async def get_meals_calendar(
     request: Request,
     start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
@@ -118,163 +103,107 @@ async def get_meals_calendar(
     Feature: 003-update-logic-for (Calendar navigation)
     Returns aggregated nutrition data by date.
     """
+    user_id = await get_authenticated_user_id(request)
+
+    # Parse dates
     try:
-        # Validate authentication
-        telegram_user_id = request.headers.get("x-user-id")
-        if not telegram_user_id:
-            raise HTTPException(status_code=401, detail="User ID required")
-
-        from ...services.db import resolve_user_id
-
-        user_id = await resolve_user_id(telegram_user_id)
-        if not user_id:
-            raise HTTPException(status_code=401, detail="User not found")
-
-        # Parse dates
         query_start = datetime.fromisoformat(start_date).date()
         query_end = datetime.fromisoformat(end_date).date()
-
-        # Validate date range (max 1 year)
-        if (query_end - query_start).days > 365:
-            raise HTTPException(status_code=400, detail="Date range cannot exceed 1 year")
-
-        # Get calendar summary
-        calendar_data = await db_get_meals_calendar_summary(
-            user_id=UUID(user_id), start_date=query_start, end_date=query_end
-        )
-
-        return MealsCalendarResponse(dates=calendar_data)
-
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid date format: {e!s}") from e
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    # Validate date range (max 1 year)
+    if (query_end - query_start).days > 365:
+        raise HTTPException(status_code=400, detail="Date range cannot exceed 1 year")
+
+    # Get calendar summary
+    calendar_data = await db_get_meals_calendar_summary(
+        user_id=UUID(user_id), start_date=query_start, end_date=query_end
+    )
+
+    return MealsCalendarResponse(dates=calendar_data)
 
 
 @router.get("/meals/{meal_id}", response_model=MealWithPhotos)
+@handle_api_errors("meal retrieval by ID")
 async def get_meal(meal_id: str, request: Request) -> MealWithPhotos:
     """Get a specific meal with photos and macronutrients.
 
     Feature: 003-update-logic-for (Multi-photo support)
     """
+    user_id = await get_authenticated_user_id(request)
+
     try:
-        # Validate user ownership
-        telegram_user_id = request.headers.get("x-user-id")
-        if not telegram_user_id:
-            raise HTTPException(status_code=401, detail="User ID required")
+        meal = await db_get_meal_with_photos(UUID(meal_id))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid meal ID format") from None
 
-        # Resolve telegram_user_id to database user_id
-        from ...services.db import resolve_user_id
+    if not meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
 
-        user_id = await resolve_user_id(telegram_user_id)
-        if not user_id:
-            raise HTTPException(status_code=401, detail="User not found")
+    # Verify ownership
+    if str(meal.user_id) != user_id:
+        raise HTTPException(status_code=403, detail="You do not own this meal")
 
-        try:
-            meal = await db_get_meal_with_photos(UUID(meal_id))
-        except ValueError:
-            raise HTTPException(status_code=422, detail="Invalid meal ID format") from None
-
-        if not meal:
-            raise HTTPException(status_code=404, detail="Meal not found")
-
-        # Verify ownership
-        if str(meal.user_id) != user_id:
-            raise HTTPException(status_code=403, detail="You do not own this meal")
-
-        return meal
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    return meal
 
 
 @router.patch("/meals/{meal_id}", response_model=MealWithPhotos)
+@handle_api_errors("meal update")
 async def update_meal(meal_id: str, payload: MealUpdate, request: Request) -> MealWithPhotos:
     """Update meal description or macronutrients.
 
     Feature: 003-update-logic-for (Meal editing)
     Automatically recalculates calories from macros if updated.
     """
+    user_id = await get_authenticated_user_id(request)
+
+    # Validate meal exists and ownership
     try:
-        # Validate authentication
-        telegram_user_id = request.headers.get("x-user-id")
-        if not telegram_user_id:
-            raise HTTPException(status_code=401, detail="User ID required")
+        existing_meal = await db_get_meal_with_photos(UUID(meal_id))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid meal ID format") from None
 
-        from ...services.db import resolve_user_id
+    if not existing_meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
 
-        user_id = await resolve_user_id(telegram_user_id)
-        if not user_id:
-            raise HTTPException(status_code=401, detail="User not found")
+    if str(existing_meal.user_id) != user_id:
+        raise HTTPException(status_code=403, detail="You do not own this meal")
 
-        # Validate meal exists and ownership
-        try:
-            existing_meal = await db_get_meal_with_photos(UUID(meal_id))
-        except ValueError:
-            raise HTTPException(status_code=422, detail="Invalid meal ID format") from None
+    # Update meal with macronutrient recalculation
+    updated_meal = await db_update_meal_with_macros(meal_id=UUID(meal_id), updates=payload)
 
-        if not existing_meal:
-            raise HTTPException(status_code=404, detail="Meal not found")
+    if not updated_meal:
+        raise HTTPException(status_code=500, detail="Failed to update meal")
 
-        if str(existing_meal.user_id) != user_id:
-            raise HTTPException(status_code=403, detail="You do not own this meal")
-
-        # Update meal with macronutrient recalculation
-        updated_meal = await db_update_meal_with_macros(meal_id=UUID(meal_id), updates=payload)
-
-        if not updated_meal:
-            raise HTTPException(status_code=500, detail="Failed to update meal")
-
-        return updated_meal
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    return updated_meal
 
 
 @router.delete("/meals/{meal_id}", status_code=status.HTTP_204_NO_CONTENT)
+@handle_api_errors("meal deletion")
 async def delete_meal(meal_id: str, request: Request):
     """Delete a meal and update daily summary.
 
     Feature: 003-update-logic-for (Meal management)
     Cascades to photos and recalculates daily stats.
     """
+    user_id = await get_authenticated_user_id(request)
+
+    # Validate meal exists and ownership
     try:
-        # Validate authentication
-        telegram_user_id = request.headers.get("x-user-id")
-        if not telegram_user_id:
-            raise HTTPException(status_code=401, detail="User ID required")
+        existing_meal = await db_get_meal_with_photos(UUID(meal_id))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid meal ID format") from None
 
-        from ...services.db import resolve_user_id
+    if not existing_meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
 
-        user_id = await resolve_user_id(telegram_user_id)
-        if not user_id:
-            raise HTTPException(status_code=401, detail="User not found")
+    if str(existing_meal.user_id) != user_id:
+        raise HTTPException(status_code=403, detail="You do not own this meal")
 
-        # Validate meal exists and ownership
-        try:
-            existing_meal = await db_get_meal_with_photos(UUID(meal_id))
-        except ValueError:
-            raise HTTPException(status_code=422, detail="Invalid meal ID format") from None
+    # Delete meal (cascades to photos, updates daily summary)
+    success = await db_delete_meal(meal_id)  # db_delete_meal expects str
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete meal")
 
-        if not existing_meal:
-            raise HTTPException(status_code=404, detail="Meal not found")
-
-        if str(existing_meal.user_id) != user_id:
-            raise HTTPException(status_code=403, detail="You do not own this meal")
-
-        # Delete meal (cascades to photos, updates daily summary)
-        success = await db_delete_meal(meal_id)  # db_delete_meal expects str
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to delete meal")
-
-        return None  # 204 No Content
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    return None  # 204 No Content

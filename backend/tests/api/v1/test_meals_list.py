@@ -17,7 +17,7 @@ async def test_get_meals_without_filters(
     # Mock meals query to return empty list
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get_meals,
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid),
     ):
         mock_get_meals.return_value = []
 
@@ -42,7 +42,7 @@ async def test_get_meals_with_date_filter(
     # Mock meals query to return empty list
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get_meals,
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid),
     ):
         mock_get_meals.return_value = []
 
@@ -66,7 +66,7 @@ async def test_get_meals_with_date_range(
     # Mock meals query to return empty list
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get_meals,
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid),
     ):
         mock_get_meals.return_value = []
 
@@ -95,7 +95,7 @@ async def test_get_meals_with_limit(
     # Mock meals query to return empty list
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get_meals,
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid),
     ):
         mock_get_meals.return_value = []
 
@@ -146,7 +146,7 @@ async def test_get_meals_returns_photos(
 
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get_meals,
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid),
     ):
         mock_get_meals.return_value = [mock_meal]
 
@@ -188,7 +188,7 @@ async def test_get_meals_returns_macronutrients(
 
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get_meals,
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid),
     ):
         mock_get_meals.return_value = [mock_meal]
 
@@ -215,7 +215,7 @@ async def test_get_meals_filters_one_year_retention(
     # Mock meals query to return empty list (old meals filtered out)
     with (
         patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get_meals,
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid),
     ):
         mock_get_meals.return_value = []
 
@@ -236,7 +236,7 @@ async def test_get_meals_invalid_date_format(
     """Test GET /api/v1/meals with invalid date format returns 400."""
     test_user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
-    with patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=test_user_uuid):
+    with patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=test_user_uuid):
         response = api_client.get("/api/v1/meals?date=invalid-date", headers=authenticated_headers)
 
     assert response.status_code == 400

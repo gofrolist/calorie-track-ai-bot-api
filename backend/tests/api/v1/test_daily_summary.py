@@ -85,21 +85,11 @@ class TestDailySummaryEndpoints:
         # Verify that db_get_daily_summary was called with the correct parameters
         mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "59357664")
 
-    @patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_daily_summary")
-    def test_get_daily_summary_without_user_id_header(
-        self, mock_db_get_daily_summary, client, mock_daily_summary_data
-    ):
-        """Test getting daily summary without x-user-id header."""
-        mock_db_get_daily_summary.return_value = mock_daily_summary_data
-
+    def test_get_daily_summary_without_user_id_header(self, client):
+        """Test getting daily summary without x-user-id header returns 401."""
         response = client.get("/daily-summary/2025-09-28")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data == mock_daily_summary_data
-
-        # Verify that db_get_daily_summary was called with None user_id
-        mock_db_get_daily_summary.assert_called_once_with("2025-09-28", None)
+        assert response.status_code == 401
 
     @patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_daily_summary")
     def test_get_daily_summary_no_data_found(self, mock_db_get_daily_summary, client):
@@ -144,21 +134,11 @@ class TestDailySummaryEndpoints:
         # Verify that db_get_today_data was called with the correct parameters
         mock_db_get_today_data.assert_called_once_with("2025-09-28", "59357664")
 
-    @patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_today_data")
-    def test_get_today_data_without_user_id_header(
-        self, mock_db_get_today_data, client, mock_today_data
-    ):
-        """Test getting today data without x-user-id header."""
-        mock_db_get_today_data.return_value = mock_today_data
-
+    def test_get_today_data_without_user_id_header(self, client):
+        """Test getting today data without x-user-id header returns 401."""
         response = client.get("/today/2025-09-28")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data == mock_today_data
-
-        # Verify that db_get_today_data was called with None user_id
-        mock_db_get_today_data.assert_called_once_with("2025-09-28", None)
+        assert response.status_code == 401
 
     @patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_today_data")
     def test_get_today_data_database_error(self, mock_db_get_today_data, client):
@@ -181,18 +161,11 @@ class TestDailySummaryEndpoints:
         assert response.status_code == 500
 
     def test_empty_user_id_header(self, client):
-        """Test getting daily summary with empty x-user-id header."""
-        with patch(
-            "calorie_track_ai_bot.api.v1.daily_summary.db_get_daily_summary"
-        ) as mock_db_get_daily_summary:
-            mock_db_get_daily_summary.return_value = None
+        """Test getting daily summary with empty x-user-id header returns 401."""
+        headers = {"x-user-id": ""}
+        response = client.get("/daily-summary/2025-09-28", headers=headers)
 
-            headers = {"x-user-id": ""}
-            response = client.get("/daily-summary/2025-09-28", headers=headers)
-
-            assert response.status_code == 200
-            # Should use empty string as user_id
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "")
+        assert response.status_code == 401
 
     def test_user_id_with_whitespace(self, client):
         """Test user ID with leading/trailing whitespace."""

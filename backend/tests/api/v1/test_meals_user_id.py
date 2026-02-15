@@ -65,7 +65,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = mock_meals_data
@@ -91,7 +91,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -119,7 +119,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -143,7 +143,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -159,7 +159,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -176,7 +176,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -186,18 +186,18 @@ class TestMealsEndpoints:
             assert response.status_code == 200
 
     def test_special_characters_in_user_id(self, api_client):
-        """Test user ID with special characters (should be rejected)."""
+        """Test user ID with special characters (user not found in DB)."""
         headers = {"x-user-id": "user@example.com"}
         response = api_client.get("/api/v1/meals", headers=headers)
 
-        assert response.status_code == 401
+        assert response.status_code == 404
 
     def test_very_long_user_id(self, api_client):
-        """Test user ID with very long string (should be rejected)."""
+        """Test user ID with very long string (user not found in DB)."""
         headers = {"x-user-id": "a" * 1000}
         response = api_client.get("/api/v1/meals", headers=headers)
 
-        assert response.status_code == 401
+        assert response.status_code == 404
 
     def test_numeric_user_id(self, api_client):
         """Test user ID that is purely numeric."""
@@ -206,7 +206,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -216,11 +216,11 @@ class TestMealsEndpoints:
             assert response.status_code == 200
 
     def test_uuid_user_id(self, api_client):
-        """Test user ID that is a UUID (should be rejected)."""
+        """Test user ID that is a UUID (user not found in DB)."""
         headers = {"x-user-id": "550e8400-e29b-41d4-a716-446655440000"}
         response = api_client.get("/api/v1/meals", headers=headers)
 
-        assert response.status_code == 401
+        assert response.status_code == 404
 
     def test_get_meals_with_different_dates(self, api_client, authenticated_headers):
         """Test getting meals for different dates."""
@@ -228,7 +228,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -246,7 +246,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -263,7 +263,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -280,7 +280,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []
@@ -297,7 +297,7 @@ class TestMealsEndpoints:
             patch(
                 "calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos"
             ) as mock_db_get_meals,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve_user_id,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve_user_id,
         ):
             mock_resolve_user_id.return_value = "550e8400-e29b-41d4-a716-446655440000"
             mock_db_get_meals.return_value = []

@@ -43,7 +43,7 @@ async def test_get_meals_calendar_success(
             "calorie_track_ai_bot.api.v1.meals.db_get_meals_calendar_summary",
             return_value=mock_calendar_data,
         ),
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
     ):
         start_date = yesterday.isoformat()
         end_date = today.isoformat()
@@ -89,7 +89,7 @@ async def test_calendar_aggregates_meals_by_date(
             "calorie_track_ai_bot.api.v1.meals.db_get_meals_calendar_summary",
             return_value=mock_calendar_data,
         ),
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
     ):
         response = api_client.get(
             f"/api/v1/meals/calendar?start_date={today.isoformat()}&end_date={today.isoformat()}",
@@ -115,7 +115,7 @@ async def test_calendar_missing_start_date(api_client, authenticated_headers, mo
     """Test calendar endpoint without start_date returns 422."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
-    with patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid):
+    with patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid):
         end_date = datetime.now().date().isoformat()
         response = api_client.get(
             f"/api/v1/meals/calendar?end_date={end_date}", headers=authenticated_headers
@@ -129,7 +129,7 @@ async def test_calendar_missing_end_date(api_client, authenticated_headers, mock
     """Test calendar endpoint without end_date returns 422."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
-    with patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid):
+    with patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid):
         start_date = datetime.now().date().isoformat()
         response = api_client.get(
             f"/api/v1/meals/calendar?start_date={start_date}", headers=authenticated_headers
@@ -145,7 +145,7 @@ async def test_calendar_invalid_date_format(
     """Test calendar endpoint with invalid date format returns 400."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
-    with patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid):
+    with patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid):
         response = api_client.get(
             "/api/v1/meals/calendar?start_date=invalid&end_date=2025-09-30",
             headers=authenticated_headers,
@@ -159,7 +159,7 @@ async def test_calendar_max_one_year_range(api_client, authenticated_headers, mo
     """Test calendar endpoint rejects range > 1 year."""
     user_uuid = "550e8400-e29b-41d4-a716-446655440000"
 
-    with patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid):
+    with patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid):
         start_date = datetime.now().date()
         end_date = start_date + timedelta(days=400)
 
@@ -199,7 +199,7 @@ async def test_calendar_filters_one_year_retention(
             "calorie_track_ai_bot.api.v1.meals.db_get_meals_calendar_summary",
             return_value=mock_calendar_data,
         ),
-        patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
     ):
         start_date = (datetime.now() - timedelta(days=450)).date().isoformat()
         end_date = datetime.now().date().isoformat()

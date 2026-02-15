@@ -41,7 +41,7 @@ class TestMealsEndpoints:
         assert "meal_id" in data
         assert data["meal_id"] == "meal123"
 
-    @patch("calorie_track_ai_bot.services.db.resolve_user_id")
+    @patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
     def test_create_meal_from_estimate_success(self, mock_db_create, mock_resolve_user_id, client):
         """Test successful meal creation from estimate."""
@@ -82,7 +82,7 @@ class TestMealsEndpoints:
         data = response.json()
         assert data["meal_id"] == "meal789"
 
-    @patch("calorie_track_ai_bot.services.db.resolve_user_id")
+    @patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
     def test_create_meal_from_estimate_without_overrides(
         self, mock_db_create, mock_resolve_user_id, client
@@ -146,7 +146,7 @@ class TestMealsEndpoints:
         response = client.post("/meals", json=payload)
         assert response.status_code == 500
 
-    @patch("calorie_track_ai_bot.services.db.resolve_user_id")
+    @patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
     def test_create_meal_from_estimate_db_error(self, mock_db_create, mock_resolve_user_id, client):
         """Test meal creation from estimate when database operation fails."""

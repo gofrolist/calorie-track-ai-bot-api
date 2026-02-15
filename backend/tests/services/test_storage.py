@@ -17,7 +17,7 @@ class TestStorageFunctions:
         """Mock S3 client."""
         with (
             patch("calorie_track_ai_bot.services.storage.s3") as mock_s3,
-            patch("calorie_track_ai_bot.services.storage.TIGRIS_BUCKET", "test-bucket"),
+            patch("calorie_track_ai_bot.services.storage.BUCKET_NAME", "test-bucket"),
         ):
             mock_s3.generate_presigned_url.return_value = "https://presigned-url.example.com"
             yield mock_s3

@@ -19,31 +19,6 @@ elif APP_ENV == "dev":
 else:
     raise ValueError("OPENAI_API_KEY must be set")
 
-SCHEMA = {
-    "type": "object",
-    "properties": {
-        "kcal_mean": {"type": "number"},
-        "kcal_min": {"type": "number"},
-        "kcal_max": {"type": "number"},
-        "confidence": {"type": "number"},
-        "items": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "label": {"type": "string"},
-                    "kcal": {"type": "number"},
-                    "confidence": {"type": "number"},
-                },
-                "required": ["label", "kcal", "confidence"],
-                "additionalProperties": False,
-            },
-        },
-    },
-    "required": ["kcal_mean", "kcal_min", "kcal_max", "confidence", "items"],
-    "additionalProperties": False,
-}
-
 # Extended schema for multi-photo with macronutrients (Feature: 003-update-logic-for)
 SCHEMA_WITH_MACROS = {
     "type": "object",
@@ -78,6 +53,15 @@ SCHEMA_WITH_MACROS = {
     },
     "required": ["kcal_mean", "kcal_min", "kcal_max", "confidence", "macronutrients", "items"],
     "additionalProperties": False,
+}
+
+# Base schema without macronutrients (derived from SCHEMA_WITH_MACROS)
+SCHEMA = {
+    **SCHEMA_WITH_MACROS,
+    "properties": {
+        k: v for k, v in SCHEMA_WITH_MACROS["properties"].items() if k != "macronutrients"
+    },
+    "required": [r for r in SCHEMA_WITH_MACROS["required"] if r != "macronutrients"],
 }
 
 

@@ -289,11 +289,12 @@ async def send_estimate_to_user(
         message += f"📈 <b>Range:</b> {kcal_min:.0f} - {kcal_max:.0f} kcal\n"
         message += f"🎯 <b>Confidence:</b> {confidence:.0%}\n\n"
 
-        # Add macronutrients section (placeholder data for now)
+        # Add macronutrients from AI response
+        macros = est.get("macronutrients", {})
         message += "<b>🏋️ Macronutrients:</b>\n"
-        message += f"• Protein: ~{kcal_mean * 0.15:.1f}g\n"  # ~15% protein
-        message += f"• Fat: ~{kcal_mean * 0.25 / 9:.1f}g\n"  # ~25% fat (~9 cal/g)
-        message += f"• Carbs: ~{kcal_mean * 0.6 / 4:.1f}g\n\n"  # ~60% carbs (~4 cal/g)
+        message += f"• Protein: {macros.get('protein', 0):.1f}g\n"
+        message += f"• Carbs: {macros.get('carbs', 0):.1f}g\n"
+        message += f"• Fats: {macros.get('fats', 0):.1f}g\n\n"
 
         if items:
             message += "<b>📋 Food Items:</b>\n"

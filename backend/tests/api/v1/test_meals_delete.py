@@ -36,7 +36,7 @@ class TestMealsDeleteEndpoint:
                 "calorie_track_ai_bot.api.v1.meals.db_get_meal_with_photos", return_value=mock_meal
             ),
             patch("calorie_track_ai_bot.api.v1.meals.db_delete_meal", return_value=True),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.delete(f"/api/v1/meals/{meal_id}", headers=authenticated_headers)
 
@@ -63,7 +63,7 @@ class TestMealsDeleteEndpoint:
                 "calorie_track_ai_bot.api.v1.meals.db_delete_meal",
                 side_effect=HTTPException(status_code=404, detail="Meal not found"),
             ),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.delete(
                 f"/api/v1/meals/{non_existent_id}", headers=authenticated_headers
@@ -87,7 +87,7 @@ class TestMealsDeleteEndpoint:
                 "calorie_track_ai_bot.api.v1.meals.db_delete_meal",
                 side_effect=HTTPException(status_code=403, detail="Forbidden"),
             ),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.delete(
                 f"/api/v1/meals/{other_user_meal_id}", headers=authenticated_headers
@@ -106,7 +106,7 @@ class TestMealsDeleteEndpoint:
         # Mock successful deletion (cascade is handled by DB)
         with (
             patch("calorie_track_ai_bot.api.v1.meals.db_delete_meal", return_value=True),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.delete(f"/api/v1/meals/{meal_id}", headers=authenticated_headers)
 
@@ -123,7 +123,7 @@ class TestMealsDeleteEndpoint:
         # Mock successful deletion (summary update is handled by DB)
         with (
             patch("calorie_track_ai_bot.api.v1.meals.db_delete_meal", return_value=True),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.delete(f"/api/v1/meals/{meal_id}", headers=authenticated_headers)
 

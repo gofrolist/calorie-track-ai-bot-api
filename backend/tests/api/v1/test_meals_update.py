@@ -61,7 +61,7 @@ class TestMealsUpdateEndpoint:
                 "calorie_track_ai_bot.api.v1.meals.db_update_meal_with_macros",
                 return_value=updated_meal,
             ),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.patch(
                 f"/api/v1/meals/{meal_id}",
@@ -125,7 +125,7 @@ class TestMealsUpdateEndpoint:
                 "calorie_track_ai_bot.api.v1.meals.db_update_meal_with_macros",
                 return_value=updated_meal,
             ),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.patch(
                 f"/api/v1/meals/{meal_id}",
@@ -194,7 +194,7 @@ class TestMealsUpdateEndpoint:
                 "calorie_track_ai_bot.api.v1.meals.db_update_meal_with_macros",
                 return_value=updated_meal,
             ),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.patch(
                 f"/api/v1/meals/{meal_id}",
@@ -223,7 +223,7 @@ class TestMealsUpdateEndpoint:
 
         with (
             patch("calorie_track_ai_bot.api.v1.meals.db_get_meal_with_photos", return_value=None),
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value=user_uuid),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=user_uuid),
         ):
             response = api_client.patch(
                 f"/api/v1/meals/{non_existent_id}",
@@ -268,7 +268,7 @@ class TestMealsUpdateEndpoint:
                 return_value=other_user_meal,
             ),
             patch(
-                "calorie_track_ai_bot.services.db.resolve_user_id", return_value=current_user_uuid
+                "calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value=current_user_uuid
             ),
         ):
             response = api_client.patch(
@@ -296,7 +296,7 @@ class TestMealsUpdateEndpoint:
         meal_id = str(uuid4())
 
         with (
-            patch("calorie_track_ai_bot.services.db.resolve_user_id", return_value="user-uuid"),
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", return_value="user-uuid"),
             patch("calorie_track_ai_bot.api.v1.meals.db_get_meal_with_photos", return_value=None),
         ):
             response = api_client.patch(

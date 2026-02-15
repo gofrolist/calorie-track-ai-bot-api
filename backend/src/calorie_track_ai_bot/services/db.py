@@ -17,9 +17,8 @@ from .config import logger
 from .database import get_pool
 from .storage import BUCKET_NAME, s3
 
-# User ID cache to reduce database queries
-_user_id_cache: dict[str, str] = {}
-_user_cache_ttl: dict[str, datetime] = {}
+# User ID cache: maps telegram_user_id -> (db_user_id, expiry_time)
+_user_id_cache: dict[str, tuple[str, datetime]] = {}
 CACHE_TTL_SECONDS = 300  # 5 minutes
 
 
@@ -182,7 +181,7 @@ async def db_create_meal_from_estimate(
 
     # Set kcal_total from estimate unless overridden
     kcal_total = estimate.get("kcal_mean", 0)
-    if data.overrides and isinstance(data.overrides, dict):
+    if data.overrides:
         kcal_total = data.overrides.get("kcal_total", kcal_total)
 
     # Extract macronutrients from estimate
@@ -192,7 +191,7 @@ async def db_create_meal_from_estimate(
     fats_grams = macronutrients.get("fats", 0)
 
     # Apply overrides if provided
-    if data.overrides and isinstance(data.overrides, dict):
+    if data.overrides:
         protein_grams = data.overrides.get("protein_grams", protein_grams)
         carbs_grams = data.overrides.get("carbs_grams", carbs_grams)
         fats_grams = data.overrides.get("fats_grams", fats_grams)
@@ -262,6 +261,16 @@ def _generate_meal_description(estimate: dict[str, Any]) -> str:
     return "No description available"
 
 
+def _ensure_updated_at(meal: dict[str, Any]) -> None:
+    """Set updated_at fallback from created_at or current time."""
+    if "updated_at" not in meal and "created_at" in meal:
+        meal["updated_at"] = meal["created_at"]
+    elif "updated_at" not in meal:
+        now = datetime.now(UTC).isoformat()
+        meal["created_at"] = now
+        meal["updated_at"] = now
+
+
 async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
     """Enhance meal data with related estimate and photo information."""
     if not meal.get("estimate_id"):
@@ -271,12 +280,7 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
             meal["description"] = "Manual entry"
         if "corrected" not in meal:
             meal["corrected"] = False
-        if "updated_at" not in meal and "created_at" in meal:
-            meal["updated_at"] = meal["created_at"]
-        elif "updated_at" not in meal:
-            now = datetime.now(UTC).isoformat()
-            meal["created_at"] = now
-            meal["updated_at"] = now
+        _ensure_updated_at(meal)
         return
 
     estimate = await db_get_estimate(str(meal["estimate_id"]))
@@ -285,12 +289,7 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
         meal["photo_url"] = None
         meal["macros"] = {"protein_g": 0, "fat_g": 0, "carbs_g": 0}
         meal["corrected"] = False
-        if "updated_at" not in meal and "created_at" in meal:
-            meal["updated_at"] = meal["created_at"]
-        elif "updated_at" not in meal:
-            now = datetime.now(UTC).isoformat()
-            meal["created_at"] = now
-            meal["updated_at"] = now
+        _ensure_updated_at(meal)
         return
 
     photo = await db_get_photo(str(estimate["photo_id"]))
@@ -315,13 +314,7 @@ async def _enhance_meal_with_related_data(meal: dict[str, Any]) -> None:
     }
     meal["description"] = _generate_meal_description(estimate)
     meal["corrected"] = False
-
-    if "updated_at" not in meal and "created_at" in meal:
-        meal["updated_at"] = meal["created_at"]
-    elif "updated_at" not in meal:
-        now = datetime.now(UTC).isoformat()
-        meal["created_at"] = now
-        meal["updated_at"] = now
+    _ensure_updated_at(meal)
 
 
 async def resolve_user_id(telegram_user_id: str | None) -> str | None:
@@ -330,45 +323,39 @@ async def resolve_user_id(telegram_user_id: str | None) -> str | None:
         return None
 
     try:
-        _cleanup_user_cache()
-
         current_time = datetime.now(UTC)
+
+        # Clean up expired entries
+        expired_keys = [
+            key for key, (_, expiry) in _user_id_cache.items() if expiry <= current_time
+        ]
+        for key in expired_keys:
+            _user_id_cache.pop(key, None)
+        if expired_keys:
+            logger.debug(f"Cleaned up {len(expired_keys)} expired user cache entries")
+
+        # Check cache
         if telegram_user_id in _user_id_cache:
-            if (
-                telegram_user_id in _user_cache_ttl
-                and _user_cache_ttl[telegram_user_id] > current_time
-            ):
+            cached_id, expiry = _user_id_cache[telegram_user_id]
+            if expiry > current_time:
                 logger.debug(f"User ID cache hit for telegram_id: {telegram_user_id}")
-                return _user_id_cache[telegram_user_id]
-            else:
-                _user_id_cache.pop(telegram_user_id, None)
-                _user_cache_ttl.pop(telegram_user_id, None)
+                return cached_id
+            _user_id_cache.pop(telegram_user_id, None)
 
         telegram_id_int = int(telegram_user_id)
         user_id = await db_get_or_create_user(telegram_id_int)
 
         if user_id:
-            _user_id_cache[telegram_user_id] = user_id
-            _user_cache_ttl[telegram_user_id] = current_time + timedelta(seconds=CACHE_TTL_SECONDS)
+            _user_id_cache[telegram_user_id] = (
+                user_id,
+                current_time + timedelta(seconds=CACHE_TTL_SECONDS),
+            )
             logger.debug(f"User ID cached for telegram_id: {telegram_user_id}")
 
         return user_id
     except (ValueError, TypeError):
         logger.warning(f"Invalid telegram_user_id format: {telegram_user_id}")
         return None
-
-
-def _cleanup_user_cache():
-    """Clean up expired cache entries to prevent memory leaks."""
-    current_time = datetime.now(UTC)
-    expired_keys = [key for key, expiry in _user_cache_ttl.items() if expiry <= current_time]
-
-    for key in expired_keys:
-        _user_id_cache.pop(key, None)
-        _user_cache_ttl.pop(key, None)
-
-    if expired_keys:
-        logger.debug(f"Cleaned up {len(expired_keys)} expired user cache entries")
 
 
 async def db_get_meals_by_date(
@@ -634,29 +621,9 @@ async def db_update_ui_configuration(
     """Update an existing UI configuration."""
     pool = await get_pool()
 
-    update_data: dict[str, Any] = {}
-    if updates.environment is not None:
-        update_data["environment"] = updates.environment
-    if updates.api_base_url is not None:
-        update_data["api_base_url"] = updates.api_base_url
-    if updates.safe_area_top is not None:
-        update_data["safe_area_top"] = updates.safe_area_top
-    if updates.safe_area_bottom is not None:
-        update_data["safe_area_bottom"] = updates.safe_area_bottom
-    if updates.safe_area_left is not None:
-        update_data["safe_area_left"] = updates.safe_area_left
-    if updates.safe_area_right is not None:
-        update_data["safe_area_right"] = updates.safe_area_right
-    if updates.theme is not None:
-        update_data["theme"] = updates.theme
-    if updates.theme_source is not None:
-        update_data["theme_source"] = updates.theme_source
-    if updates.language is not None:
-        update_data["language"] = updates.language
-    if updates.language_source is not None:
-        update_data["language_source"] = updates.language_source
-    if updates.features is not None:
-        update_data["features"] = Json(updates.features)
+    update_data: dict[str, Any] = updates.model_dump(exclude_unset=True)
+    if "features" in update_data and update_data["features"] is not None:
+        update_data["features"] = Json(update_data["features"])
 
     update_data["updated_at"] = datetime.now(UTC).isoformat()
 
@@ -728,73 +695,66 @@ async def db_cleanup_old_ui_configurations(user_id: str, keep_count: int = 5) ->
 # Multi-Photo Meals Support
 
 
+def _build_meal_photo_info(photo: dict[str, Any], meal_id: Any) -> MealPhotoInfo:
+    """Convert a photo row to MealPhotoInfo with presigned URLs."""
+    from .storage import generate_presigned_url
+
+    try:
+        url = generate_presigned_url(photo["tigris_key"], expiry=3600)
+        return MealPhotoInfo(
+            id=photo["id"],
+            thumbnailUrl=url,
+            fullUrl=url,
+            displayOrder=photo["display_order"],
+        )
+    except Exception as e:
+        logger.warning(f"Failed to generate photo URLs for meal {meal_id}: {e}")
+        return MealPhotoInfo(
+            id=photo["id"],
+            thumbnailUrl="",
+            fullUrl="",
+            displayOrder=photo["display_order"],
+        )
+
+
 async def db_get_meal_with_photos(meal_id: uuid.UUID) -> Any | None:
     """Get meal with associated photos and macronutrients."""
     pool = await get_pool()
 
     from ..schemas import Macronutrients, MealWithPhotos
 
-    try:
-        async with pool.connection() as conn:
-            cur = await conn.execute("SELECT * FROM meals WHERE id = %s", (str(meal_id),))
-            meal_data = await cur.fetchone()
-            if not meal_data:
-                return None
-            meal_data = dict(meal_data)
+    async with pool.connection() as conn:
+        cur = await conn.execute("SELECT * FROM meals WHERE id = %s", (str(meal_id),))
+        meal_data = await cur.fetchone()
+        if not meal_data:
+            return None
+        meal_data = dict(meal_data)
 
-            cur = await conn.execute(
-                """SELECT id, tigris_key, display_order FROM photos
-                   WHERE meal_id = %s ORDER BY display_order""",
-                (str(meal_id),),
-            )
-            photo_rows: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
-
-        photos = []
-        for photo in photo_rows:
-            try:
-                from .storage import generate_presigned_url
-
-                thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-                full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-                photos.append(
-                    MealPhotoInfo(
-                        id=photo["id"],
-                        thumbnailUrl=thumbnail_url,
-                        fullUrl=full_url,
-                        displayOrder=photo["display_order"],
-                    )
-                )
-            except Exception as e:
-                logger.warning(f"Failed to generate photo URLs for meal {meal_id}: {e}")
-                photos.append(
-                    MealPhotoInfo(
-                        id=photo["id"],
-                        thumbnailUrl="",
-                        fullUrl="",
-                        displayOrder=photo["display_order"],
-                    )
-                )
-
-        macros = Macronutrients(
-            protein=meal_data.get("protein_grams", 0) or 0,
-            carbs=meal_data.get("carbs_grams", 0) or 0,
-            fats=meal_data.get("fats_grams", 0) or 0,
+        cur = await conn.execute(
+            """SELECT id, tigris_key, display_order FROM photos
+               WHERE meal_id = %s ORDER BY display_order""",
+            (str(meal_id),),
         )
+        photo_rows: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
 
-        return MealWithPhotos(
-            id=meal_data["id"],
-            userId=meal_data["user_id"],
-            createdAt=meal_data["created_at"],
-            description=meal_data.get("description"),
-            calories=meal_data.get("kcal_total", 0),
-            macronutrients=macros,
-            photos=photos,
-            confidenceScore=meal_data.get("confidence_score"),
-        )
+    photos = [_build_meal_photo_info(photo, meal_id) for photo in photo_rows]
 
-    except Exception as e:
-        logger.error(f"Error getting meal with photos: {e}")
-        raise
+    macros = Macronutrients(
+        protein=meal_data.get("protein_grams", 0) or 0,
+        carbs=meal_data.get("carbs_grams", 0) or 0,
+        fats=meal_data.get("fats_grams", 0) or 0,
+    )
+
+    return MealWithPhotos(
+        id=meal_data["id"],
+        userId=meal_data["user_id"],
+        createdAt=meal_data["created_at"],
+        description=meal_data.get("description"),
+        calories=meal_data.get("kcal_total", 0),
+        macronutrients=macros,
+        photos=photos,
+        confidenceScore=meal_data.get("confidence_score"),
+    )
 
 
 async def db_get_meals_with_photos(
@@ -811,133 +771,102 @@ async def db_get_meals_with_photos(
 
     from ..schemas import Macronutrients, MealWithPhotos
 
-    try:
-        one_year_ago = (date_type.today() - timedelta(days=365)).isoformat()
+    one_year_ago = (date_type.today() - timedelta(days=365)).isoformat()
 
-        # Build query
-        conditions = ["user_id = %s", "created_at >= %s"]
-        params: list[Any] = [str(user_id), one_year_ago]
+    # Build query
+    conditions = ["user_id = %s", "created_at >= %s"]
+    params: list[Any] = [str(user_id), one_year_ago]
 
-        if query_date:
-            conditions.append("created_at >= %s")
-            conditions.append("created_at < %s")
-            params.append(f"{query_date}T00:00:00")
-            params.append(f"{query_date}T23:59:59.999999")
-        elif start_date and end_date:
-            conditions.append("created_at >= %s")
-            conditions.append("created_at <= %s")
-            params.append(f"{start_date}T00:00:00")
-            params.append(f"{end_date}T23:59:59.999999")
+    if query_date:
+        conditions.append("created_at >= %s")
+        conditions.append("created_at < %s")
+        params.append(f"{query_date}T00:00:00")
+        params.append(f"{query_date}T23:59:59.999999")
+    elif start_date and end_date:
+        conditions.append("created_at >= %s")
+        conditions.append("created_at <= %s")
+        params.append(f"{start_date}T00:00:00")
+        params.append(f"{end_date}T23:59:59.999999")
 
-        where = " AND ".join(conditions)
-        params.append(limit)
+    where = " AND ".join(conditions)
+    params.append(limit)
 
-        async with pool.connection() as conn:
-            cur = await conn.execute(
-                f"SELECT * FROM meals WHERE {where} ORDER BY created_at DESC LIMIT %s",  # type: ignore[arg-type]
-                tuple(params),
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            f"SELECT * FROM meals WHERE {where} ORDER BY created_at DESC LIMIT %s",  # type: ignore[arg-type]
+            tuple(params),
+        )
+        meals_data: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
+
+        if not meals_data:
+            return []
+
+        meal_ids = [str(m["id"]) for m in meals_data]
+
+        cur = await conn.execute(
+            """SELECT id, tigris_key, display_order, meal_id FROM photos
+               WHERE meal_id = ANY(%s) ORDER BY display_order""",
+            (meal_ids,),
+        )
+        photos_data: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
+
+        # Batch fetch estimates
+        estimate_ids = [
+            str(m["estimate_id"])
+            for m in meals_data
+            if m.get("estimate_id") and not m.get("description")
+        ]
+
+        estimates_by_id: dict[str, dict[str, Any]] = {}
+        if estimate_ids:
+            cur = await conn.execute("SELECT * FROM estimates WHERE id = ANY(%s)", (estimate_ids,))
+            estimates_by_id = {str(e["id"]): e for e in (dict(r) for r in await cur.fetchall())}
+
+    # Group photos by meal_id
+    photos_by_meal: dict[str, list[dict[str, Any]]] = {}
+    for photo in photos_data:
+        mid = str(photo["meal_id"])
+        if mid not in photos_by_meal:
+            photos_by_meal[mid] = []
+        photos_by_meal[mid].append(photo)
+
+    result_meals = []
+    for meal_data in meals_data:
+        meal_id = str(meal_data["id"])
+        meal_photos = photos_by_meal.get(meal_id, [])
+
+        photos = [_build_meal_photo_info(photo, meal_id) for photo in meal_photos]
+
+        macros = Macronutrients(
+            protein=meal_data.get("protein_grams", 0) or 0,
+            carbs=meal_data.get("carbs_grams", 0) or 0,
+            fats=meal_data.get("fats_grams", 0) or 0,
+        )
+
+        description = meal_data.get("description")
+        if not description and meal_data.get("estimate_id"):
+            estimate = estimates_by_id.get(str(meal_data["estimate_id"]))
+            if estimate:
+                description = _generate_meal_description(estimate)
+            else:
+                description = "No description available"
+        elif not description:
+            description = "Manual entry"
+
+        result_meals.append(
+            MealWithPhotos(
+                id=meal_data["id"],
+                userId=meal_data["user_id"],
+                createdAt=meal_data["created_at"],
+                description=description,
+                calories=meal_data.get("kcal_total", 0),
+                macronutrients=macros,
+                photos=photos,
+                confidenceScore=meal_data.get("confidence_score"),
             )
-            meals_data: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
+        )
 
-            if not meals_data:
-                return []
-
-            meal_ids = [str(m["id"]) for m in meals_data]
-
-            cur = await conn.execute(
-                """SELECT id, tigris_key, display_order, meal_id FROM photos
-                   WHERE meal_id = ANY(%s) ORDER BY display_order""",
-                (meal_ids,),
-            )
-            photos_data: list[dict[str, Any]] = [dict(r) for r in await cur.fetchall()]
-
-            # Batch fetch estimates
-            estimate_ids = [
-                str(m["estimate_id"])
-                for m in meals_data
-                if m.get("estimate_id") and not m.get("description")
-            ]
-
-            estimates_by_id: dict[str, dict[str, Any]] = {}
-            if estimate_ids:
-                cur = await conn.execute(
-                    "SELECT * FROM estimates WHERE id = ANY(%s)", (estimate_ids,)
-                )
-                estimates_by_id = {str(e["id"]): e for e in (dict(r) for r in await cur.fetchall())}
-
-        # Group photos by meal_id
-        photos_by_meal: dict[str, list[dict[str, Any]]] = {}
-        for photo in photos_data:
-            mid = str(photo["meal_id"])
-            if mid not in photos_by_meal:
-                photos_by_meal[mid] = []
-            photos_by_meal[mid].append(photo)
-
-        result_meals = []
-        for meal_data in meals_data:
-            meal_id = str(meal_data["id"])
-            meal_photos = photos_by_meal.get(meal_id, [])
-
-            photos = []
-            for photo in meal_photos:
-                try:
-                    from .storage import generate_presigned_url
-
-                    thumbnail_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-                    full_url = generate_presigned_url(photo["tigris_key"], expiry=3600)
-                    photos.append(
-                        MealPhotoInfo(
-                            id=photo["id"],
-                            thumbnailUrl=thumbnail_url,
-                            fullUrl=full_url,
-                            displayOrder=photo["display_order"],
-                        )
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to generate photo URLs for meal {meal_id}: {e}")
-                    photos.append(
-                        MealPhotoInfo(
-                            id=photo["id"],
-                            thumbnailUrl="",
-                            fullUrl="",
-                            displayOrder=photo["display_order"],
-                        )
-                    )
-
-            macros = Macronutrients(
-                protein=meal_data.get("protein_grams", 0) or 0,
-                carbs=meal_data.get("carbs_grams", 0) or 0,
-                fats=meal_data.get("fats_grams", 0) or 0,
-            )
-
-            description = meal_data.get("description")
-            if not description and meal_data.get("estimate_id"):
-                estimate = estimates_by_id.get(str(meal_data["estimate_id"]))
-                if estimate:
-                    description = _generate_meal_description(estimate)
-                else:
-                    description = "No description available"
-            elif not description:
-                description = "Manual entry"
-
-            result_meals.append(
-                MealWithPhotos(
-                    id=meal_data["id"],
-                    userId=meal_data["user_id"],
-                    createdAt=meal_data["created_at"],
-                    description=description,
-                    calories=meal_data.get("kcal_total", 0),
-                    macronutrients=macros,
-                    photos=photos,
-                    confidenceScore=meal_data.get("confidence_score"),
-                )
-            )
-
-        return result_meals
-
-    except Exception as e:
-        logger.error(f"Error getting meals with photos: {e}")
-        raise
+    return result_meals
 
 
 async def db_update_meal_with_macros(meal_id: uuid.UUID, updates: Any) -> Any | None:

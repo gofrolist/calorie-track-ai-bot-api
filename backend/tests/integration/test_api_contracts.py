@@ -185,7 +185,7 @@ class TestAPIContracts:
         """Test meal creation from estimate API contract."""
         with (
             patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate") as mock_create,
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve,
         ):
             mock_create.return_value = {"meal_id": "meal-uuid-123"}
             mock_resolve.return_value = "user-uuid-123"
@@ -233,7 +233,7 @@ class TestAPIContracts:
         )
 
         with (
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve,
             patch("calorie_track_ai_bot.api.v1.meals.db_get_meals_with_photos") as mock_get,
         ):
             mock_resolve.return_value = user_uuid
@@ -276,7 +276,7 @@ class TestAPIContracts:
     def test_daily_summary_contract(self, client):
         """Test daily summary API contract."""
         with (
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve,
             patch("calorie_track_ai_bot.api.v1.daily_summary.db_get_daily_summary") as mock_get,
         ):
             mock_resolve.return_value = "user-uuid-123"
@@ -347,8 +347,8 @@ class TestAPIContracts:
             assert "detail" in data
             assert isinstance(data["detail"], str)
 
-        # Test 400 for missing user ID
-        with patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve:
+        # Test 404 for user not found
+        with patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve:
             mock_resolve.return_value = None  # Simulate user not found
 
             response = client.post(
@@ -361,8 +361,7 @@ class TestAPIContracts:
                 },
                 headers={"x-user-id": "123456789"},
             )
-            # Should return 400 or 500 - either is acceptable for error handling
-            assert response.status_code in [400, 500]
+            assert response.status_code == 404
 
         data = response.json()
         assert "detail" in data
@@ -458,7 +457,7 @@ class TestAPIContracts:
             assert response.headers["content-type"] == "application/json"
 
         with (
-            patch("calorie_track_ai_bot.services.db.resolve_user_id") as mock_resolve,
+            patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id") as mock_resolve,
             patch("calorie_track_ai_bot.services.db.db_get_meals_by_date") as mock_get,
         ):
             mock_resolve.return_value = "user-uuid-123"

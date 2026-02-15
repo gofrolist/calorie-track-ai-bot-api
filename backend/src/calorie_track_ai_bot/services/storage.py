@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import boto3
-from boto3.session import Session
 
 from .config import (
     APP_ENV,
@@ -17,7 +16,6 @@ from .config import (
 
 # Initialize S3 client only if all required config is available
 s3: Any | None = None
-TIGRIS_BUCKET: str | None = None
 
 if (
     AWS_ENDPOINT_URL_S3 is not None
@@ -25,15 +23,13 @@ if (
     and AWS_SECRET_ACCESS_KEY is not None
     and BUCKET_NAME is not None
 ):
-    _session: Session = boto3.Session()
-    s3 = _session.client(
+    s3 = boto3.Session().client(
         "s3",
         endpoint_url=AWS_ENDPOINT_URL_S3,
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
         region_name=AWS_REGION,
     )
-    TIGRIS_BUCKET = BUCKET_NAME
 elif APP_ENV == "dev":
     # In development mode, allow missing TIGRIS config
     print("WARNING: TIGRIS configuration not set. Photo upload functionality will be disabled.")
@@ -53,7 +49,7 @@ else:
 
 
 async def tigris_presign_put(content_type: str, prefix: str = "photos") -> tuple[str, str]:
-    if s3 is None or TIGRIS_BUCKET is None:
+    if s3 is None or BUCKET_NAME is None:
         raise RuntimeError(
             "TIGRIS configuration not available. Photo upload functionality is disabled."
         )
@@ -64,7 +60,7 @@ async def tigris_presign_put(content_type: str, prefix: str = "photos") -> tuple
     key = f"{safe_prefix}/{uuid.uuid4()}.jpg"
     url = s3.generate_presigned_url(
         ClientMethod="put_object",
-        Params={"Bucket": TIGRIS_BUCKET, "Key": key, "ContentType": content_type},
+        Params={"Bucket": BUCKET_NAME, "Key": key, "ContentType": content_type},
         ExpiresIn=900,
         HttpMethod="PUT",
     )
@@ -81,12 +77,12 @@ def generate_presigned_url(file_key: str, expiry: int = 3600) -> str:
     Returns:
         Presigned URL for downloading the photo
     """
-    if s3 is None or TIGRIS_BUCKET is None:
+    if s3 is None or BUCKET_NAME is None:
         raise RuntimeError("TIGRIS configuration not available")
 
     url = s3.generate_presigned_url(
         ClientMethod="get_object",
-        Params={"Bucket": TIGRIS_BUCKET, "Key": file_key},
+        Params={"Bucket": BUCKET_NAME, "Key": file_key},
         ExpiresIn=expiry,
     )
     return url
@@ -104,7 +100,7 @@ def purge_transient_media(
     Returns:
         Dict mapping prefixes to the list of deleted object keys.
     """
-    if s3 is None or TIGRIS_BUCKET is None:
+    if s3 is None or BUCKET_NAME is None:
         raise RuntimeError("TIGRIS configuration not available")
 
     scan_prefixes = prefixes or ["inline/", "inline-temp/", "transient/inline/"]
@@ -115,7 +111,7 @@ def purge_transient_media(
         paginator = s3.get_paginator("list_objects_v2")
         removed: list[str] = []
 
-        for page in paginator.paginate(Bucket=TIGRIS_BUCKET, Prefix=prefix):
+        for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=prefix):
             for obj in page.get("Contents", []):
                 key = obj.get("Key")
                 last_modified = obj.get("LastModified")
@@ -126,7 +122,7 @@ def purge_transient_media(
                     last_modified = last_modified.replace(tzinfo=UTC)
 
                 if last_modified <= cutoff:
-                    s3.delete_object(Bucket=TIGRIS_BUCKET, Key=key)
+                    s3.delete_object(Bucket=BUCKET_NAME, Key=key)
                     removed.append(key)
                     logger.info(
                         "inline.media.purged",
