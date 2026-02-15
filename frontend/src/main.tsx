@@ -4,12 +4,12 @@ import "./app.css";
 import "./i18n";
 import { App } from "./app";
 
-// Initialize Telegram WebApp
+// Initialize Telegram WebApp (only when running inside Telegram)
 const webapp = window.Telegram?.WebApp;
-if (webapp) {
+if (webapp?.initData) {
   webapp.ready();
   webapp.expand();
-  webapp.enableClosingConfirmation();
+  if (webapp.enableClosingConfirmation) webapp.enableClosingConfirmation();
   if (webapp.setHeaderColor) webapp.setHeaderColor("bg_color");
   if (webapp.setBackgroundColor) webapp.setBackgroundColor("bg_color");
 }
