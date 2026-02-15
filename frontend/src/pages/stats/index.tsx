@@ -6,6 +6,8 @@ import { StatsCharts } from "@/components/stats/StatsCharts";
 import { PeriodSelector } from "@/components/stats/PeriodSelector";
 import type { Period } from "@/components/stats/PeriodSelector";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { unwrap } from "@/api/unwrap";
+import { formatDate } from "@/utils/date";
 import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
@@ -16,23 +18,9 @@ function getDateRange(days: number) {
   const start = new Date();
   start.setDate(end.getDate() - days);
   return {
-    start_date: start.toISOString().split("T")[0],
-    end_date: end.toISOString().split("T")[0],
+    start_date: formatDate(start),
+    end_date: formatDate(end),
   };
-}
-
-/**
- * Extract the actual response body from an Orval hook result.
- * Orval types wrap the body in { data, status, headers } but at runtime
- * customFetch returns the raw JSON body directly.
- */
-function unwrap<T>(response: unknown): T | undefined {
-  if (!response) return undefined;
-  const r = response as Record<string, unknown>;
-  if ("data" in r && "status" in r) {
-    return r.data as T;
-  }
-  return response as T;
 }
 
 export default function StatsPage() {

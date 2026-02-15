@@ -23,6 +23,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div
         data-testid="modal-backdrop"
+        role="presentation"
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />

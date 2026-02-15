@@ -1,11 +1,8 @@
-import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 import structlog
-from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -39,11 +36,6 @@ from .services.config import (
 from .services.database import close_pool
 from .services.queue import r as redis_client
 from .services.telegram import get_bot
-
-# Load environment variables from .env file only when running the main application
-if __name__ == "__main__" or "uvicorn" in sys.modules:
-    env_path = Path(__file__).parent.parent.parent / ".env"
-    load_dotenv(env_path)
 
 # Initialize structured logger
 struct_logger = structlog.get_logger(__name__)

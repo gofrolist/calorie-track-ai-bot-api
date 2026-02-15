@@ -1,5 +1,11 @@
 import logging
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env before any os.getenv calls
+load_dotenv(Path(__file__).parent.parent.parent.parent / ".env")
 
 APP_ENV: str = os.getenv("APP_ENV", "dev")
 

@@ -72,6 +72,7 @@ const en = {
     saveError: "Failed to save changes. Please try again.",
     deleteSuccess: "Meal deleted successfully",
     deleteError: "Failed to delete meal. Please try again.",
+    description: "Description",
     details: "Details",
     created: "Created",
     lastUpdated: "Last Updated",

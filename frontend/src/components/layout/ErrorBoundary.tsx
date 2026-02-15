@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import i18n from "@/i18n";
 
 interface Props {
   children: ReactNode;
@@ -26,9 +27,11 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-tg-bg p-6 text-center text-tg-text">
-          <h1 className="text-xl font-semibold">Something went wrong</h1>
+          <h1 className="text-xl font-semibold">
+            {i18n.t("errorBoundary.title")}
+          </h1>
           <p className="text-sm text-tg-hint">
-            An unexpected error occurred. Please try refreshing the page.
+            {i18n.t("errorBoundary.message")}
           </p>
           {import.meta.env.DEV && this.state.error && (
             <pre className="max-w-full overflow-auto rounded bg-tg-secondary-bg p-3 text-left text-xs">
@@ -38,9 +41,9 @@ export class ErrorBoundary extends Component<Props, State> {
           <button
             onClick={() => window.location.reload()}
             className="rounded-lg bg-tg-button px-6 py-2 text-sm font-medium text-tg-button-text"
-            aria-label="Reload Page"
+            aria-label={i18n.t("errorBoundary.reload")}
           >
-            Reload Page
+            {i18n.t("errorBoundary.reload")}
           </button>
         </div>
       );

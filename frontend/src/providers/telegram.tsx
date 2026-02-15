@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import i18n from "@/i18n";
@@ -88,18 +89,21 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const value = useMemo(
+    () => ({
+      user,
+      initData,
+      theme,
+      language,
+      safeAreas,
+      setTheme,
+      setLanguage,
+    }),
+    [user, initData, theme, language, safeAreas, setTheme, setLanguage],
+  );
+
   return (
-    <TelegramContext.Provider
-      value={{
-        user,
-        initData,
-        theme,
-        language,
-        safeAreas,
-        setTheme,
-        setLanguage,
-      }}
-    >
+    <TelegramContext.Provider value={value}>
       {children}
     </TelegramContext.Provider>
   );

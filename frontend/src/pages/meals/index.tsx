@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetMealsApiV1MealsGet,
   useUpdateMealApiV1MealsMealIdPatch,
@@ -12,33 +13,20 @@ import { MealEditor } from "@/components/meal/MealEditor";
 import type { MealFormData } from "@/components/meal/MealEditor";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { unwrap } from "@/api/unwrap";
+import { formatDate } from "@/utils/date";
 import type { MealWithPhotos } from "@/api/model";
 import type { MealsListResponse } from "@/api/model";
 import type { DailySummary } from "@/api/model";
 import type { GoalResponse } from "@/api/model";
 
-function formatDate(d: Date): string {
-  return d.toISOString().split("T")[0];
-}
-
-/**
- * Extract the actual response body from an Orval hook result.
- * Orval types wrap the body in { data, status, headers } but at runtime
- * customFetch returns the raw JSON body directly.
- */
-function unwrap<T>(response: unknown): T | undefined {
-  if (!response) return undefined;
-  const r = response as Record<string, unknown>;
-  if ("data" in r && "status" in r) {
-    return r.data as T;
-  }
-  return response as T;
-}
-
 export default function MealsPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [selectedDate] = useState(formatDate(new Date()));
   const [editingMeal, setEditingMeal] = useState<MealWithPhotos | null>(null);
+  const [deletingMealId, setDeletingMealId] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const { data: mealsRaw, isLoading } = useGetMealsApiV1MealsGet({
     date: selectedDate,
@@ -53,22 +41,43 @@ export default function MealsPage() {
   const summary = unwrap<DailySummary>(summaryRaw);
   const goal = unwrap<GoalResponse>(goalRaw);
 
+  const invalidateAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/v1/meals"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/v1/daily-summary"] });
+  }, [queryClient]);
+
   const handleEdit = useCallback(
     (id: string) => {
       const meal = mealsData?.meals.find((m) => m.id === id);
-      if (meal) setEditingMeal(meal);
+      if (meal) {
+        setMutationError(null);
+        setEditingMeal(meal);
+      }
     },
     [mealsData],
   );
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      if (window.confirm(t("meals.confirmDelete"))) {
-        deleteMeal.mutate({ mealId: id });
-      }
-    },
-    [deleteMeal, t],
-  );
+  const handleDelete = useCallback((id: string) => {
+    setMutationError(null);
+    setDeletingMealId(id);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (!deletingMealId) return;
+    deleteMeal.mutate(
+      { mealId: deletingMealId },
+      {
+        onSuccess: () => {
+          setDeletingMealId(null);
+          invalidateAll();
+        },
+        onError: () => {
+          setDeletingMealId(null);
+          setMutationError(t("mealDetail.deleteError"));
+        },
+      },
+    );
+  }, [deletingMealId, deleteMeal, invalidateAll, t]);
 
   const handleSave = useCallback(
     (data: MealFormData) => {
@@ -83,15 +92,30 @@ export default function MealsPage() {
             fats_grams: data.fats,
           },
         },
-        { onSuccess: () => setEditingMeal(null) },
+        {
+          onSuccess: () => {
+            setEditingMeal(null);
+            invalidateAll();
+          },
+          onError: () => {
+            setMutationError(t("mealDetail.saveError"));
+          },
+        },
       );
     },
-    [editingMeal, updateMeal],
+    [editingMeal, updateMeal, invalidateAll, t],
   );
 
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-lg font-semibold text-tg-text">{t("meals.title")}</h1>
+
+      {/* Error banner */}
+      {mutationError && (
+        <div className="rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-500">
+          {mutationError}
+        </div>
+      )}
 
       {/* Daily summary */}
       {summary && (
@@ -144,6 +168,38 @@ export default function MealsPage() {
           {t("meals.list.empty")}
         </p>
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={!!deletingMealId}
+        onClose={() => setDeletingMealId(null)}
+        title={t("mealDetail.deleteMeal")}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-tg-text">
+            {t("mealDetail.deleteConfirm")}
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setDeletingMealId(null)}
+              className="flex-1 rounded-lg border border-tg-hint/30 py-2 text-sm text-tg-text"
+            >
+              {t("mealDetail.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              disabled={deleteMeal.isPending}
+              className="flex-1 rounded-lg bg-red-500 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {deleteMeal.isPending
+                ? t("mealDetail.saving")
+                : t("mealDetail.confirmDelete")}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Edit modal */}
       <Modal

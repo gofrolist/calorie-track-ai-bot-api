@@ -1,7 +1,12 @@
 const SESSION_CORRELATION_ID = crypto.randomUUID();
 
 function getTelegramUserId(): string | undefined {
-  return window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+  return (
+    window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() ??
+    (import.meta.env.DEV
+      ? (import.meta.env.VITE_DEV_USER_ID ?? "59357664")
+      : undefined)
+  );
 }
 
 function getBaseUrl(): string {
@@ -56,10 +61,12 @@ export async function customFetch<T>(
   }
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     "X-Correlation-ID": SESSION_CORRELATION_ID,
     ...extraHeaders,
   };
+  if (body) {
+    headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
+  }
 
   const userId = getTelegramUserId();
   if (userId) {

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetGoalApiV1GoalsGet,
   useUpdateGoalApiV1GoalsPatch,
@@ -8,31 +9,17 @@ import {
 import { useGetDailySummaryApiV1DailySummaryDateGet } from "@/api/queries/daily-summary/daily-summary";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { unwrap } from "@/api/unwrap";
+import { formatDate } from "@/utils/date";
 import type { GoalResponse, DailySummary } from "@/api/model";
-
-function formatDate(d: Date): string {
-  return d.toISOString().split("T")[0];
-}
-
-/**
- * Extract the actual response body from an Orval hook result.
- * Orval types wrap the body in { data, status, headers } but at runtime
- * customFetch returns the raw JSON body directly.
- */
-function unwrap<T>(response: unknown): T | undefined {
-  if (!response) return undefined;
-  const r = response as Record<string, unknown>;
-  if ("data" in r && "status" in r) {
-    return r.data as T;
-  }
-  return response as T;
-}
 
 export default function GoalsPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [goalInput, setGoalInput] = useState("");
   const [error, setError] = useState("");
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const { data: goalRaw, isLoading: loadingGoal } = useGetGoalApiV1GoalsGet();
   const { data: summaryRaw } = useGetDailySummaryApiV1DailySummaryDateGet(
@@ -44,9 +31,15 @@ export default function GoalsPage() {
   const goal = unwrap<GoalResponse>(goalRaw);
   const summary = unwrap<DailySummary>(summaryRaw);
 
+  const invalidateAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/v1/goals"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/v1/daily-summary"] });
+  }, [queryClient]);
+
   const handleEdit = useCallback(() => {
     setGoalInput(goal?.daily_kcal_target?.toString() ?? "2000");
     setError("");
+    setMutationError(null);
     setEditing(true);
   }, [goal]);
 
@@ -59,9 +52,17 @@ export default function GoalsPage() {
     const mutation = goal ? updateGoal : createGoal;
     mutation.mutate(
       { data: { daily_kcal_target: value } },
-      { onSuccess: () => setEditing(false) },
+      {
+        onSuccess: () => {
+          setEditing(false);
+          invalidateAll();
+        },
+        onError: () => {
+          setMutationError(t("goals.saveError"));
+        },
+      },
     );
-  }, [goalInput, goal, updateGoal, createGoal, t]);
+  }, [goalInput, goal, updateGoal, createGoal, t, invalidateAll]);
 
   const consumed = summary?.kcal_total ?? 0;
   const target = goal?.daily_kcal_target ?? 0;
@@ -71,6 +72,13 @@ export default function GoalsPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-lg font-semibold text-tg-text">{t("goals.title")}</h1>
+
+      {/* Error banner */}
+      {mutationError && (
+        <div className="rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-500">
+          {mutationError}
+        </div>
+      )}
 
       {loadingGoal ? (
         <Skeleton className="h-32 w-full" />

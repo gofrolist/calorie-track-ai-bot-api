@@ -51,9 +51,11 @@ export function MealEditor({
       className="flex flex-col gap-4"
     >
       <label className="flex flex-col gap-1">
-        <span className="text-sm text-tg-hint">Description</span>
+        <span className="text-sm text-tg-hint">
+          {t("mealDetail.description")}
+        </span>
         <input
-          aria-label="Description"
+          aria-label={t("mealDetail.description")}
           type="text"
           value={form.description}
           onChange={(e) => handleChange("description", e.target.value)}
@@ -66,7 +68,7 @@ export function MealEditor({
             {t("today.macros.protein")}
           </span>
           <input
-            aria-label="Protein"
+            aria-label={t("mealDetail.protein")}
             type="number"
             min={0}
             value={form.protein}
@@ -79,7 +81,7 @@ export function MealEditor({
             {t("today.macros.carbs")}
           </span>
           <input
-            aria-label="Carbs"
+            aria-label={t("mealDetail.carbs")}
             type="number"
             min={0}
             value={form.carbs}
@@ -90,7 +92,7 @@ export function MealEditor({
         <label className="flex flex-col gap-1">
           <span className="text-sm text-tg-hint">{t("today.macros.fat")}</span>
           <input
-            aria-label="Fat"
+            aria-label={t("mealDetail.fat")}
             type="number"
             min={0}
             value={form.fats}
