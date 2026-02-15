@@ -79,12 +79,17 @@ async def request_logging_middleware(request: Request, call_next):
     # Get correlation ID from request state
     correlation_id = getattr(request.state, "correlation_id", "unknown")
 
-    # Log request start
+    # Log request start (redact sensitive headers)
+    safe_headers = {
+        k: v
+        for k, v in request.headers.items()
+        if k.lower() not in {"authorization", "cookie", "x-user-id"}
+    }
     struct_logger.info(
         "Request started",
         method=request.method,
         url=str(request.url),
-        headers=dict(request.headers),
+        headers=safe_headers,
         correlation_id=correlation_id,
     )
 
