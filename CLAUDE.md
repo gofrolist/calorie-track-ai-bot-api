@@ -3,7 +3,7 @@
 Telegram Mini App for AI-powered food photo analysis and calorie tracking. Monorepo:
 
 - **`backend/`** — Python 3.12, FastAPI, Neon PostgreSQL, deployed on Fly.io
-- **`frontend/`** — React 19, TypeScript 5.9, Vite 7, deployed on Vercel
+- **`frontend/`** — React 19, TypeScript 5.9, Vite 7, Bun, Orval + TanStack Query, Tailwind CSS v4, deployed on Vercel
 
 See `backend/CLAUDE.md` and `frontend/CLAUDE.md` for detailed commands, architecture, and code style.
 
@@ -19,8 +19,8 @@ make docker-dev       # Full stack via Docker Compose
 ## CI/CD
 
 GitHub Actions workflows trigger on path-based changes:
-- `backend-ci.yml` → `backend-build.yml` → `backend-deploy.yml` (Fly.io)
-- `frontend-ci.yml` → `frontend-deploy.yml` (Vercel)
+- `backend-ci.yml` -> `backend-build.yml` -> `backend-deploy.yml` (Fly.io)
+- `frontend-ci.yml` -> `frontend-deploy.yml` (Vercel)
 
 ## Database
 

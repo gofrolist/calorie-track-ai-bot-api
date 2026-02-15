@@ -20,12 +20,12 @@ async def db_get_or_create_user(
 
         if user:
             user_id = str(user["id"])
-            logger.info(f"Found existing user with ID: {user_id}")
+            logger.info(f"Found existing user: {user.get('handle') or telegram_id}")
             return user_id
 
         # Create new user
         user_id = str(uuid.uuid4())
-        logger.info(f"Creating new user with ID: {user_id}, telegram_id: {telegram_id}")
+        logger.info(f"Creating new user: {handle or telegram_id}")
         await conn.execute(
             "INSERT INTO users (id, telegram_id, handle, locale) VALUES (%s, %s, %s, %s)",
             (user_id, telegram_id, handle, locale),

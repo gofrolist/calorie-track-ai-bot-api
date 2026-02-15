@@ -113,16 +113,6 @@ class StatisticsService:
                 average_goal_achievement=average_goal_achievement,
             )
 
-            logger.info(
-                f"Daily statistics retrieved for user {user_id[:8]}",
-                extra={
-                    "user_id": user_id,
-                    "start_date": start_date.isoformat(),
-                    "end_date": end_date.isoformat(),
-                    "data_points": len(data_points),
-                },
-            )
-
             return DailyStatisticsResponse(data=data_points, period=period, summary=summary)
 
         except ValueError:
@@ -178,16 +168,6 @@ class StatisticsService:
                 start_date=start_date,
                 end_date=end_date,
                 total_days=(end_date - start_date).days,
-            )
-
-            logger.info(
-                f"Macro statistics retrieved for user {user_id[:8]}",
-                extra={
-                    "user_id": user_id,
-                    "start_date": start_date.isoformat(),
-                    "end_date": end_date.isoformat(),
-                    "total_meals": len(rows),
-                },
             )
 
             return MacroStatisticsResponse(

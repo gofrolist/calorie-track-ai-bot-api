@@ -26,6 +26,8 @@ async def get_pool() -> AsyncConnectionPool:
             min_size=2,
             max_size=10,
             kwargs={"row_factory": dict_row},
+            check=AsyncConnectionPool.check_connection,
+            max_idle=300,
         )
         await _pool.open()
         logger.info("Database connection pool opened")
