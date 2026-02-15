@@ -231,3 +231,4 @@ frontend/*.tsbuildinfo
 .cursor
 .specify
 /specs
+docs/plans/
