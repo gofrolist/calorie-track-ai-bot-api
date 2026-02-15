@@ -12,7 +12,7 @@ from ...schemas import DailyStatisticsResponse, MacroStatisticsResponse
 from ...services.config import logger
 from ...services.statistics_service import get_statistics_service
 from ...utils.error_handling import handle_api_errors
-from .deps import get_authenticated_user_id, get_telegram_user_id
+from .deps import get_authenticated_user_id
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 
@@ -41,7 +41,6 @@ async def get_daily_statistics(
     Raises:
         HTTPException: If query fails or date range invalid
     """
-    telegram_user_id = get_telegram_user_id(request)
     user_id = await get_authenticated_user_id(request)
 
     statistics_service = get_statistics_service()
@@ -52,7 +51,7 @@ async def get_daily_statistics(
     )
 
     logger.info(
-        f"Daily statistics retrieved for user {telegram_user_id}",
+        f"Daily statistics retrieved for user {request.headers.get('x-user-id')}",
         extra={
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
@@ -86,7 +85,6 @@ async def get_macro_statistics(
     Raises:
         HTTPException: If query fails or date range invalid
     """
-    telegram_user_id = get_telegram_user_id(request)
     user_id = await get_authenticated_user_id(request)
 
     statistics_service = get_statistics_service()
@@ -97,7 +95,7 @@ async def get_macro_statistics(
     )
 
     logger.info(
-        f"Macro statistics retrieved for user {telegram_user_id}",
+        f"Macro statistics retrieved for user {request.headers.get('x-user-id')}",
         extra={
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
