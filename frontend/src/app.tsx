@@ -12,7 +12,7 @@ const Feedback = lazy(() => import("@/pages/feedback"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      staleTime: 50 * 60_000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
