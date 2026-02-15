@@ -29,7 +29,8 @@ jobs:
     - name: Verify generated API code is up-to-date
       run: |
         bun run api:gen
-        git diff --exit-code src/api/ || (echo "Generated API code is out of date. Run 'bun run api:gen' and commit the changes." && exit 1)
+        bun run format
+        git diff --exit-code src/api/ || (echo "Generated API code is out of date. Run 'bun run api:gen && bun run format' and commit the changes." && exit 1)
       working-directory: frontend
 
     - name: Run tests
