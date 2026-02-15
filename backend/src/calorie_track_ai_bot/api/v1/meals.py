@@ -142,7 +142,7 @@ async def get_meal(meal_id: str, request: Request) -> MealWithPhotos:
         raise HTTPException(status_code=404, detail="Meal not found")
 
     # Verify ownership
-    if str(meal.user_id) != user_id:
+    if str(meal.userId) != user_id:
         raise HTTPException(status_code=403, detail="You do not own this meal")
 
     return meal
@@ -167,7 +167,7 @@ async def update_meal(meal_id: str, payload: MealUpdate, request: Request) -> Me
     if not existing_meal:
         raise HTTPException(status_code=404, detail="Meal not found")
 
-    if str(existing_meal.user_id) != user_id:
+    if str(existing_meal.userId) != user_id:
         raise HTTPException(status_code=403, detail="You do not own this meal")
 
     # Update meal with macronutrient recalculation
@@ -198,7 +198,7 @@ async def delete_meal(meal_id: str, request: Request):
     if not existing_meal:
         raise HTTPException(status_code=404, detail="Meal not found")
 
-    if str(existing_meal.user_id) != user_id:
+    if str(existing_meal.userId) != user_id:
         raise HTTPException(status_code=403, detail="You do not own this meal")
 
     # Delete meal (cascades to photos, updates daily summary)

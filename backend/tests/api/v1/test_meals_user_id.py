@@ -17,23 +17,19 @@ class TestMealsUserIdDetection:
         return [
             MealWithPhotos(
                 id="550e8400-e29b-41d4-a716-446655440001",
-                user_id="550e8400-e29b-41d4-a716-446655440000",
-                meal_date="2025-09-28",
-                meal_type="breakfast",
+                userId="550e8400-e29b-41d4-a716-446655440000",
                 calories=500,
                 macronutrients=Macronutrients(protein=20, carbs=60, fats=15),
                 photos=[],
-                created_at=datetime(2025, 9, 28, 8, 0, 0, tzinfo=UTC),
+                createdAt=datetime(2025, 9, 28, 8, 0, 0, tzinfo=UTC),
             ),
             MealWithPhotos(
                 id="550e8400-e29b-41d4-a716-446655440002",
-                user_id="550e8400-e29b-41d4-a716-446655440000",
-                meal_date="2025-09-28",
-                meal_type="lunch",
+                userId="550e8400-e29b-41d4-a716-446655440000",
                 calories=700,
                 macronutrients=Macronutrients(protein=30, carbs=80, fats=25),
                 photos=[],
-                created_at=datetime(2025, 9, 28, 13, 0, 0, tzinfo=UTC),
+                createdAt=datetime(2025, 9, 28, 13, 0, 0, tzinfo=UTC),
             ),
         ]
 

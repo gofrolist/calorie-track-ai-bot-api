@@ -327,7 +327,9 @@ codegen: venv
 		--input-file-type openapi \
 		--output src/calorie_track_ai_bot/schemas.py \
 		--output-model-type pydantic_v2.BaseModel \
-		--target-python-version 3.12
+		--target-python-version 3.12 \
+		--field-constraints \
+		--use-annotated
 
 # =============================================================================
 # DEPLOYMENT

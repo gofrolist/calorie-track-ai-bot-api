@@ -23,9 +23,9 @@ class TestMealsDeleteEndpoint:
         # Mock meal exists
         mock_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=500.0,
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=0.0, carbs=0.0, fats=0.0),
             photos=[],
         )

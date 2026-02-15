@@ -175,7 +175,7 @@ async def db_create_meal_from_estimate(
     mid = str(uuid.uuid4())
 
     # Get the estimate data to retrieve kcal_mean
-    estimate = await db_get_estimate(data.estimate_id)
+    estimate = await db_get_estimate(str(data.estimate_id))
     if not estimate:
         raise ValueError(f"Estimate not found: {data.estimate_id}")
 

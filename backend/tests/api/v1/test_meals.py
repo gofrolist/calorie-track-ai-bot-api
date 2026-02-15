@@ -23,13 +23,13 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_manual_success(self, mock_db_create, client):
         """Test successful manual meal creation."""
-        mock_db_create.return_value = {"meal_id": "meal123"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000001"}
 
         payload = {
             "meal_date": "2024-01-01",
             "meal_type": "breakfast",
             "kcal_total": 300.5,
-            "macros": {"protein": 20, "carbs": 30, "fat": 10},
+            "macros": {"protein": 20, "carbs": 30, "fats": 10},
         }
 
         response = client.post("/meals", json=payload)
@@ -39,19 +39,19 @@ class TestMealsEndpoints:
 
         # Check response structure
         assert "meal_id" in data
-        assert data["meal_id"] == "meal123"
+        assert data["meal_id"] == "00000000-0000-0000-0000-000000000001"
 
     @patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
     def test_create_meal_from_estimate_success(self, mock_db_create, mock_resolve_user_id, client):
         """Test successful meal creation from estimate."""
         mock_resolve_user_id.return_value = "user-uuid-123"
-        mock_db_create.return_value = {"meal_id": "meal456"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000002"}
 
         payload = {
             "meal_date": "2024-01-01",
             "meal_type": "lunch",
-            "estimate_id": "estimate123",
+            "estimate_id": "00000000-0000-0000-0000-000000000123",
             "overrides": {"kcal_total": 450},
         }
 
@@ -62,12 +62,12 @@ class TestMealsEndpoints:
 
         # Check response structure
         assert "meal_id" in data
-        assert data["meal_id"] == "meal456"
+        assert data["meal_id"] == "00000000-0000-0000-0000-000000000002"
 
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_manual_without_macros(self, mock_db_create, client):
         """Test manual meal creation without macros."""
-        mock_db_create.return_value = {"meal_id": "meal789"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000003"}
 
         payload = {
             "meal_date": "2024-01-01",
@@ -80,7 +80,7 @@ class TestMealsEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["meal_id"] == "meal789"
+        assert data["meal_id"] == "00000000-0000-0000-0000-000000000003"
 
     @patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id")
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_estimate")
@@ -89,12 +89,12 @@ class TestMealsEndpoints:
     ):
         """Test meal creation from estimate without overrides."""
         mock_resolve_user_id.return_value = "user-uuid-123"
-        mock_db_create.return_value = {"meal_id": "meal999"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000004"}
 
         payload = {
             "meal_date": "2024-01-01",
             "meal_type": "snack",
-            "estimate_id": "estimate456",
+            "estimate_id": "00000000-0000-0000-0000-000000000456",
             # No overrides field
         }
 
@@ -102,7 +102,7 @@ class TestMealsEndpoints:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["meal_id"] == "meal999"
+        assert data["meal_id"] == "00000000-0000-0000-0000-000000000004"
 
     def test_create_meal_missing_required_fields(self, client):
         """Test meal creation with missing required fields."""
@@ -152,7 +152,11 @@ class TestMealsEndpoints:
         mock_resolve_user_id.return_value = "user-uuid-123"
         mock_db_create.side_effect = Exception("Database Error")
 
-        payload = {"meal_date": "2024-01-01", "meal_type": "lunch", "estimate_id": "estimate123"}
+        payload = {
+            "meal_date": "2024-01-01",
+            "meal_type": "lunch",
+            "estimate_id": "00000000-0000-0000-0000-000000000123",
+        }
 
         response = client.post("/meals", json=payload, headers={"x-user-id": "123456789"})
         assert response.status_code == 500
@@ -174,7 +178,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_content_type(self, mock_db_create, client):
         """Test that create meal returns JSON content type."""
-        mock_db_create.return_value = {"meal_id": "meal123"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000001"}
 
         payload = {"meal_date": "2024-01-01", "meal_type": "breakfast", "kcal_total": 300.5}
 
@@ -184,7 +188,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_response_structure(self, mock_db_create, client):
         """Test that create meal returns consistent response structure."""
-        mock_db_create.return_value = {"meal_id": "meal123"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000001"}
 
         payload = {"meal_date": "2024-01-01", "meal_type": "breakfast", "kcal_total": 300.5}
 
@@ -203,7 +207,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_meal_types(self, mock_db_create, client):
         """Test meal creation with different meal types."""
-        mock_db_create.return_value = {"meal_id": "meal123"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000001"}
 
         meal_types = ["breakfast", "lunch", "dinner", "snack"]
 
@@ -216,7 +220,7 @@ class TestMealsEndpoints:
     @patch("calorie_track_ai_bot.api.v1.meals.db_create_meal_from_manual")
     def test_create_meal_date_formats(self, mock_db_create, client):
         """Test meal creation with different date formats."""
-        mock_db_create.return_value = {"meal_id": "meal123"}
+        mock_db_create.return_value = {"meal_id": "00000000-0000-0000-0000-000000000001"}
 
         date_formats = ["2024-01-01", "2024-12-31", "2023-06-15"]
 

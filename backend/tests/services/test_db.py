@@ -212,7 +212,7 @@ class TestDatabaseFunctions:
             data = MealCreateFromEstimateRequest(
                 meal_date=date(2024, 1, 1),
                 meal_type=MealType.lunch,
-                estimate_id="estimate123",
+                estimate_id="00000000-0000-0000-0000-000000000123",
                 overrides={"kcal_total": 450},
             )
 
@@ -243,7 +243,7 @@ class TestDatabaseFunctions:
             data = MealCreateFromEstimateRequest(
                 meal_date=date(2024, 1, 1),
                 meal_type=MealType.dinner,
-                estimate_id="estimate456",
+                estimate_id="00000000-0000-0000-0000-000000000456",
                 overrides=None,
             )
 
@@ -268,7 +268,7 @@ class TestDatabaseFunctions:
             data = MealCreateFromEstimateRequest(
                 meal_date=date(2024, 1, 1),
                 meal_type=MealType.snack,
-                estimate_id="missing",
+                estimate_id="00000000-0000-0000-0000-000000000999",
                 overrides=None,
             )
 

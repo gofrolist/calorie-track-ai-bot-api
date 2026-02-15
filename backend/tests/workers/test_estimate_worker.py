@@ -216,7 +216,7 @@ class TestEstimateWorker:
             "user_id": "user123",
             "tigris_key": "photos/storage_key.jpg",
         }
-        estimate_id = "estimate123"
+        estimate_id = "00000000-0000-0000-0000-000000000123"
 
         with patch(
             "calorie_track_ai_bot.workers.estimate_worker.db_create_meal_from_estimate"
@@ -231,7 +231,7 @@ class TestEstimateWorker:
             meal_request = call_args[0][0]  # First positional argument
             user_id = call_args[0][1]  # Second positional argument
 
-            assert meal_request.estimate_id == estimate_id
+            assert str(meal_request.estimate_id) == estimate_id
             assert meal_request.meal_type.value == "snack"
             assert user_id == "user123"
 
@@ -243,7 +243,7 @@ class TestEstimateWorker:
             "tigris_key": "photos/storage_key.jpg",
             # No user_id
         }
-        estimate_id = "estimate123"
+        estimate_id = "00000000-0000-0000-0000-000000000123"
 
         with patch(
             "calorie_track_ai_bot.workers.estimate_worker.db_create_meal_from_estimate"

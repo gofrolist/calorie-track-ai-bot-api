@@ -80,7 +80,7 @@ class TestPhotoUrlGeneration:
 
             mock_resolve.return_value = "user-uuid-123"
             mock_get_estimate.return_value = {
-                "id": "estimate-uuid-123",
+                "id": "00000000-0000-0000-0000-000000000123",
                 "photo_id": "photo-uuid-123",
                 "kcal_mean": 650,
                 "breakdown": [{"label": "chicken breast", "kcal": 300}],
@@ -232,13 +232,13 @@ class TestPhotoUrlGeneration:
             ) as mock_get_estimate,
         ):
             mock_get_estimate.return_value = {
-                "id": "estimate-uuid-123",
+                "id": "00000000-0000-0000-0000-000000000123",
                 "kcal_mean": 850,
                 "breakdown": [{"label": "test food", "kcal": 850}],
             }
 
             meal_request = MealCreateFromEstimateRequest(
-                estimate_id="estimate-uuid-123",
+                estimate_id="00000000-0000-0000-0000-000000000123",
                 meal_date=date.today(),
                 meal_type=MealType.snack,
             )
@@ -268,13 +268,13 @@ class TestPhotoUrlGeneration:
             ) as mock_get_estimate,
         ):
             mock_get_estimate.return_value = {
-                "id": "estimate-uuid-123",
+                "id": "00000000-0000-0000-0000-000000000123",
                 "kcal_mean": 850,
                 "breakdown": [{"label": "test food", "kcal": 850}],
             }
 
             meal_request = MealCreateFromEstimateRequest(
-                estimate_id="estimate-uuid-123",
+                estimate_id="00000000-0000-0000-0000-000000000123",
                 meal_date=date.today(),
                 meal_type=MealType.snack,
                 overrides={"kcal_total": 750},

@@ -27,13 +27,10 @@ class TestMealsUpdateEndpoint:
         # Mock existing meal
         existing_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=650.0,
-            protein_grams=45.5,
-            carbs_grams=75.0,
-            fats_grams=18.2,
             description="Original description",
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=45.5, carbs=75.0, fats=18.2),
             photos=[],
         )
@@ -41,13 +38,10 @@ class TestMealsUpdateEndpoint:
         # Mock updated meal
         updated_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=650.0,
-            protein_grams=45.5,
-            carbs_grams=75.0,
-            fats_grams=18.2,
             description="Updated: Grilled chicken pasta",
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=45.5, carbs=75.0, fats=18.2),
             photos=[],
         )
@@ -91,13 +85,10 @@ class TestMealsUpdateEndpoint:
         # Mock existing meal
         existing_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=650.0,
-            protein_grams=45.5,
-            carbs_grams=75.0,
-            fats_grams=18.2,
             description="Original description",
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=45.5, carbs=75.0, fats=18.2),
             photos=[],
         )
@@ -105,13 +96,10 @@ class TestMealsUpdateEndpoint:
         # Mock updated meal with recalculated calories
         updated_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=660.0,  # 50*4 + 70*4 + 20*9 = 660
-            protein_grams=50.0,
-            carbs_grams=70.0,
-            fats_grams=20.0,
             description="Original description",
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=50.0, carbs=70.0, fats=20.0),
             photos=[],
         )
@@ -160,13 +148,10 @@ class TestMealsUpdateEndpoint:
         # Mock existing meal
         existing_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=650.0,
-            protein_grams=45.5,
-            carbs_grams=75.0,
-            fats_grams=18.2,
             description="Original description",
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=45.5, carbs=75.0, fats=18.2),
             photos=[],
         )
@@ -174,13 +159,10 @@ class TestMealsUpdateEndpoint:
         # Mock updated meal with only protein changed
         updated_meal = MealWithPhotos(
             id=meal_id,
-            user_id=user_uuid,
+            userId=user_uuid,
             calories=650.0,  # Only protein changed, calories recalculated
-            protein_grams=45.0,
-            carbs_grams=75.0,
-            fats_grams=18.2,
             description="Original description",
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=45.0, carbs=75.0, fats=18.2),
             photos=[],
         )
@@ -251,13 +233,10 @@ class TestMealsUpdateEndpoint:
         # Mock meal belonging to another user
         other_user_meal = MealWithPhotos(
             id=other_user_meal_id,
-            user_id=other_user_uuid,  # Different user
+            userId=other_user_uuid,  # Different user
             calories=650.0,
-            protein_grams=45.5,
-            carbs_grams=75.0,
-            fats_grams=18.2,
             description="Other user's meal",
-            created_at=datetime.now(UTC),
+            createdAt=datetime.now(UTC),
             macronutrients=Macronutrients(protein=45.5, carbs=75.0, fats=18.2),
             photos=[],
         )

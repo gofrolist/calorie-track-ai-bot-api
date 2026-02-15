@@ -1,27 +1,39 @@
 openapi: 3.1.1
 info:
   title: Calories Count API
-  version: 0.1.0
+  version: 0.2.0
+  description: AI-powered food photo analysis and calorie tracking API for Telegram Mini App.
+
+security:
+  - telegramAuth: []
 
 paths:
+  # ---------- Photo Upload ----------
   /api/v1/photos:
     post:
-      summary: Begin a new photo upload
+      summary: Upload one or more photos
       operationId: createPhoto
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PhotoCreateRequest'
+              oneOf:
+                - $ref: '#/components/schemas/PhotoCreateRequest'
+                - $ref: '#/components/schemas/MultiPhotoCreateRequest'
       responses:
         "200":
-          description: Presigned URL
+          description: Presigned upload URL(s)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PresignResponse'
+                oneOf:
+                  - $ref: '#/components/schemas/PresignResponse'
+                  - $ref: '#/components/schemas/MultiPhotoResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
 
+  # ---------- Estimation ----------
   /api/v1/photos/{photo_id}/estimate:
     post:
       summary: Enqueue an estimation job for a photo
@@ -32,6 +44,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         "200":
           description: Job queued
@@ -42,7 +55,7 @@ paths:
 
   /api/v1/estimates/{estimate_id}:
     get:
-      summary: Fetch an estimate
+      summary: Fetch an estimate result
       operationId: getEstimate
       parameters:
         - in: path
@@ -50,6 +63,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
       responses:
         "200":
           description: Estimate
@@ -57,7 +71,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EstimateResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
 
+  # ---------- Meals ----------
   /api/v1/meals:
     post:
       summary: Create a meal (manual or from estimate)
@@ -77,145 +94,369 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MealCreateResponse'
-
-  # ---------- Health Check Endpoints ----------
-  /healthz:
+        "400":
+          $ref: '#/components/responses/BadRequest'
     get:
-      summary: Health check endpoint
-      operationId: healthCheck
+      summary: List meals with optional date filtering
+      operationId: listMeals
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          description: Filter by exact date (YYYY-MM-DD)
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          description: Filter from date (inclusive)
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          description: Filter to date (inclusive)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
       responses:
         "200":
-          description: Service is healthy
+          description: List of meals
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "ok"
+                $ref: '#/components/schemas/MealsListResponse'
 
-  /health/live:
+  /api/v1/meals/calendar:
     get:
-      summary: Liveness probe
-      operationId: livenessProbe
+      summary: Calendar summary of meals per day
+      operationId: getMealsCalendar
+      parameters:
+        - in: query
+          name: start_date
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          required: true
+          schema:
+            type: string
+            format: date
       responses:
         "200":
-          description: Service is alive
+          description: Daily meal summaries for calendar view
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "alive"
+                $ref: '#/components/schemas/MealsCalendarResponse'
 
-  /health/ready:
+  /api/v1/meals/{meal_id}:
     get:
-      summary: Readiness probe
-      operationId: readinessProbe
+      summary: Get a single meal with photos
+      operationId: getMeal
+      parameters:
+        - $ref: '#/components/parameters/MealId'
       responses:
         "200":
-          description: Service is ready
+          description: Meal details
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "ready"
-
-  # ---------- Telegram Bot Endpoints ----------
-  /bot:
-    post:
-      summary: Telegram webhook handler
-      operationId: telegramWebhook
+                $ref: '#/components/schemas/MealWithPhotos'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a meal
+      operationId: updateMeal
+      parameters:
+        - $ref: '#/components/parameters/MealId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TelegramUpdate'
+              $ref: '#/components/schemas/MealUpdate'
       responses:
         "200":
-          description: Webhook processed
+          description: Updated meal
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "ok"
-
-  /bot/setup:
-    post:
-      summary: Setup Telegram webhook
-      operationId: setupTelegramWebhook
-      responses:
-        "200":
-          description: Webhook configured
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "webhook_set"
-
-  /bot/webhook-info:
-    get:
-      summary: Get Telegram webhook information
-      operationId: getTelegramWebhookInfo
-      responses:
-        "200":
-          description: Webhook information
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TelegramWebhookInfo'
-
-  /bot/webhook:
+                $ref: '#/components/schemas/MealWithPhotos'
+        "404":
+          $ref: '#/components/responses/NotFound'
     delete:
-      summary: Delete Telegram webhook
-      operationId: deleteTelegramWebhook
+      summary: Delete a meal
+      operationId: deleteMeal
+      parameters:
+        - $ref: '#/components/parameters/MealId'
+      responses:
+        "204":
+          description: Meal deleted
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ---------- Summaries ----------
+  /api/v1/daily-summary/{date}:
+    get:
+      summary: Daily nutrition summary
+      operationId: getDailySummary
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
       responses:
         "200":
-          description: Webhook deleted
+          description: Daily summary
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "webhook_deleted"
+                $ref: '#/components/schemas/DailySummary'
 
-  # ---------- Authentication Endpoints ----------
-  /auth/telegram/init:
+  /api/v1/weekly-summary:
+    get:
+      summary: 7-day nutrition summaries
+      operationId: getWeeklySummary
+      parameters:
+        - in: query
+          name: start_date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Array of 7 daily summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailySummary'
+
+  /api/v1/monthly-summary:
+    get:
+      summary: Full month of daily summaries
+      operationId: getMonthlySummary
+      parameters:
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+      responses:
+        "200":
+          description: Array of daily summaries for the month
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailySummary'
+
+  /api/v1/today/{date}:
+    get:
+      summary: Today page data (meals + daily summary)
+      operationId: getTodayData
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Combined today data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodayResponse'
+
+  # ---------- Goals ----------
+  /api/v1/goals:
+    get:
+      summary: Get user's calorie goal
+      operationId: getGoal
+      responses:
+        "200":
+          description: Goal data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
     post:
-      summary: Initialize Telegram authentication
-      operationId: initTelegramAuth
+      summary: Create or set calorie goal
+      operationId: createGoal
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TelegramAuthRequest'
+              $ref: '#/components/schemas/GoalRequest'
       responses:
         "200":
-          description: Authentication initialized
+          description: Created goal
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TelegramAuthResponse'
+                $ref: '#/components/schemas/GoalResponse'
+    patch:
+      summary: Update calorie goal
+      operationId: updateGoal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoalRequest'
+      responses:
+        "200":
+          description: Updated goal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoalResponse'
+
+  # ---------- Statistics ----------
+  /api/v1/statistics/daily:
+    get:
+      summary: Daily nutrition statistics
+      operationId: getDailyStatistics
+      parameters:
+        - in: query
+          name: start_date
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Daily statistics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyStatisticsResponse'
+
+  /api/v1/statistics/macros:
+    get:
+      summary: Macronutrient breakdown statistics
+      operationId: getMacroStatistics
+      parameters:
+        - in: query
+          name: start_date
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end_date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Macro breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MacroStatisticsResponse'
+
+  # ---------- Feedback ----------
+  /api/v1/feedback:
+    post:
+      summary: Submit user feedback
+      operationId: submitFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackSubmissionRequest'
+      responses:
+        "201":
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackSubmissionResponse'
+
+  # ---------- Connectivity ----------
+  /api/v1/connectivity:
+    get:
+      summary: Health check with DB ping
+      operationId: checkConnectivity
+      security: []
+      responses:
+        "200":
+          description: Connectivity status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectivityResponse'
 
 components:
+  securitySchemes:
+    telegramAuth:
+      type: apiKey
+      in: header
+      name: x-user-id
+      description: Telegram user ID
+
+  parameters:
+    MealId:
+      in: path
+      name: meal_id
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
   schemas:
-    # ---------- Enums (string) ----------
+    # =====================================================================
+    # Enums
+    # =====================================================================
     Status:
       type: string
       enum: [queued, running, done, failed]
@@ -224,7 +465,43 @@ components:
       type: string
       enum: [breakfast, lunch, dinner, snack]
 
-    # ---------- Shared models ----------
+    FeedbackMessageType:
+      type: string
+      enum: [feedback, bug, question, support]
+
+    FeedbackStatus:
+      type: string
+      enum: [new, reviewed, resolved]
+
+    ConnectionStatus:
+      type: string
+      enum: [connected, disconnected, error]
+
+    # =====================================================================
+    # Shared Models
+    # =====================================================================
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required: [detail]
+
+    Macronutrients:
+      type: object
+      description: Macronutrient breakdown in grams
+      properties:
+        protein:
+          type: number
+          minimum: 0
+        carbs:
+          type: number
+          minimum: 0
+        fats:
+          type: number
+          minimum: 0
+      required: [protein, carbs, fats]
+
     EstimateItem:
       type: object
       properties:
@@ -236,7 +513,9 @@ components:
           type: number
       required: [label, kcal, confidence]
 
-    # ---------- Requests ----------
+    # =====================================================================
+    # Photo Requests / Responses
+    # =====================================================================
     PhotoCreateRequest:
       type: object
       properties:
@@ -245,43 +524,38 @@ components:
           description: MIME type of the image (e.g., image/jpeg)
       required: [content_type]
 
-    MealCreateManualRequest:
+    MultiPhotoCreateRequest:
       type: object
       properties:
-        meal_date:
-          type: string
-          format: date
-        meal_type:
-          $ref: '#/components/schemas/MealType'
-        kcal_total:
-          type: number
-        macros:
-          type: object
-          additionalProperties: true
-      required: [meal_date, meal_type, kcal_total]
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhotoCreateRequest'
+          minItems: 1
+          maxItems: 5
+          description: List of photos to upload (1-5 photos)
+      required: [photos]
 
-    MealCreateFromEstimateRequest:
+    PhotoInfo:
       type: object
       properties:
-        meal_date:
+        id:
           type: string
-          format: date
-        meal_type:
-          $ref: '#/components/schemas/MealType'
-        estimate_id:
+        upload_url:
           type: string
-        overrides:
-          type: object
-          additionalProperties: true
-      required: [meal_date, meal_type, estimate_id]
+        file_key:
+          type: string
+      required: [id, upload_url, file_key]
 
-    MealCreateResponse:
+    MultiPhotoResponse:
       type: object
       properties:
-        meal_id: { type: string }
-      required: [meal_id]
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhotoInfo'
+      required: [photos]
 
-    # ---------- Responses ----------
     PresignResponse:
       type: object
       properties:
@@ -291,6 +565,9 @@ components:
           type: string
       required: [photo_id, upload_url]
 
+    # =====================================================================
+    # Estimation
+    # =====================================================================
     EstimateQueuedResponse:
       type: object
       properties:
@@ -324,160 +601,755 @@ components:
           $ref: '#/components/schemas/Status'
       required: [id, photo_id, kcal_mean, kcal_min, kcal_max, confidence, breakdown]
 
-    # ---------- Telegram Bot Schemas ----------
-    TelegramUpdate:
+    # =====================================================================
+    # Meal Requests / Responses
+    # =====================================================================
+    MealCreateManualRequest:
       type: object
       properties:
-        update_id:
-          type: integer
-        message:
-          $ref: '#/components/schemas/TelegramMessage'
-        callback_query:
-          $ref: '#/components/schemas/TelegramCallbackQuery'
-      required: [update_id]
-
-    TelegramMessage:
-      type: object
-      properties:
-        message_id:
-          type: integer
-        from:
-          $ref: '#/components/schemas/TelegramUser'
-        chat:
-          $ref: '#/components/schemas/TelegramChat'
-        date:
-          type: integer
-        text:
+        meal_date:
           type: string
-        photo:
+          format: date
+        meal_type:
+          $ref: '#/components/schemas/MealType'
+        kcal_total:
+          type: number
+        macros:
+          $ref: '#/components/schemas/Macronutrients'
+      required: [meal_date, meal_type, kcal_total]
+
+    MealCreateFromEstimateRequest:
+      type: object
+      properties:
+        meal_date:
+          type: string
+          format: date
+        meal_type:
+          $ref: '#/components/schemas/MealType'
+        estimate_id:
+          type: string
+          format: uuid
+        overrides:
+          type: object
+          additionalProperties: true
+      required: [meal_date, meal_type, estimate_id]
+
+    MealCreateResponse:
+      type: object
+      properties:
+        meal_id:
+          type: string
+          format: uuid
+      required: [meal_id]
+
+    MealPhotoInfo:
+      type: object
+      description: Photo information for meal display
+      properties:
+        id:
+          type: string
+          format: uuid
+        thumbnailUrl:
+          type: string
+          description: Presigned URL for thumbnail
+        fullUrl:
+          type: string
+          description: Presigned URL for full-size image
+        displayOrder:
+          type: integer
+          minimum: 0
+          maximum: 4
+          description: Position in carousel (0-4)
+      required: [id, thumbnailUrl, fullUrl, displayOrder]
+
+    MealWithPhotos:
+      type: object
+      description: Meal with associated photos and macronutrients
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        description:
+          type: string
+          maxLength: 1000
+        calories:
+          type: number
+          minimum: 0
+        macronutrients:
+          $ref: '#/components/schemas/Macronutrients'
+        photos:
           type: array
           items:
-            $ref: '#/components/schemas/TelegramPhotoSize'
-        document:
-          $ref: '#/components/schemas/TelegramDocument'
-      required: [message_id, from, chat, date]
+            $ref: '#/components/schemas/MealPhotoInfo'
+          default: []
+        confidenceScore:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: AI confidence (0-1)
+      required: [id, userId, createdAt, calories, macronutrients]
 
-    TelegramUser:
+    MealUpdate:
+      type: object
+      description: Partial update for meal details
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+          maxLength: 1000
+        protein_grams:
+          type: number
+          minimum: 0
+        carbs_grams:
+          type: number
+          minimum: 0
+        fats_grams:
+          type: number
+          minimum: 0
+
+    MealCalendarDay:
+      type: object
+      description: Daily meal summary for calendar view
+      properties:
+        meal_date:
+          type: string
+          format: date
+        meal_count:
+          type: integer
+          minimum: 0
+        total_calories:
+          type: number
+          minimum: 0
+        total_protein:
+          type: number
+          minimum: 0
+        total_carbs:
+          type: number
+          minimum: 0
+        total_fats:
+          type: number
+          minimum: 0
+      required: [meal_date, meal_count, total_calories, total_protein, total_carbs, total_fats]
+
+    MealsListResponse:
       type: object
       properties:
-        id:
-          type: integer
-        is_bot:
-          type: boolean
-        first_name:
-          type: string
-        last_name:
-          type: string
-        username:
-          type: string
-        language_code:
-          type: string
-      required: [id, is_bot, first_name]
-
-    TelegramChat:
-      type: object
-      properties:
-        id:
-          type: integer
-        type:
-          type: string
-          enum: [private, group, supergroup, channel]
-        title:
-          type: string
-        username:
-          type: string
-        first_name:
-          type: string
-        last_name:
-          type: string
-      required: [id, type]
-
-    TelegramPhotoSize:
-      type: object
-      properties:
-        file_id:
-          type: string
-        file_unique_id:
-          type: string
-        width:
-          type: integer
-        height:
-          type: integer
-        file_size:
-          type: integer
-      required: [file_id, file_unique_id, width, height]
-
-    TelegramDocument:
-      type: object
-      properties:
-        file_id:
-          type: string
-        file_unique_id:
-          type: string
-        file_name:
-          type: string
-        mime_type:
-          type: string
-        file_size:
-          type: integer
-      required: [file_id, file_unique_id]
-
-    TelegramCallbackQuery:
-      type: object
-      properties:
-        id:
-          type: string
-        from:
-          $ref: '#/components/schemas/TelegramUser'
-        message:
-          $ref: '#/components/schemas/TelegramMessage'
-        data:
-          type: string
-      required: [id, from]
-
-    TelegramWebhookInfo:
-      type: object
-      properties:
-        url:
-          type: string
-        has_custom_certificate:
-          type: boolean
-        pending_update_count:
-          type: integer
-        ip_address:
-          type: string
-        last_error_date:
-          type: integer
-        last_error_message:
-          type: string
-        max_connections:
-          type: integer
-        allowed_updates:
+        meals:
           type: array
           items:
-            type: string
-      required: [url, has_custom_certificate, pending_update_count]
+            $ref: '#/components/schemas/MealWithPhotos'
+        total:
+          type: integer
+          minimum: 0
+      required: [meals, total]
 
-    # ---------- Authentication Schemas ----------
-    TelegramAuthRequest:
+    MealsCalendarResponse:
       type: object
       properties:
-        init_data:
-          type: string
-          description: Telegram WebApp init data
-        hash:
-          type: string
-          description: Hash for verification
-      required: [init_data, hash]
+        dates:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealCalendarDay'
+      required: [dates]
 
-    TelegramAuthResponse:
+    # =====================================================================
+    # Summary / Today
+    # =====================================================================
+    MacrosTotals:
+      type: object
+      properties:
+        protein_g:
+          type: number
+          minimum: 0
+        fat_g:
+          type: number
+          minimum: 0
+        carbs_g:
+          type: number
+          minimum: 0
+      required: [protein_g, fat_g, carbs_g]
+
+    DailySummary:
       type: object
       properties:
         user_id:
           type: string
-        session_token:
+        date:
           type: string
-        expires_at:
+          format: date
+        kcal_total:
+          type: number
+          minimum: 0
+        macros_totals:
+          $ref: '#/components/schemas/MacrosTotals'
+      required: [user_id, date, kcal_total, macros_totals]
+
+    TodayResponse:
+      type: object
+      properties:
+        meals:
+          type: array
+          items:
+            type: object
+        daily_summary:
+          $ref: '#/components/schemas/DailySummary'
+      required: [meals, daily_summary]
+
+    # =====================================================================
+    # Goals
+    # =====================================================================
+    GoalRequest:
+      type: object
+      properties:
+        daily_kcal_target:
+          type: integer
+      required: [daily_kcal_target]
+
+    GoalResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        daily_kcal_target:
+          type: integer
+        created_at:
           type: string
           format: date-time
-      required: [user_id, session_token, expires_at]
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, user_id, daily_kcal_target]
+
+    # =====================================================================
+    # Statistics
+    # =====================================================================
+    DailyDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        total_calories:
+          type: number
+          minimum: 0
+        total_protein:
+          type: number
+          minimum: 0
+        total_fat:
+          type: number
+          minimum: 0
+        total_carbs:
+          type: number
+          minimum: 0
+        meal_count:
+          type: integer
+          minimum: 0
+        goal_calories:
+          type: number
+          minimum: 0
+        goal_achievement:
+          type: number
+      required: [date, total_calories, total_protein, total_fat, total_carbs, meal_count]
+
+    StatisticsPeriod:
+      type: object
+      properties:
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        total_days:
+          type: integer
+          minimum: 1
+      required: [start_date, end_date, total_days]
+
+    StatisticsSummary:
+      type: object
+      properties:
+        total_meals:
+          type: integer
+          minimum: 0
+        average_daily_calories:
+          type: number
+          minimum: 0
+        average_goal_achievement:
+          type: number
+      required: [total_meals, average_daily_calories]
+
+    DailyStatisticsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyDataPoint'
+        period:
+          $ref: '#/components/schemas/StatisticsPeriod'
+        summary:
+          $ref: '#/components/schemas/StatisticsSummary'
+      required: [data, period, summary]
+
+    MacroStatisticsResponse:
+      type: object
+      properties:
+        protein_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        fat_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        carbs_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        protein_grams:
+          type: number
+          minimum: 0
+        fat_grams:
+          type: number
+          minimum: 0
+        carbs_grams:
+          type: number
+          minimum: 0
+        total_calories:
+          type: number
+          minimum: 0
+        period:
+          $ref: '#/components/schemas/StatisticsPeriod'
+      required: [protein_percent, fat_percent, carbs_percent, protein_grams, fat_grams, carbs_grams, total_calories, period]
+
+    # =====================================================================
+    # Feedback
+    # =====================================================================
+    FeedbackSubmissionRequest:
+      type: object
+      properties:
+        message_type:
+          $ref: '#/components/schemas/FeedbackMessageType'
+        message_content:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        user_context:
+          type: object
+          additionalProperties: true
+      required: [message_type, message_content]
+
+    FeedbackSubmissionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/FeedbackStatus'
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+      required: [id, status, created_at, message]
+
+    FeedbackSubmission:
+      type: object
+      description: Complete feedback record (admin view)
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        message_type:
+          $ref: '#/components/schemas/FeedbackMessageType'
+        message_content:
+          type: string
+        user_context:
+          type: object
+          additionalProperties: true
+        status:
+          $ref: '#/components/schemas/FeedbackStatus'
+        admin_notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, user_id, message_type, message_content, status, created_at, updated_at]
+
+    # =====================================================================
+    # Connectivity
+    # =====================================================================
+    ConnectivityResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ConnectionStatus'
+        services:
+          type: object
+          additionalProperties: true
+        response_time_ms:
+          type: number
+        correlation_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+      required: [status, services, response_time_ms, correlation_id, timestamp]
+
+    # =====================================================================
+    # Internal schemas (used by code, not exposed in paths)
+    # =====================================================================
+
+    # --- Inline Bot Analytics ---
+    InlineTriggerType:
+      type: string
+      enum: [inline_query, reply_mention, tagged_photo]
+
+    InlineChatType:
+      type: string
+      enum: [private, group]
+
+    InlineInteractionJob:
+      type: object
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        trigger_type:
+          $ref: '#/components/schemas/InlineTriggerType'
+        chat_type:
+          $ref: '#/components/schemas/InlineChatType'
+        chat_id:
+          type: integer
+        chat_id_hash:
+          type: string
+        thread_id:
+          type: integer
+        reply_to_message_id:
+          type: integer
+        inline_message_id:
+          type: string
+        file_id:
+          type: string
+        origin_message_id:
+          type: string
+        source_user_id:
+          type: integer
+        source_user_hash:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+      required: [job_id, trigger_type, chat_type, file_id, requested_at]
+
+    InlinePermissionNotification:
+      type: object
+      properties:
+        chat_id_hash:
+          type: string
+        source_user_hash:
+          type: string
+        last_notified_at:
+          type: string
+          format: date-time
+      required: [chat_id_hash, source_user_hash, last_notified_at]
+
+    InlineFailureReason:
+      type: object
+      properties:
+        reason:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+      required: [reason, count]
+
+    InlineAnalyticsDaily:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        chat_type:
+          $ref: '#/components/schemas/InlineChatType'
+        trigger_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        request_count:
+          type: integer
+          minimum: 0
+          default: 0
+        success_count:
+          type: integer
+          minimum: 0
+          default: 0
+        failure_count:
+          type: integer
+          minimum: 0
+          default: 0
+        permission_block_count:
+          type: integer
+          minimum: 0
+          default: 0
+        avg_ack_latency_ms:
+          type: integer
+          minimum: 0
+        p95_result_latency_ms:
+          type: integer
+          minimum: 0
+        accuracy_within_tolerance_pct:
+          type: number
+          minimum: 0
+          maximum: 100
+        failure_reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/InlineFailureReason'
+        last_updated_at:
+          type: string
+          format: date-time
+      required: [id, date, chat_type, trigger_counts, request_count, success_count, failure_count, permission_block_count, avg_ack_latency_ms, p95_result_latency_ms, accuracy_within_tolerance_pct, last_updated_at]
+
+    # --- UI Configuration ---
+    Environment:
+      type: string
+      enum: [development, production]
+
+    Theme:
+      type: string
+      enum: [light, dark, auto]
+
+    ThemeSource:
+      type: string
+      enum: [telegram, system, manual]
+
+    LanguageSource:
+      type: string
+      enum: [telegram, browser, manual]
+
+    UIConfiguration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          $ref: '#/components/schemas/Environment'
+        api_base_url:
+          type: string
+        safe_area_top:
+          type: integer
+          default: 0
+        safe_area_bottom:
+          type: integer
+          default: 0
+        safe_area_left:
+          type: integer
+          default: 0
+        safe_area_right:
+          type: integer
+          default: 0
+        theme:
+          $ref: '#/components/schemas/Theme'
+        theme_source:
+          $ref: '#/components/schemas/ThemeSource'
+        language:
+          type: string
+          default: en
+        language_source:
+          $ref: '#/components/schemas/LanguageSource'
+        features:
+          type: object
+          additionalProperties:
+            type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, environment, api_base_url, created_at, updated_at]
+
+    UIConfigurationUpdate:
+      type: object
+      properties:
+        environment:
+          $ref: '#/components/schemas/Environment'
+        api_base_url:
+          type: string
+        safe_area_top:
+          type: integer
+        safe_area_bottom:
+          type: integer
+        safe_area_left:
+          type: integer
+        safe_area_right:
+          type: integer
+        theme:
+          $ref: '#/components/schemas/Theme'
+        theme_source:
+          $ref: '#/components/schemas/ThemeSource'
+        language:
+          type: string
+        language_source:
+          $ref: '#/components/schemas/LanguageSource'
+        features:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    ThemeDetectionResponse:
+      type: object
+      properties:
+        theme:
+          $ref: '#/components/schemas/Theme'
+        theme_source:
+          $ref: '#/components/schemas/ThemeSource'
+        telegram_color_scheme:
+          type: string
+        system_prefers_dark:
+          type: boolean
+        detected_at:
+          type: string
+          format: date-time
+      required: [theme, theme_source, detected_at]
+
+    LanguageDetectionResponse:
+      type: object
+      properties:
+        language:
+          type: string
+        language_source:
+          $ref: '#/components/schemas/LanguageSource'
+        telegram_language_code:
+          type: string
+        browser_language:
+          type: string
+        detected_at:
+          type: string
+          format: date-time
+        supported_languages:
+          type: array
+          items:
+            type: string
+      required: [language, language_source, detected_at, supported_languages]
+
+    # --- Logging ---
+    LogLevel:
+      type: string
+      enum: [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+
+    LogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          $ref: '#/components/schemas/LogLevel'
+        message:
+          type: string
+        correlation_id:
+          type: string
+          format: uuid
+        module:
+          type: string
+        function:
+          type: string
+        user_id:
+          type: string
+        request_id:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        error_details:
+          type: object
+          additionalProperties: true
+      required: [id, timestamp, level, message]
+
+    LogEntryCreate:
+      type: object
+      properties:
+        level:
+          $ref: '#/components/schemas/LogLevel'
+        message:
+          type: string
+        correlation_id:
+          type: string
+          format: uuid
+        module:
+          type: string
+        function:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        inline_trigger:
+          type: string
+        inline_stage:
+          type: string
+      required: [level, message]
+
+    # --- Development ---
+    DevelopmentEnvironment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        frontend_port:
+          type: integer
+        backend_port:
+          type: integer
+        supabase_db_url:
+          type: string
+        supabase_db_password:
+          type: string
+        redis_url:
+          type: string
+        storage_endpoint:
+          type: string
+        cors_origins:
+          type: array
+          items:
+            type: string
+        log_level:
+          type: string
+        hot_reload:
+          type: boolean
+        supabase_cli_version:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, name, frontend_port, backend_port, supabase_db_url, supabase_db_password, redis_url, storage_endpoint, cors_origins, log_level, hot_reload, supabase_cli_version, created_at, updated_at]

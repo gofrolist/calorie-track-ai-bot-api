@@ -1,14 +1,10 @@
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
 
+from ...schemas import GoalRequest
 from ...services.db import db_create_or_update_goal, db_get_goal
 from ...utils.error_handling import handle_api_errors, validate_user_authentication
 
 router = APIRouter()
-
-
-class GoalRequest(BaseModel):
-    daily_kcal_target: int
 
 
 @router.get("/goals")

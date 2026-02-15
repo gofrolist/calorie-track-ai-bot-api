@@ -2,7 +2,7 @@ import asyncio
 import os
 from datetime import UTC, date, datetime
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 from pydantic import ValidationError
@@ -242,7 +242,7 @@ async def create_meal_from_estimate(photo_record: dict[str, Any], estimate_id: s
 
         # Create meal from estimate with default values
         meal_request = MealCreateFromEstimateRequest(
-            estimate_id=estimate_id,
+            estimate_id=UUID(estimate_id),
             meal_date=date.today(),
             meal_type=MealType.snack,  # Default to snack, user can change in UI
         )
