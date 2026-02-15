@@ -1,9 +1,10 @@
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 import { ErrorBoundary } from '../ErrorBoundary';
 
-function ThrowingComponent() {
+function ThrowingComponent(): React.ReactNode {
   throw new Error('Test error');
 }
 
