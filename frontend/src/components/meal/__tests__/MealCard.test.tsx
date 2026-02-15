@@ -36,9 +36,9 @@ describe("MealCard", () => {
     renderWithProviders(
       <MealCard meal={mockMeal} onEdit={vi.fn()} onDelete={vi.fn()} />,
     );
-    expect(screen.getByText(/35/)).toBeInTheDocument();
-    expect(screen.getByText(/40/)).toBeInTheDocument();
-    expect(screen.getByText(/12/)).toBeInTheDocument();
+    expect(screen.getByText(/P: 35g/)).toBeInTheDocument();
+    expect(screen.getByText(/C: 40g/)).toBeInTheDocument();
+    expect(screen.getByText(/F: 12g/)).toBeInTheDocument();
   });
 
   it("shows thumbnail when photo exists", () => {
