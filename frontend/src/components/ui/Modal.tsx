@@ -20,7 +20,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-60 flex items-end justify-center sm:items-center">
       <div
         data-testid="modal-backdrop"
         role="presentation"
@@ -31,7 +31,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-label={title}
         aria-modal="true"
-        className="relative z-10 w-full max-w-lg rounded-t-2xl bg-tg-bg p-6 sm:rounded-2xl"
+        className="relative z-10 max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-tg-bg p-6 sm:max-h-[90dvh] sm:rounded-2xl"
       >
         {children}
       </div>
