@@ -933,7 +933,9 @@ async def process_photo_group(
             raise ValueError("No photos were successfully processed")
 
         # Enqueue estimation job for all photos
-        job_id = await enqueue_estimate_job(photo_ids, description=description)
+        job_id = await enqueue_estimate_job(
+            photo_ids, description=description, chat_id=chat_id, telegram_id=user_id
+        )
         logger.info(f"Estimation job enqueued for {len(photo_ids)} photo(s), job ID: {job_id}")
 
     except Exception as e:

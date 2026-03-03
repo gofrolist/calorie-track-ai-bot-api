@@ -36,6 +36,38 @@ from ..services.queue import dequeue_estimate_job, dequeue_inline_job
 from ..services.storage import BUCKET_NAME, generate_presigned_url, s3, tigris_presign_put
 
 
+async def _send_error_to_user(chat_id: int | None) -> None:
+    """Send error notification to the user via Telegram."""
+    if not chat_id:
+        return
+    try:
+        bot = telegram.get_bot()
+        await bot.send_message(
+            chat_id,
+            "❌ Sorry, I encountered an error analyzing your photo(s). Please try again later.",
+        )
+    except Exception as e:
+        logger.error(f"Failed to send worker error message to chat {chat_id}: {e}")
+
+
+async def _keep_typing(chat_id: int, stop_event: asyncio.Event) -> None:
+    """Send typing indicators while the worker processes the job."""
+    bot = telegram.get_bot()
+    try:
+        while not stop_event.is_set():
+            try:
+                await bot.send_chat_action(chat_id, "typing")
+            except Exception:
+                pass
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=4.0)
+                break
+            except TimeoutError:
+                continue
+    except asyncio.CancelledError:
+        pass
+
+
 async def handle_job(job: dict[str, Any]) -> None:
     """Handle estimation job for single or multiple photos.
 
@@ -44,22 +76,45 @@ async def handle_job(job: dict[str, Any]) -> None:
     """
     _log_privacy_metadata(job)
 
+    chat_id = job.get("chat_id")
+
     # Check if this is a multi-photo job
     photo_ids = job.get("photo_ids")  # New multi-photo format
     photo_id = job.get("photo_id")  # Legacy single-photo format
     description = job.get("description")  # Optional user description
     media_group_id = job.get("media_group_id")  # Telegram media group
 
-    if photo_ids:
-        # Multi-photo job
-        logger.info(f"Processing multi-photo estimation job: {len(photo_ids)} photos")
-        await handle_multiphotos_job(photo_ids, description, media_group_id)
-    elif photo_id:
-        # Legacy single-photo job
-        logger.info(f"Processing single-photo estimation job for photo_id: {photo_id}")
-        await handle_single_photo_job(photo_id)
-    else:
-        raise ValueError("Job must contain either photo_id or photo_ids")
+    # Start typing indicator while processing
+    stop_typing = asyncio.Event()
+    typing_task = None
+    if chat_id:
+        typing_task = asyncio.create_task(_keep_typing(chat_id, stop_typing))
+
+    try:
+        if photo_ids:
+            # Multi-photo job
+            logger.info(f"Processing multi-photo estimation job: {len(photo_ids)} photos")
+            await handle_multiphotos_job(photo_ids, description, media_group_id)
+        elif photo_id:
+            # Legacy single-photo job
+            logger.info(f"Processing single-photo estimation job for photo_id: {photo_id}")
+            await handle_single_photo_job(photo_id)
+        else:
+            raise ValueError("Job must contain either photo_id or photo_ids")
+    except Exception:
+        await _send_error_to_user(chat_id)
+        raise
+    finally:
+        stop_typing.set()
+        if typing_task:
+            try:
+                await asyncio.wait_for(typing_task, timeout=2.0)
+            except TimeoutError:
+                typing_task.cancel()
+                try:
+                    await typing_task
+                except asyncio.CancelledError:
+                    pass
 
 
 async def handle_single_photo_job(photo_id: str) -> None:

@@ -9,8 +9,10 @@ from .config import APP_ENV, OPENAI_API_KEY, OPENAI_MODEL
 # Initialize OpenAI client only if configuration is available
 client: AsyncOpenAI | None = None
 
+OPENAI_TIMEOUT = 60  # seconds
+
 if OPENAI_API_KEY is not None:
-    client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+    client = AsyncOpenAI(api_key=OPENAI_API_KEY, timeout=OPENAI_TIMEOUT)
 elif APP_ENV == "dev":
     # In development mode, allow missing OpenAI config
     print("WARNING: OpenAI configuration not set. AI estimation functionality will be disabled.")

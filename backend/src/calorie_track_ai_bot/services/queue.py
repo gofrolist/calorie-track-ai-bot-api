@@ -46,12 +46,19 @@ else:
     raise ValueError("REDIS_URL must be set")
 
 
-async def enqueue_estimate_job(photo_ids: str | list[str], description: str | None = None) -> str:
+async def enqueue_estimate_job(
+    photo_ids: str | list[str],
+    description: str | None = None,
+    chat_id: int | None = None,
+    telegram_id: int | None = None,
+) -> str:
     """Enqueue an estimation job for one or more photos.
 
     Args:
         photo_ids: Single photo ID or list of photo IDs
         description: Optional user-provided meal description
+        chat_id: Telegram chat ID for sending results/errors back
+        telegram_id: Telegram user ID for user identification
 
     Returns:
         Job ID (first photo ID if single, or joined IDs if multiple)
@@ -63,7 +70,11 @@ async def enqueue_estimate_job(photo_ids: str | list[str], description: str | No
     if isinstance(photo_ids, str):
         photo_ids = [photo_ids]
 
-    job = {"photo_ids": photo_ids, "description": description}
+    job: dict[str, Any] = {"photo_ids": photo_ids, "description": description}
+    if chat_id is not None:
+        job["chat_id"] = chat_id
+    if telegram_id is not None:
+        job["telegram_id"] = telegram_id
     await r.lpush(QUEUE, json.dumps(job))  # type: ignore
 
     # Return first photo ID as job identifier
