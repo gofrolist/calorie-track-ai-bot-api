@@ -3,7 +3,7 @@ name = "calorie-track-ai-bot"
 version = "0.1.0"
 description = "Telegram bot to track calories using AI"
 authors = [
-  {name = "Evgenii Vasilenko", email = "evgenii.vasilenko@gmail.com"}
+  {name = "Evgenii Vasilenko", email = "vasilenko.e@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.12"
