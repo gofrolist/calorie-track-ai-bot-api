@@ -1,5 +1,6 @@
 name: Frontend Deploy
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["Frontend CI"]
     types: [completed]
