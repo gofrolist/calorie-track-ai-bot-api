@@ -834,16 +834,28 @@ async def process_single_photo(message: TelegramMessage, file_id: str) -> None:
     await process_photo_group(message, [file_id], message.caption)
 
 
-async def keep_sending_status_indicator(chat_id: int, stop_event: asyncio.Event) -> None:
+async def keep_sending_status_indicator(
+    chat_id: int, stop_event: asyncio.Event, max_duration: float = 120.0
+) -> None:
     """Keep sending 'upload_photo' status indicator every 4 seconds until stopped.
 
     Args:
         chat_id: Target chat ID
         stop_event: Event to signal when to stop sending indicators
+        max_duration: Maximum seconds to run before auto-stopping (safety net)
     """
     bot = telegram.get_bot()
+    start_time = time.monotonic()
     try:
         while not stop_event.is_set():
+            elapsed = time.monotonic() - start_time
+            if elapsed >= max_duration:
+                logger.warning(
+                    f"Status indicator for chat {chat_id} exceeded max duration "
+                    f"({max_duration}s), stopping"
+                )
+                break
+
             try:
                 await bot.send_chat_action(chat_id, "upload_photo")
                 logger.debug(f"Sent status indicator to chat {chat_id}")
@@ -858,6 +870,80 @@ async def keep_sending_status_indicator(chat_id: int, stop_event: asyncio.Event)
                 continue  # Continue sending indicators
     except asyncio.CancelledError:
         logger.debug(f"Status indicator task cancelled for chat {chat_id}")
+
+
+async def _process_photo_group_inner(
+    message: TelegramMessage,
+    file_ids: list[str],
+    description: str | None,
+    user_id: int | None,
+    chat_id: int | None,
+) -> None:
+    """Inner photo processing logic (download, upload, enqueue)."""
+    # Get or create user to get proper UUID
+    username = message.from_user.get("username") if message.from_user else None
+    user_uuid = None
+    if user_id:
+        user_uuid = await db_get_or_create_user(
+            telegram_id=user_id,
+            handle=username,
+            locale="en",  # Default locale
+        )
+        logger.info(f"User {user_id} created/retrieved with UUID: {user_uuid}")
+
+    # Download and upload all photos
+    bot = telegram.get_bot()
+    photo_ids = []
+
+    for idx, file_id in enumerate(file_ids):
+        try:
+            # Download photo from Telegram
+            file_info = await bot.get_file(file_id)
+            file_path = file_info["file_path"]
+            logger.info(f"Downloading photo {idx + 1}/{len(file_ids)}: {file_path}")
+
+            photo_content = await bot.download_file(file_path)
+
+            # Get presigned URL for upload
+            storage_key, upload_url = await tigris_presign_put(content_type="image/jpeg")
+            logger.info(f"Generated presigned URL for storage key: {storage_key}")
+
+            # Upload photo to Tigris
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                upload_response = await client.put(
+                    upload_url,
+                    content=photo_content,
+                    headers={"Content-Type": "image/jpeg"},
+                )
+                upload_response.raise_for_status()
+            logger.info(f"Photo {idx + 1} uploaded to Tigris")
+
+            # Create photo record in database with display_order
+            photo_id = await db_create_photo(
+                tigris_key=storage_key,
+                user_id=user_uuid,
+                display_order=idx,
+                media_group_id=message.media_group_id,
+            )
+            photo_ids.append(photo_id)
+            logger.info(f"Photo record created with ID: {photo_id}")
+
+        except Exception as e:
+            logger.error(f"Error processing photo {idx + 1}: {e}", exc_info=True)
+            # Continue with other photos
+
+    if not photo_ids:
+        raise ValueError("No photos were successfully processed")
+
+    # Enqueue estimation job for all photos
+    job_id = await enqueue_estimate_job(
+        photo_ids, description=description, chat_id=chat_id, telegram_id=user_id
+    )
+    logger.info(f"Estimation job enqueued for {len(photo_ids)} photo(s), job ID: {job_id}")
+
+
+# Maximum time (seconds) for photo download/upload/enqueue before giving up
+PHOTO_PROCESSING_TIMEOUT = 90.0
 
 
 async def process_photo_group(
@@ -877,67 +963,25 @@ async def process_photo_group(
         indicator_task = asyncio.create_task(keep_sending_status_indicator(chat_id, stop_indicator))
 
     try:
-        # Get or create user to get proper UUID
-        username = message.from_user.get("username") if message.from_user else None
-        user_uuid = None
-        if user_id:
-            user_uuid = await db_get_or_create_user(
-                telegram_id=user_id,
-                handle=username,
-                locale="en",  # Default locale
-            )
-            logger.info(f"User {user_id} created/retrieved with UUID: {user_uuid}")
-
-        # Download and upload all photos
-        bot = telegram.get_bot()
-        photo_ids = []
-
-        for idx, file_id in enumerate(file_ids):
-            try:
-                # Download photo from Telegram
-                file_info = await bot.get_file(file_id)
-                file_path = file_info["file_path"]
-                logger.info(f"Downloading photo {idx + 1}/{len(file_ids)}: {file_path}")
-
-                photo_content = await bot.download_file(file_path)
-
-                # Get presigned URL for upload
-                storage_key, upload_url = await tigris_presign_put(content_type="image/jpeg")
-                logger.info(f"Generated presigned URL for storage key: {storage_key}")
-
-                # Upload photo to Tigris
-                async with httpx.AsyncClient() as client:
-                    upload_response = await client.put(
-                        upload_url,
-                        content=photo_content,
-                        headers={"Content-Type": "image/jpeg"},
-                    )
-                    upload_response.raise_for_status()
-                logger.info(f"Photo {idx + 1} uploaded to Tigris")
-
-                # Create photo record in database with display_order
-                photo_id = await db_create_photo(
-                    tigris_key=storage_key,
-                    user_id=user_uuid,
-                    display_order=idx,
-                    media_group_id=message.media_group_id,
-                )
-                photo_ids.append(photo_id)
-                logger.info(f"Photo record created with ID: {photo_id}")
-
-            except Exception as e:
-                logger.error(f"Error processing photo {idx + 1}: {e}", exc_info=True)
-                # Continue with other photos
-
-        if not photo_ids:
-            raise ValueError("No photos were successfully processed")
-
-        # Enqueue estimation job for all photos
-        job_id = await enqueue_estimate_job(
-            photo_ids, description=description, chat_id=chat_id, telegram_id=user_id
+        await asyncio.wait_for(
+            _process_photo_group_inner(message, file_ids, description, user_id, chat_id),
+            timeout=PHOTO_PROCESSING_TIMEOUT,
         )
-        logger.info(f"Estimation job enqueued for {len(photo_ids)} photo(s), job ID: {job_id}")
-
+    except TimeoutError:
+        logger.error(
+            f"Photo processing timed out after {PHOTO_PROCESSING_TIMEOUT}s "
+            f"for user {user_id} ({len(file_ids)} photos)"
+        )
+        if chat_id and TELEGRAM_BOT_TOKEN:
+            try:
+                bot = telegram.get_bot()
+                await bot.send_message(
+                    chat_id,
+                    "❌ Sorry, processing your photo(s) took too long. Please try again later.",
+                    reply_to_message_id=message.message_id,
+                )
+            except Exception as e:
+                logger.error(f"Failed to send timeout message: {e}")
     except Exception as e:
         logger.error(f"Error processing photo group: {e}", exc_info=True)
 

@@ -50,11 +50,24 @@ async def _send_error_to_user(chat_id: int | None) -> None:
         logger.error(f"Failed to send worker error message to chat {chat_id}: {e}")
 
 
-async def _keep_typing(chat_id: int, stop_event: asyncio.Event) -> None:
+async def _keep_typing(
+    chat_id: int, stop_event: asyncio.Event, max_duration: float = 120.0
+) -> None:
     """Send typing indicators while the worker processes the job."""
+    import time
+
     bot = telegram.get_bot()
+    start_time = time.monotonic()
     try:
         while not stop_event.is_set():
+            elapsed = time.monotonic() - start_time
+            if elapsed >= max_duration:
+                logger.warning(
+                    f"Typing indicator for chat {chat_id} exceeded max duration "
+                    f"({max_duration}s), stopping"
+                )
+                break
+
             try:
                 await bot.send_chat_action(chat_id, "typing")
             except Exception:
