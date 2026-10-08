@@ -18,8 +18,6 @@ export default defineConfig({
           name: 'customFetch',
         },
         query: {
-          useQuery: true,
-          useMutation: true,
           signal: true,
         },
       },
