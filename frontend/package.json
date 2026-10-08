@@ -56,7 +56,7 @@
     "globals": "^17",
     "jsdom": "^28",
     "msw": "^2",
-    "orval": "^8",
+    "orval": "^8.40.0",
     "playwright": "^1",
     "prettier": "^3",
     "tailwindcss": "^4",
