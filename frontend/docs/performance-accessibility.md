@@ -21,90 +21,71 @@
 
 ### 1. Code Splitting & Lazy Loading
 ```typescript
-// Route-based code splitting
-const Today = lazy(() => import('./pages/today'));
-const Stats = lazy(() => import('./pages/stats'));
-const Goals = lazy(() => import('./pages/goals'));
-const MealDetail = lazy(() => import('./pages/meal-detail'));
+// src/app.tsx: route-based code splitting
+const Meals = lazy(() => import("@/pages/meals"));
+const Stats = lazy(() => import("@/pages/stats"));
+const Goals = lazy(() => import("@/pages/goals"));
+const Feedback = lazy(() => import("@/pages/feedback"));
 ```
+The `Suspense` boundary (spinner fallback) lives in `src/components/layout/AppLayout.tsx`.
 
 ### 2. Image Optimization
-- Use WebP format when supported
-- Implement responsive images with srcset
-- Lazy load images below the fold
-- Optimize image sizes for mobile devices
+- `MealCard` renders the backend-provided `thumbnailUrl`; full-size `fullUrl` is used only by `PhotoCarousel`
+- No WebP conversion, `srcset`, or `loading="lazy"` yet
 
 ### 3. Bundle Optimization
-- Tree shaking to eliminate unused code
-- Minification and compression
-- Vendor chunk splitting
-- Dynamic imports for heavy dependencies
+- Tree shaking and minification (Vite production build)
+- Vendor chunk splitting via `manualChunks` in `vite.config.ts`: `react-vendor`, `chart-vendor` (Recharts), `i18n-vendor`
+- `chunkSizeWarningLimit: 600` (KB)
 
 ### 4. Caching Strategy
-- Service worker for offline functionality
-- HTTP caching headers
-- Local storage for user preferences
-- Memory caching for API responses
+- In-memory API response caching via TanStack Query (`staleTime` 50 minutes, `retry: 1`, `refetchOnWindowFocus: false`)
+- No service worker / offline support, and theme/language overrides are not persisted
 
 ### 5. Network Optimization
-- API request batching
-- Parallel data fetching
-- Request deduplication
-- Optimistic updates
+- Parallel data fetching (independent query hooks per page)
+- Request deduplication (TanStack Query shares in-flight queries by key)
+- Targeted cache invalidation after mutations (meals, daily summary, goals)
+- Request cancellation via `AbortSignal` (Orval `query.signal: true`)
 
 ## Accessibility Features Implemented
 
 ### 1. Semantic HTML
-```html
-<!-- Proper heading hierarchy -->
-<h1>Page Title</h1>
-<h2>Section Title</h2>
-<h3>Subsection Title</h3>
-
-<!-- Semantic elements -->
-<main role="main">
-<nav role="navigation">
-<section aria-labelledby="section-heading">
-```
+- One `<h1>` per page; `<h3>` chart headings in `StatsCharts`
+- `<main>` in `AppLayout`, `<nav aria-label=...>` in `Navigation`
+- `<html lang="en">` in `index.html`
 
 ### 2. ARIA Labels and Roles
-```typescript
-// Progress bars
-<div
-  className="progress-bar"
-  role="progressbar"
-  aria-valuenow={percentage}
-  aria-valuemin={0}
-  aria-valuemax={100}
-  aria-label={`Progress: ${percentage}%`}
->
+```tsx
+// Navigation: active tab
+<button aria-current={isActive ? "page" : undefined}>
 
-// Form inputs
-<input
-  type="number"
-  aria-label="Daily Calorie Goal"
-  aria-describedby="goal-help"
-  aria-invalid={hasError}
-/>
+// Modal
+<div role="dialog" aria-modal="true" aria-label={title}>
+
+// PeriodSelector
+<div role="group" aria-label={t("statistics.period.title")}>
+  <button aria-pressed={selected === period}>
+
+// Skeleton
+<div role="status" aria-busy="true" aria-label="Loading" />
 ```
+Icon/action buttons (meal edit/delete, goal edit, feedback submit, error reload) and `MealEditor` inputs have translated `aria-label`s. The goals progress bar is a styled `div` without `role="progressbar"`.
 
 ### 3. Keyboard Navigation
-- Tab order follows logical flow
-- Skip links for main content
-- Keyboard shortcuts for common actions
-- Focus indicators visible and consistent
+- All interactive elements are native `<button>`/`<input>`/`<textarea>`, so they are focusable in DOM order
+- `Modal` closes on Escape (no focus trap)
+- No skip links or custom keyboard shortcuts
 
 ### 4. Color and Contrast
-- High contrast mode support
-- Color is not the only indicator of information
-- Sufficient contrast ratios (4.5:1 minimum)
-- Dark mode compatibility
+- All colors come from Telegram theme variables (`--tg-*`) via Tailwind `@theme` tokens in `src/app.css`
+- Dark mode via `data-theme` on `<html>`, with dark overrides for chart colors
+- Contrast is checked by axe-core in `tests/e2e/accessibility.spec.ts`
 
 ### 5. Screen Reader Support
-- Descriptive alt text for images
-- Live regions for dynamic content updates
-- Proper form labels and descriptions
-- Announcements for state changes
+- Translated labels for controls (i18next, EN/RU)
+- `MealCard` thumbnails use the meal description as `alt`; `PhotoCarousel` images use empty `alt`
+- No `aria-live` regions yet; mutation errors are rendered as plain text
 
 ## Performance Testing Checklist
 
@@ -125,94 +106,46 @@ const MealDetail = lazy(() => import('./pages/meal-detail'));
 ## Monitoring and Metrics
 
 ### Performance Monitoring
-```typescript
-// Web Vitals tracking
-import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
-
-getCLS(console.log);
-getFID(console.log);
-getFCP(console.log);
-getLCP(console.log);
-getTTFB(console.log);
-```
+`@vercel/analytics` and `@vercel/speed-insights` are listed in `package.json` dependencies but are not wired into the app (no `<Analytics />` / `<SpeedInsights />` in `src/`). There is no `web-vitals` integration.
 
 ### Error Tracking
-- JavaScript error monitoring
-- API error tracking
-- Performance regression detection
-- User experience metrics
+- `ErrorBoundary` logs render errors with `console.error`
+- API errors surface as `ApiError` (status + detail) from `src/api/client.ts`
 
 ## Mobile-Specific Optimizations
 
 ### 1. Touch Interactions
-- Minimum 44px touch targets
-- Touch feedback for interactions
-- Swipe gestures where appropriate
-- Prevent accidental double-taps
+- Full-width bottom navigation buttons
+- Modal renders as a bottom sheet on small screens
 
 ### 2. Viewport Optimization
-- Proper viewport meta tag
-- Responsive design for all screen sizes
-- Safe area handling for notched devices
-- Orientation change handling
+- Viewport meta tag with `viewport-fit=cover` (zoom disabled) in `index.html`
+- Mobile-first responsive layout
+- Safe area handling: `--safe-area-*` CSS variables from `env(safe-area-inset-*)` in `src/app.css`, applied in `AppLayout` and `Navigation`; `TelegramProvider` re-reads them on resize
 
 ### 3. Network Considerations
-- Offline functionality
-- Progressive loading
-- Data usage optimization
-- 3G network simulation testing
+- Skeleton loading states while queries load
+- Slow/failed network scenarios simulated in `tests/e2e/ui-ux-validation.spec.ts`
 
 ## Implementation Examples
 
 ### Optimized Component Loading
-```typescript
-const LazyComponent = lazy(() => import('./HeavyComponent'));
-
-const App = () => (
-  <Suspense fallback={<LoadingSkeleton />}>
-    <LazyComponent />
+```tsx
+// src/components/layout/AppLayout.tsx
+<ErrorBoundary>
+  <Suspense fallback={<PageLoading />}>
+    <Outlet />
   </Suspense>
-);
+</ErrorBoundary>
 ```
 
 ### Efficient Data Fetching
 ```typescript
-// Parallel data fetching
-const [todayData, goalData] = await Promise.allSettled([
-  dailySummaryApi.getTodayData(today),
-  goalsApi.getGoal(),
-]);
-
-// Request deduplication
-const cache = new Map();
-const fetchWithCache = async (key, fetcher) => {
-  if (cache.has(key)) return cache.get(key);
-  const result = await fetcher();
-  cache.set(key, result);
-  return result;
-};
-```
-
-### Accessibility Helper Functions
-```typescript
-// Announce changes to screen readers
-const announceToScreenReader = (message: string) => {
-  const announcement = document.createElement('div');
-  announcement.setAttribute('aria-live', 'polite');
-  announcement.setAttribute('aria-atomic', 'true');
-  announcement.className = 'sr-only';
-  announcement.textContent = message;
-  document.body.appendChild(announcement);
-  setTimeout(() => document.body.removeChild(announcement), 1000);
-};
-
-// Focus management
-const trapFocus = (element: HTMLElement) => {
-  const focusableElements = element.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  );
-  // Focus trap implementation
-};
+// src/pages/stats/index.tsx: both queries run in parallel and are cached/deduplicated by TanStack Query
+const { data: dailyRaw, isLoading: loadingDaily } =
+  useGetDailyStatisticsApiV1StatisticsDailyGet(dateRange);
+const { data: macroRaw, isLoading: loadingMacro } =
+  useGetMacroStatisticsApiV1StatisticsMacrosGet(dateRange);
 ```
 
 ## Continuous Improvement
@@ -240,7 +173,7 @@ const trapFocus = (element: HTMLElement) => {
 ### Tools
 - [Lighthouse](https://developers.google.com/web/tools/lighthouse)
 - [Web Vitals](https://web.dev/vitals/)
-- [axe-core](https://github.com/deque/axe-core)
+- [axe-core](https://github.com/dequelabs/axe-core) (used via `@axe-core/playwright`)
 - [Pa11y](https://pa11y.org/)
 
 ### Guidelines

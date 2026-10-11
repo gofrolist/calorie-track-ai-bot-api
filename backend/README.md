@@ -7,54 +7,58 @@ Frontend: Vercel (Telegram Mini App) • Backend: FastAPI on Fly.io • Redis: U
 This repository is organized into backend and frontend components:
 
 - `backend/` - FastAPI application with Telegram bot functionality
-- `frontend/` - Frontend application (to be added)
+- `frontend/` - React Telegram Mini App (see `../frontend/README.md`)
 
 ## Features
 - Presigned PUT to Tigris (S3‑compatible) for meal photos
 - Queue job to Upstash Redis; background worker processes photos
 - Vision estimate via OpenAI gpt‑5‑mini → deterministic kcal aggregation with min/max
-- Persist users/photos/estimates/meals in Neon PostgreSQL Postgres
+- Persist users/photos/estimates/meals in Neon PostgreSQL
 
 ## Quick start
 
 ### Development Setup
 ```bash
 # Install dependencies
-make venv
+uv sync
 
-# Edit .env file with your actual service credentials
+# Create .env and fill in your actual service credentials
+cp .env.example .env
 nano .env
 
-# Start development server
-make run
+# Start development server (port 8000, hot reload)
+make dev
 
 # Health check
 curl http://localhost:8000/health/live
 ```
 
 ### Docker Setup
+`docker-compose.yml` lives in the repository root and starts Redis, MinIO (local S3), the backend, the worker and the frontend. `DATABASE_URL`, `OPENAI_API_KEY` and `TELEGRAM_BOT_TOKEN` are read from your shell or a root-level `.env`.
 ```bash
-cp .env.example .env
-# fill values
-docker compose up --build
+# from the repository root
+docker compose up --build   # or: make docker-dev
 
-# In another terminal (optional) create tables in Neon PostgreSQL:
+# In another terminal (optional) create tables in Neon PostgreSQL (from backend/):
 psql "$DATABASE_URL" -f infra/schema.sql
 ```
 
 ### Testing
 ```bash
-# Run basic tests (no external services required)
-uv run pytest tests/services/test_config.py tests/api/v1/test_health.py tests/api/v1/test_auth.py -v
-
-# Run all tests (requires .env with real credentials)
+# Run all tests (external services are mocked; no credentials required)
 make test
+
+# Run tests excluding tests/integration/
+make test-unit
 
 # Run linting
 uv run ruff check
 
 # Run type checking
 uv run pyright
+
+# Lint + type check
+make check
 ```
 
 ## Endpoints
@@ -64,14 +68,18 @@ uv run pyright
 - `POST /api/v1/photos/{photo_id}/estimate` → enqueue estimation
 - `GET /api/v1/estimates/{id}` → fetch estimate
 - `POST /api/v1/meals` → create from estimate or manual kcal
+- `GET /api/v1/meals`, `GET /api/v1/meals/calendar`, `GET|PATCH|DELETE /api/v1/meals/{meal_id}` → list, calendar, read/update/delete meals
+- `GET|POST|PATCH /api/v1/goals` → daily calorie goal
+- `GET /api/v1/daily-summary/{date}`, `/api/v1/weekly-summary`, `/api/v1/monthly-summary`, `/api/v1/today/{date}` → summaries
+- `GET /health/live`, `/health/ready`, `/health/connectivity`, `/healthz` → health checks
 
 ### Statistics Endpoints (✨ NEW)
-- `GET /api/v1/statistics/daily` → Daily nutrition aggregates (last 7/30/90 days)
+- `GET /api/v1/statistics/daily?start_date=&end_date=` → Daily nutrition aggregates for a date range (end exclusive)
 - `GET /api/v1/statistics/macros` → Macronutrient breakdown by percentage
 
 ### Feedback Endpoints (✨ NEW)
 - `POST /api/v1/feedback` → Submit user feedback (bug reports, feature requests)
-- `GET /api/v1/feedback/{id}` → Retrieve feedback submission (admin only)
+- `GET /api/v1/feedback/{id}` → Retrieve feedback submission (intended as admin-only; currently any authenticated user)
 
 ### Telegram Bot Endpoints
 - `POST /bot` → Telegram webhook handler (receives messages from Telegram)
@@ -79,8 +87,8 @@ uv run pyright
 - `GET /bot/webhook-info` → Get current webhook information
 - `DELETE /bot/webhook` → Delete current webhook
 
-OpenAPI JSON: `GET /openapi.json`.
-Complete API documentation: `specs/openapi.yaml`
+OpenAPI JSON: `GET /openapi.json` (interactive docs at `/docs`).
+Export the spec to `frontend/openapi.json` with `make openapi-export`.
 
 ### New Features in v2.0
 - **Interactive Statistics**: Real-time data aggregation with date range filtering
@@ -134,10 +142,15 @@ The application requires the following environment variables:
 
 #### Optional
 - `LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- `APP_ENV`: Application environment (dev, prod)
-- `WEBHOOK_URL`: Telegram webhook URL (auto-configured in production)
+- `APP_ENV`: Application environment (default `dev`; `production` enables TrustedHost middleware and production CORS origins)
+- `OPENAI_MODEL`: OpenAI model for image analysis (default `gpt-5-mini`)
+- `WEBHOOK_URL`: Telegram webhook URL (set in `fly.toml` for production)
+- `USE_WEBHOOK`: Set webhook automatically on startup (true/false, default false)
+- `ENABLE_WORKER`: Run the estimate worker inside the API process (true/false, default false; `true` in `fly.toml`)
+- `CORS_ORIGINS`, `TRUSTED_HOSTS`: Comma-separated overrides for the defaults in `services/config.py`
+- `INLINE_MODE_ENABLED`, `INLINE_HASH_SALT`: Telegram inline mode settings
 - `ADMIN_NOTIFICATION_CHAT_ID`: Telegram chat ID for admin feedback notifications
-- `FEEDBACK_NOTIFICATIONS_ENABLED`: Enable/disable feedback Telegram notifications (true/false)
+- `FEEDBACK_NOTIFICATIONS_ENABLED`: Enable/disable feedback Telegram notifications (true/false, default true)
 
 ### Common Issues
 - **Silent bot responses**: Check webhook URL configuration and endpoint accessibility
@@ -149,7 +162,7 @@ The application requires the following environment variables:
 ## Environment Configuration
 
 ### Local Development
-Create a `.env` file in this folder with your service credentials:
+Create a `.env` file in this folder (e.g. `cp .env.example .env`) with your service credentials:
 
 ```bash
 # Application
@@ -198,7 +211,7 @@ USE_WEBHOOK=true
 ```
 
 ### 3. Deploy and Test
-The webhook is automatically configured when your app starts up! Just deploy and test:
+The webhook is automatically configured when your app starts up (requires `USE_WEBHOOK=true`, `TELEGRAM_BOT_TOKEN` and `WEBHOOK_URL`). Just deploy and test:
 
 ```bash
 # Deploy your app (webhook will be set automatically)
@@ -226,18 +239,19 @@ curl -X DELETE https://your-app.fly.dev/bot/webhook
 ```
 
 ### GitHub Actions
-For CI/CD, configure GitHub secrets in your repository settings. See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for detailed instructions.
+For CI/CD, configure GitHub secrets in your repository settings. See [docs/GITHUB_SECRETS.md](../docs/GITHUB_SECRETS.md) for detailed instructions.
 
 ## Available Commands
 
 ```bash
 # Development (using Makefile)
-make venv                # Install dependencies
-make run                 # Start dev server
+make dev                 # Start dev server with hot reload (port 8000)
+make worker              # Start background estimate worker
 make test                # Run all tests
-make precommit           # Run linting and formatting
-make validate            # Validate OpenAPI spec
-make codegen             # Generate schemas from OpenAPI spec
+make test-unit           # Run tests excluding tests/integration/
+make check               # Lint (ruff) + typecheck (pyright)
+make format              # Format code with ruff
+make openapi-export      # Export OpenAPI spec to ../frontend/openapi.json
 
 # Development (using uv directly)
 uv sync --all-extras     # Install dependencies
@@ -246,7 +260,7 @@ uv run pytest            # Run all tests
 uv run ruff check        # Run linting
 uv run pyright          # Run type checking
 
-# Docker
+# Docker (run from the repository root)
 docker compose up --build  # Build and run with Docker
 docker compose down        # Stop Docker containers
 

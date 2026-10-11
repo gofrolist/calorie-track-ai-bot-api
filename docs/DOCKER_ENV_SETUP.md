@@ -12,16 +12,16 @@ You can run the application in two different ways, each with different environme
 
 **Uses**: Local containerized services
 - ✅ Redis: `redis://redis:6379/0` (local container)
-- ✅ Database: `postgresql://host.docker.internal:5432/neondb` (local PostgreSQL)
+- ⚠️ Database: `${DATABASE_URL}` from your shell or a root-level `.env` (Neon); falls back to `postgresql://postgres:postgres@host.docker.internal:5432/calorie_track` if unset
 - ✅ MinIO: `http://minio:9000` (local S3-compatible storage)
 
 **Environment**: Defined in `docker-compose.yml`
-**Config Location**: Root `docker-compose.yml` (lines 53-83, 115-132)
+**Config Location**: Root `docker-compose.yml` (`environment:` of the `backend` and `worker` services)
 
 ### 2. Local Development (`make dev` from root)
 
 **Uses**: Production/cloud services (requires credentials)
-- ⚠️ Redis: Upstash Redis (production URL from `backend/.env`)
+- ⚠️ Redis: `REDIS_URL` from `backend/.env` (Upstash or a local Redis)
 - ⚠️ Database: Neon PostgreSQL URL from `backend/.env`
 - ⚠️ Storage: Tigris/production S3 from `backend/.env`
 
@@ -88,30 +88,20 @@ make docker-dev
 - ✅ Always use local containers
 - ✅ Safe from `.env` conflicts
 
-### ⚠️ **For Backend Directory Docker**
+### ⚠️ **Backend Directory Docker (removed)**
 
-When running from `backend/`:
-```bash
-cd backend
-docker compose up
-```
-
-**Environment variables come from:**
-- `backend/.env` file
-- `backend/docker-compose.yml`
-
-This is meant for backend-only testing.
+There is no `backend/docker-compose.yml` anymore, so `docker compose up` from `backend/` does not work. Run Compose from the root, or run the backend locally with `cd backend && make dev`.
 
 ## Recommended Workflows
 
 ### Frontend Development (Fastest)
 ```bash
-# Start backend services in Docker
+# Start backend services in Docker (add `worker` if you need photo estimation)
 docker compose up redis minio backend
 
 # Run frontend locally
 cd frontend
-npm run dev
+bun run dev
 ```
 
 **Pros:**
@@ -132,12 +122,12 @@ make docker-dev
 
 **Cons:**
 - Slower rebuild times
-- Caching issues (fixed with `make docker-restart`)
+- Caching issues (see [DOCKER_CACHE_TROUBLESHOOTING.md](DOCKER_CACHE_TROUBLESHOOTING.md))
 
 ### Backend Testing Only
 ```bash
 cd backend
-make run  # Uses backend/.env with production services
+make dev  # Uses backend/.env with production services
 ```
 
 **Pros:**
@@ -150,13 +140,13 @@ make run  # Uses backend/.env with production services
 
 ## Environment Variable Precedence
 
-In Docker Compose, environment variables are loaded in this order (later overrides earlier):
+How variables reach the `backend` and `worker` containers:
 
-1. **Environment variables in shell** (e.g., `export REDIS_URL=...`)
-2. **`.env` file** (if `env_file:` is specified)
-3. **`environment:` section** in docker-compose.yml ← **HIGHEST PRIORITY**
+1. **Shell environment / root-level `.env`**: used only for `${VAR}` substitution in `docker-compose.yml` (`DATABASE_URL`, `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_NAME`). No `env_file:` is configured.
+2. **`environment:` section** in docker-compose.yml: set on the container ← **HIGHEST PRIORITY**
+3. **`backend/.env`**: copied into the image by the Dockerfile's `COPY . /app` and loaded by python-dotenv at startup. python-dotenv does not override variables that are already set, so it only fills in variables not listed in `environment:`.
 
-We rely on #3 to ensure Docker always uses local services.
+We rely on #2 to ensure Docker always uses local Redis and MinIO.
 
 ## Troubleshooting
 
@@ -183,7 +173,7 @@ docker compose -f docker-compose.yml up
 
 **Fix**:
 ```bash
-make docker-restart  # Clean restart
+make docker-stop && make docker-dev  # Clean restart (rebuilds images)
 # Then hard refresh browser (Cmd+Shift+R)
 ```
 
@@ -204,15 +194,14 @@ docker compose logs minio
 
 | Command | Use Case | Speed |
 |---------|----------|-------|
-| `make docker-dev` | Start all services | Normal |
-| `make docker-restart` | Clean restart (fixes cache) | Slow |
-| `make docker-rebuild-frontend` | Rebuild frontend only | Fast |
-| `make docker-stop` | Stop all containers | Fast |
+| `make docker-dev` | Start all services (`docker compose up --build`) | Normal |
+| `docker compose up -d --build --force-recreate frontend` | Rebuild frontend only | Fast |
+| `make docker-stop` | Stop all containers (`docker compose down`) | Fast |
 | `docker compose down -v` | Nuclear option (delete volumes) | Slow |
 
 ## Production Deployment
 
-For production, use the values from `backend/.env` which should point to:
+Production configuration does not come from `backend/.env` or docker-compose.yml. The backend runs on Fly.io with `USE_WEBHOOK`, `WEBHOOK_URL` and `ENABLE_WORKER` set in `backend/fly.toml` `[env]`; everything else must be set as Fly secrets, pointing to:
 - ✅ Upstash Redis (production)
 - ✅ Neon PostgreSQL (production project)
 - ✅ Tigris S3 (production bucket)

@@ -2,219 +2,183 @@
 
 This document describes the database schema changes implemented for the multi-photo meal tracking feature (Feature: 003-update-logic-for).
 
+## How Schema Changes Are Applied
+
+There is no migration tool (no Alembic, no migrations directory) in the repository.
+
+- The base schema lives in `backend/infra/schema.sql` (idempotent `create table if not exists ...`). It is applied manually against Neon, e.g. with `psql "$DATABASE_URL" -f backend/infra/schema.sql` or the Neon console SQL editor.
+- Schema changes are applied by hand as SQL statements against the Neon database. Nothing runs them on deploy.
+- The feature 003 changes below were originally applied by `supabase/migrations/20250930012519_multiphotos_meals.sql` and `supabase/migrations/20251002100414_add_photo_ids_to_estimates.sql`. The `supabase/` directory was deleted in commit `0222207` ("migrate from supabase to neon"); use `git show 0222207^:<path>` to view them.
+
+`backend/infra/schema.sql` was regenerated from the live Neon schema on 2026-10-11 and includes the changes below, plus the `ui_configurations`, `inline_analytics_daily` and `feedback_submissions` tables and the `query_daily_statistics()` function. When you change the live schema, update `schema.sql` in the same PR.
+
 ## Overview
 
 The schema changes extend the existing database to support:
 - Multiple photos per meal (up to 5)
+- Macronutrient tracking per meal
 - Enhanced meal management with calendar views
-- Improved data relationships and constraints
 - Better performance for photo and meal queries
 
 ## Table Changes
+
+The definitions below reflect the live Neon database.
 
 ### 1. Photos Table
 
 **New Fields Added**:
 ```sql
--- Display order for carousel (0-4)
-display_order INTEGER NOT NULL DEFAULT 0 CHECK (display_order >= 0 AND display_order <= 4)
+-- Meal the photo belongs to (set when a meal is created from an estimate)
+meal_id UUID REFERENCES meals(id)
 
 -- Telegram media group ID for grouped photos
-media_group_id TEXT
+media_group_id VARCHAR(255)
+
+-- Display order for carousel (0-4)
+display_order INTEGER DEFAULT 0 CHECK (display_order BETWEEN 0 AND 4)
 
 -- Indexes for performance
 CREATE INDEX idx_photos_meal_id ON photos(meal_id);
-CREATE INDEX idx_photos_media_group_id ON photos(media_group_id);
-CREATE INDEX idx_photos_display_order ON photos(meal_id, display_order);
+CREATE INDEX idx_photos_media_group ON photos(media_group_id);
 ```
 
 **Purpose**:
+- `meal_id`: Links photos to the meal created from their estimate
 - `display_order`: Controls the order of photos in the carousel (0-indexed)
 - `media_group_id`: Links photos that were uploaded together in Telegram
 - Indexes: Improve query performance for meal photo retrieval
+
+Note: the original migration declared `meal_id ... ON DELETE CASCADE`, but the live foreign key has no `ON DELETE` action.
 
 ### 2. Meals Table
 
 **New Fields Added**:
 ```sql
--- Enhanced description field
-description TEXT -- Increased from VARCHAR(255) to TEXT for longer descriptions
+-- Macronutrients
+protein_grams NUMERIC CHECK (protein_grams >= 0)
+carbs_grams   NUMERIC CHECK (carbs_grams >= 0)
+fats_grams    NUMERIC CHECK (fats_grams >= 0)
 
--- Confidence score for AI estimates
-confidence_score DECIMAL(3,2) CHECK (confidence_score >= 0 AND confidence_score <= 1)
+-- Meal description
+description TEXT
+
+-- Confidence score for AI estimates (no CHECK constraint)
+confidence_score NUMERIC
+
+-- Last update timestamp
+updated_at TIMESTAMPTZ DEFAULT now()
 
 -- Indexes for performance
-CREATE INDEX idx_meals_user_id_created_at ON meals(user_id, created_at DESC);
-CREATE INDEX idx_meals_created_at ON meals(created_at DESC);
+CREATE INDEX idx_meals_user_created ON meals(user_id, created_at DESC);
+CREATE INDEX idx_meals_created_at ON meals(created_at);
 ```
 
 **Purpose**:
-- `description`: Support for longer meal descriptions
+- `protein_grams` / `carbs_grams` / `fats_grams`: Per-meal macros (from the estimate, or user overrides)
+- `description`: Meal description (generated from estimate items when empty)
 - `confidence_score`: Track AI estimation confidence
 - Indexes: Optimize queries for user meal history and calendar views
+
+`description`, `confidence_score` and `updated_at` are not in either historical migration file; they exist in the live database only.
 
 ### 3. Estimates Table
 
 **New Fields Added**:
 ```sql
+-- Macronutrient breakdown from the AI estimate
+macronutrients JSONB
+
+-- Number of photos in the estimate
+photo_count INTEGER DEFAULT 1
+
 -- Support for multi-photo estimates
 photo_ids TEXT[] -- Array of photo IDs for multi-photo estimates
 
--- Media group tracking
-media_group_id TEXT
-
--- Enhanced description
-description TEXT
-
--- Indexes for performance
-CREATE INDEX idx_estimates_media_group_id ON estimates(media_group_id);
-CREATE INDEX idx_estimates_created_at ON estimates(created_at DESC);
+-- Index for array lookups
+CREATE INDEX idx_estimates_photo_ids ON estimates USING GIN (photo_ids);
 ```
 
 **Purpose**:
-- `photo_ids`: Support multiple photos in a single estimate
-- `media_group_id`: Link estimates to Telegram media groups
-- `description`: Store user-provided descriptions
-- Indexes: Improve estimate lookup and media group queries
+- `macronutrients`: Store protein/carbs/fats returned by the estimator
+- `photo_count` / `photo_ids`: Support multiple photos in a single estimate
+- Index: Improve estimate lookup by photo
 
 ## New Tables
 
-### 1. Daily Summary Table
-
-```sql
-CREATE TABLE daily_summary (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    meal_date DATE NOT NULL,
-    meal_count INTEGER NOT NULL DEFAULT 0,
-    total_calories DECIMAL(8,2) NOT NULL DEFAULT 0,
-    total_protein DECIMAL(8,2) NOT NULL DEFAULT 0,
-    total_carbs DECIMAL(8,2) NOT NULL DEFAULT 0,
-    total_fats DECIMAL(8,2) NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-
-    -- Ensure one summary per user per day
-    UNIQUE(user_id, meal_date)
-);
-
--- Indexes for performance
-CREATE INDEX idx_daily_summary_user_date ON daily_summary(user_id, meal_date DESC);
-CREATE INDEX idx_daily_summary_date ON daily_summary(meal_date DESC);
-```
-
-**Purpose**:
-- Pre-computed daily meal summaries for calendar views
-- Efficient aggregation of meal data by date
-- Supports fast calendar queries without real-time aggregation
+Feature 003 added no new tables. Daily, weekly and monthly summaries are computed at query time from `meals` (`services/db/summaries.py`, and the `query_daily_statistics()` SQL function called by `services/statistics_service.py`, added by the 005 migration `20251102080000_add_macro_columns_to_meals.sql`); there is no `daily_summary` table.
 
 ## Migration Scripts
 
-### Migration 1: Add Photo Display Order
+The original migration (`supabase/migrations/20250930012519_multiphotos_meals.sql`, abridged):
 
 ```sql
--- Add display_order column to photos table
-ALTER TABLE photos ADD COLUMN display_order INTEGER NOT NULL DEFAULT 0;
+-- Step 1: Add macronutrient columns to meals
+ALTER TABLE meals
+  ADD COLUMN IF NOT EXISTS protein_grams DECIMAL(6,2) CHECK (protein_grams >= 0),
+  ADD COLUMN IF NOT EXISTS carbs_grams DECIMAL(6,2) CHECK (carbs_grams >= 0),
+  ADD COLUMN IF NOT EXISTS fats_grams DECIMAL(6,2) CHECK (fats_grams >= 0);
 
--- Add constraint for display order range
-ALTER TABLE photos ADD CONSTRAINT check_display_order
-    CHECK (display_order >= 0 AND display_order <= 4);
+-- Step 2: Extend photos table
+ALTER TABLE photos
+  ADD COLUMN IF NOT EXISTS meal_id UUID REFERENCES meals(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS media_group_id VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0 CHECK (display_order BETWEEN 0 AND 4);
 
--- Add index for efficient ordering
-CREATE INDEX idx_photos_meal_display_order ON photos(meal_id, display_order);
-```
-
-### Migration 2: Add Media Group Support
-
-```sql
--- Add media_group_id to photos table
-ALTER TABLE photos ADD COLUMN media_group_id TEXT;
-
--- Add media_group_id to estimates table
-ALTER TABLE estimates ADD COLUMN media_group_id TEXT;
-
--- Add indexes for media group queries
-CREATE INDEX idx_photos_media_group_id ON photos(media_group_id);
-CREATE INDEX idx_estimates_media_group_id ON estimates(media_group_id);
-```
-
-### Migration 3: Enhance Meals Table
-
-```sql
--- Extend description field
-ALTER TABLE meals ALTER COLUMN description TYPE TEXT;
-
--- Add confidence score
-ALTER TABLE meals ADD COLUMN confidence_score DECIMAL(3,2);
-
--- Add constraint for confidence score
-ALTER TABLE meals ADD CONSTRAINT check_confidence_score
-    CHECK (confidence_score >= 0 AND confidence_score <= 1);
-
--- Add performance indexes
+-- Step 3: Create indexes
 CREATE INDEX idx_meals_user_created ON meals(user_id, created_at DESC);
-CREATE INDEX idx_meals_created_at ON meals(created_at DESC);
+CREATE INDEX idx_meals_created_at ON meals(created_at);
+CREATE INDEX idx_photos_meal_id ON photos(meal_id);
+CREATE INDEX idx_photos_media_group ON photos(media_group_id);
+
+-- Step 4: Extend estimates table
+ALTER TABLE estimates
+  ADD COLUMN IF NOT EXISTS macronutrients JSONB,
+  ADD COLUMN IF NOT EXISTS photo_count INTEGER DEFAULT 1;
+
+-- Step 7: Set display_order for existing photos
+UPDATE photos SET display_order = 0 WHERE display_order IS NULL;
 ```
 
-### Migration 4: Create Daily Summary Table
+Follow-up (`supabase/migrations/20251002100414_add_photo_ids_to_estimates.sql`):
 
 ```sql
--- Create daily_summary table
-CREATE TABLE daily_summary (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    meal_date DATE NOT NULL,
-    meal_count INTEGER NOT NULL DEFAULT 0,
-    total_calories DECIMAL(8,2) NOT NULL DEFAULT 0,
-    total_protein DECIMAL(8,2) NOT NULL DEFAULT 0,
-    total_carbs DECIMAL(8,2) NOT NULL DEFAULT 0,
-    total_fats DECIMAL(8,2) NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+ALTER TABLE estimates
+  ADD COLUMN IF NOT EXISTS photo_ids TEXT[] DEFAULT NULL;
 
-    UNIQUE(user_id, meal_date)
-);
+CREATE INDEX IF NOT EXISTS idx_estimates_photo_ids ON estimates USING GIN (photo_ids);
 
--- Add indexes
-CREATE INDEX idx_daily_summary_user_date ON daily_summary(user_id, meal_date DESC);
-CREATE INDEX idx_daily_summary_date ON daily_summary(meal_date DESC);
+-- Backfill from the single photo_id column
+UPDATE estimates
+SET photo_ids = ARRAY[photo_id::TEXT]
+WHERE photo_id IS NOT NULL AND photo_ids IS NULL;
 ```
 
 ## Data Integrity Constraints
 
 ### Photo Constraints
-- Maximum 5 photos per meal (enforced by `display_order` constraint)
+- Maximum 5 photos per meal (enforced by `display_order` constraint and the `photo_ids[:5]` slice in `services/db/meals.py`)
 - Unique `display_order` per meal (enforced by application logic)
 - Valid `display_order` range (0-4)
 
 ### Meal Constraints
-- Valid `confidence_score` range (0-1)
-- Non-negative macronutrient values
-- Valid date ranges for calendar queries
-
-### Daily Summary Constraints
-- One summary per user per day (enforced by unique constraint)
-- Non-negative aggregate values
-- Automatic updates via triggers or application logic
+- Non-negative macronutrient values (CHECK constraints)
+- `confidence_score` range (0-1) is not enforced by the database
 
 ## Performance Optimizations
 
 ### Indexes Added
 1. **Photos Table**:
    - `idx_photos_meal_id`: Fast meal photo retrieval
-   - `idx_photos_media_group_id`: Media group queries
-   - `idx_photos_meal_display_order`: Ordered photo display
+   - `idx_photos_media_group`: Media group queries
 
 2. **Meals Table**:
    - `idx_meals_user_created`: User meal history queries
    - `idx_meals_created_at`: General meal queries
 
-3. **Daily Summary Table**:
-   - `idx_daily_summary_user_date`: Calendar queries
-   - `idx_daily_summary_date`: Date-based queries
+3. **Estimates Table**:
+   - `idx_estimates_photo_ids`: GIN index on photo ID array
 
 ### Query Optimizations
-- Pre-computed daily summaries for calendar views
 - Efficient photo ordering with display_order
 - Optimized meal history queries with proper indexing
 
@@ -222,54 +186,56 @@ CREATE INDEX idx_daily_summary_date ON daily_summary(meal_date DESC);
 
 ### Existing Data
 - All existing photos get `display_order = 0`
-- Existing meals remain unchanged
+- Existing estimates get `photo_ids` backfilled from `photo_id`
+- Existing meals remain unchanged (macro columns are NULL)
 - No data loss during migration
 
 ### API Compatibility
 - Existing API endpoints continue to work
 - New fields are optional in responses
-- Graceful handling of missing new fields
+- Graceful handling of missing new fields (macros default to 0 in `services/db/meals.py`)
 
 ## Rollback Plan
 
 ### Rollback Steps
 1. Drop new indexes
 2. Remove new columns
-3. Drop new tables
-4. Restore original constraints
 
 ### Rollback Scripts
 ```sql
--- Rollback Migration 4
-DROP TABLE IF EXISTS daily_summary;
+-- Rollback photo_ids
+DROP INDEX IF EXISTS idx_estimates_photo_ids;
+ALTER TABLE estimates DROP COLUMN IF EXISTS photo_ids;
 
--- Rollback Migration 3
-ALTER TABLE meals DROP COLUMN IF EXISTS confidence_score;
-ALTER TABLE meals ALTER COLUMN description TYPE VARCHAR(255);
+-- Rollback estimates changes
+ALTER TABLE estimates DROP COLUMN IF EXISTS macronutrients;
+ALTER TABLE estimates DROP COLUMN IF EXISTS photo_count;
+
+-- Rollback photos changes
+DROP INDEX IF EXISTS idx_photos_meal_id;
+DROP INDEX IF EXISTS idx_photos_media_group;
+ALTER TABLE photos DROP COLUMN IF EXISTS meal_id;
+ALTER TABLE photos DROP COLUMN IF EXISTS media_group_id;
+ALTER TABLE photos DROP COLUMN IF EXISTS display_order;
+
+-- Rollback meals changes
 DROP INDEX IF EXISTS idx_meals_user_created;
 DROP INDEX IF EXISTS idx_meals_created_at;
-
--- Rollback Migration 2
-ALTER TABLE photos DROP COLUMN IF EXISTS media_group_id;
-ALTER TABLE estimates DROP COLUMN IF EXISTS media_group_id;
-DROP INDEX IF EXISTS idx_photos_media_group_id;
-DROP INDEX IF EXISTS idx_estimates_media_group_id;
-
--- Rollback Migration 1
-ALTER TABLE photos DROP COLUMN IF EXISTS display_order;
-DROP INDEX IF EXISTS idx_photos_meal_display_order;
+ALTER TABLE meals DROP COLUMN IF EXISTS protein_grams;
+ALTER TABLE meals DROP COLUMN IF EXISTS carbs_grams;
+ALTER TABLE meals DROP COLUMN IF EXISTS fats_grams;
 ```
+
+The current code depends on all of these columns, so a rollback also requires reverting the application.
 
 ## Monitoring and Maintenance
 
 ### Performance Monitoring
 - Monitor query performance for new indexes
-- Track daily summary table growth
 - Monitor photo storage usage
 
 ### Maintenance Tasks
 - Regular index maintenance
-- Daily summary table cleanup (old data)
 - Photo storage optimization
 
 ### Data Validation

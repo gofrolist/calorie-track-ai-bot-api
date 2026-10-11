@@ -1,204 +1,182 @@
 # Frontend Components Documentation
 
-This document describes the React components used in the Calorie Track AI Bot frontend application.
+This document describes the React components used in the Calorie Track AI Bot frontend application. All components are function components (except `ErrorBoundary`) styled with Tailwind CSS v4 utility classes that map to Telegram theme tokens (`bg-tg-bg`, `text-tg-text`, etc., defined in `src/app.css`). All user-facing text goes through `useTranslation()`.
 
-## Core Components
+## Meal Components (`src/components/meal/`)
 
 ### MealCard
-**Location**: `src/components/MealCard.tsx`
+**Location**: `src/components/meal/MealCard.tsx`
 
-A reusable component for displaying individual meal information with photos and macronutrients.
+Displays a single meal in the meals list.
 
 **Props**:
-- `meal`: MealWithPhotos object containing meal data
-- `onEdit`: Function called when edit button is clicked
-- `onDelete`: Function called when delete button is clicked
-- `isExpanded`: Boolean to control expanded/collapsed state
-- `onToggleExpand`: Function to toggle expansion state
+- `meal`: `MealWithPhotos` (Orval-generated type)
+- `onEdit`: `(id: string) => void`, called with the meal ID when Edit is clicked
+- `onDelete`: `(id: string) => void`, called with the meal ID when Delete is clicked
 
 **Features**:
-- Displays meal description, calories, and macronutrients
-- Shows photo carousel with thumbnail and full-size images
-- Expandable/collapsible design for mobile optimization
-- Edit and delete action buttons
-- Responsive design for different screen sizes
+- Shows the first photo's thumbnail (if any), description, creation time, calories, and P/C/F macros
+- Edit and delete buttons with translated `aria-label`s
 
 ### PhotoCarousel
-**Location**: `src/components/PhotoCarousel.tsx`
+**Location**: `src/components/meal/PhotoCarousel.tsx`
 
-A carousel component for displaying multiple meal photos with navigation controls.
+Displays meal photos. Currently not used by any page (covered by unit tests only).
 
 **Props**:
-- `photos`: Array of PhotoInfo objects
-- `initialSlide`: Index of the initial slide to display
-- `onSlideChange`: Callback function when slide changes
+- `photos`: `MealPhotoInfo[]`
 
 **Features**:
-- Swiper.js integration for smooth touch/swipe navigation
-- Thumbnail navigation dots
-- Full-screen image display
-- Keyboard navigation support
-- Responsive design
+- Renders nothing for an empty array, a single full-width image for one photo
+- For multiple photos, a horizontally scrollable row sorted by `displayOrder` (plain CSS overflow, no carousel library)
 
 ### CalendarPicker
-**Location**: `src/components/CalendarPicker.tsx`
+**Location**: `src/components/meal/CalendarPicker.tsx`
 
-A date picker component for selecting meal dates and date ranges.
+Single-date picker built on `react-day-picker`. Currently not used by any page (covered by unit tests only).
 
 **Props**:
-- `selectedDate`: Currently selected date
-- `onDateSelect`: Function called when a date is selected
-- `onRangeSelect`: Function called when a date range is selected
-- `mode`: 'single' or 'range' selection mode
-
-**Features**:
-- react-day-picker integration
-- Single date and date range selection
-- Month/year navigation
-- Custom styling for Telegram Mini App theme
-- Accessibility support
+- `selected`: `Date`
+- `onSelect`: `(date: Date) => void`
+- `calendarData?`: `MealCalendarDay[]`; days with `meal_count > 0` are highlighted
 
 ### MealEditor
-**Location**: `src/components/MealEditor.tsx`
+**Location**: `src/components/meal/MealEditor.tsx`
 
-A modal component for editing meal details including description and macronutrients.
+Form for editing a meal's description and macronutrients. Rendered inside a `Modal` by the Meals page.
 
 **Props**:
-- `meal`: MealWithPhotos object to edit
-- `isOpen`: Boolean to control modal visibility
-- `onClose`: Function called when modal is closed
-- `onSave`: Function called when changes are saved
+- `meal`: `MealFormData` (`{ description, calories, protein, carbs, fats }`, exported type)
+- `onSave`: `(data: MealFormData) => void`
+- `onCancel`: `() => void`
+- `saving?`: `boolean`, disables the submit button and shows a saving label
 
 **Features**:
-- Form validation for macronutrient values
-- Real-time calorie calculation
-- Optimistic UI updates
-- Error handling and validation messages
+- Recalculates calories (`protein*4 + carbs*4 + fats*9`) when a macro changes
+- Numeric inputs with `min={0}`
+
+## Stats Components (`src/components/stats/`)
+
+### StatsCharts
+**Location**: `src/components/stats/StatsCharts.tsx`
+
+**Props**:
+- `dailyStats`: `DailyStatisticsResponse`
+- `macroStats`: `MacroStatisticsResponse | null`
+
+**Features**:
+- Empty state when there is no daily data
+- Summary cards (average daily calories, total meals)
+- Recharts line chart of calories over time and pie chart of macro distribution
+
+### PeriodSelector
+**Location**: `src/components/stats/PeriodSelector.tsx`
+
+**Props**:
+- `selected`: `Period` (`7 | 30 | 90`, exported type)
+- `onChange`: `(period: Period) => void`
+
+Button group (`role="group"`, `aria-pressed`) for 7/30/90-day periods.
 
 ## Page Components
 
-### Meals
-**Location**: `src/pages/Meals.tsx`
+Pages live in `src/pages/<name>/index.tsx` (default exports, lazy-loaded in `src/app.tsx`):
 
-The main page component for displaying and managing meals.
+### Meals
+**Location**: `src/pages/meals/index.tsx` (route `/`)
 
 **Features**:
-- Meal list with filtering and pagination
-- Calendar integration for date-based filtering
-- Meal creation, editing, and deletion
-- Responsive layout for mobile and desktop
-- Integration with backend API
+- Today's meal list (date is fixed to the current day; no calendar filtering in the UI)
+- Daily summary (kcal total, macros) and daily goal
+- Edit via `MealEditor` in a `Modal`; delete with a confirmation `Modal`
+- Error banner on failed mutations
 
 **State Management**:
-- Uses `useMeals` hook for data fetching
-- Uses `useMealsCalendar` hook for calendar data
-- Local state for UI interactions (modals, filters)
+- Orval-generated TanStack Query hooks: `useGetMealsApiV1MealsGet`, `useGetDailySummaryApiV1DailySummaryDateGet`, `useGetGoalApiV1GoalsGet`, `useUpdateMealApiV1MealsMealIdPatch`, `useDeleteMealApiV1MealsMealIdDelete`
+- Invalidates meal and daily-summary queries after mutations
+- Local state for UI interactions (editing/deleting meal, error message)
 
-## Utility Components
+### Stats, Goals, Feedback
+- `src/pages/stats/index.tsx` (`/stats`): `PeriodSelector` + `StatsCharts`, using the statistics daily/macros query hooks
+- `src/pages/goals/index.tsx` (`/goals`): view and create/update the daily calorie goal (edited in a `Modal`)
+- `src/pages/feedback/index.tsx` (`/feedback`): free-text feedback form (max 5000 chars). Not linked from `Navigation`; reachable by URL only
 
-### SafeAreaWrapper
-**Location**: `src/components/SafeAreaWrapper.tsx`
+## Layout Components (`src/components/layout/`)
 
-A wrapper component that handles safe area insets for mobile devices.
+### AppLayout
+**Location**: `src/components/layout/AppLayout.tsx`
 
-**Props**:
-- `children`: React children to wrap
-- `className`: Additional CSS classes
+Layout route element. Wraps the routed page (`<Outlet />`) in `ErrorBoundary` and `Suspense` (spinner fallback), applies top safe-area padding via `--safe-area-top`, and renders `Navigation`.
 
-**Features**:
-- CSS environment variable support for safe areas
-- Fallback for devices without safe area support
-- Customizable padding and margins
+### Navigation
+**Location**: `src/components/layout/Navigation.tsx`
 
-### Loading
-**Location**: `src/components/Loading.tsx`
-
-A loading indicator component for async operations.
-
-**Props**:
-- `size`: 'small', 'medium', or 'large'
-- `text`: Optional loading text
-
-**Features**:
-- Spinner animation
-- Customizable size and text
-- Accessible loading states
+Fixed bottom tab bar with three items: Meals (`/`), Stats (`/stats`), Goals (`/goals`). Active item gets `aria-current="page"`; bottom padding uses `--safe-area-bottom`.
 
 ### ErrorBoundary
-**Location**: `src/components/ErrorBoundary.tsx`
+**Location**: `src/components/layout/ErrorBoundary.tsx`
 
-An error boundary component for catching and handling React errors.
+Class component error boundary.
 
 **Props**:
 - `children`: React children to wrap
-- `fallback`: Custom fallback component
+- `fallback?`: Custom fallback node
 
 **Features**:
-- Catches JavaScript errors in component tree
-- Displays fallback UI
-- Error reporting and logging
+- Catches render errors and logs them with `console.error`
+- Default fallback shows a translated message, the error text in dev mode, and a reload button
+
+## UI Primitives (`src/components/ui/`)
+
+### Modal
+**Location**: `src/components/ui/Modal.tsx`
+
+**Props**:
+- `open`: `boolean`
+- `onClose`: `() => void`
+- `title?`: `string` (used as the dialog's `aria-label`)
+- `children`: content
+
+**Features**:
+- `role="dialog"`, `aria-modal="true"`
+- Closes on Escape and on backdrop click
+- Bottom sheet on mobile, centered on `sm` and up
+
+### Skeleton
+**Location**: `src/components/ui/Skeleton.tsx`
+
+**Props**:
+- `className?`: sizing classes
+
+Pulsing placeholder with `role="status"`, `aria-busy="true"`, `aria-label="Loading"`.
 
 ## Hooks
 
-### useMeals
-**Location**: `src/hooks/useMeals.ts`
-
-A custom hook for managing meal data and operations.
-
-**Returns**:
-- `meals`: Array of meals
-- `loading`: Loading state
-- `error`: Error state
-- `createMeal`: Function to create a new meal
-- `updateMeal`: Function to update an existing meal
-- `deleteMeal`: Function to delete a meal
-- `refetch`: Function to refetch data
-
-**Features**:
-- Optimistic updates for better UX
-- Error handling and retry logic
-- Caching and state management
-
-### useMealsCalendar
-**Location**: `src/hooks/useMeals.ts`
-
-A custom hook for managing calendar meal data.
-
-**Returns**:
-- `calendarData`: Calendar summary data
-- `loading`: Loading state
-- `error`: Error state
-- `refetch`: Function to refetch data
-
-**Features**:
-- Date range-based data fetching
-- Caching for performance
-- Error handling
+There are no hand-written data hooks. Server state uses the Orval-generated TanStack Query hooks in `src/api/queries/` (regenerate with `bun run api:gen`). Telegram context is available via `useTelegram()` from `src/providers/telegram.tsx`.
 
 ## Styling
 
-### CSS Modules
-Components use CSS modules for scoped styling:
-- `SafeAreaWrapper.module.css`
-- Component-specific styles in respective files
+### Tailwind CSS v4
+No CSS modules. Styling is Tailwind utility classes; theme tokens are declared CSS-first with `@theme` in `src/app.css` (no `tailwind.config.js`).
 
 ### Theme Integration
 Components integrate with Telegram Mini App theming:
-- Light/dark mode support
-- Custom color schemes
-- Responsive design patterns
+- Colors map to Telegram CSS variables (`--tg-*`) via `tg-*` tokens
+- `TelegramProvider` sets `data-theme` on `<html>` for light/dark overrides
+- Safe-area insets via `--safe-area-*` CSS variables
 
 ## Testing
 
 ### Component Tests
-Each component has corresponding test files:
-- `MealCard.test.tsx`
-- `PhotoCarousel.test.tsx`
-- `CalendarPicker.test.tsx`
-- `MealEditor.test.tsx`
+Each component has a Vitest + React Testing Library test in a sibling `__tests__/` directory, e.g.:
+- `src/components/meal/__tests__/MealCard.test.tsx`
+- `src/components/meal/__tests__/PhotoCarousel.test.tsx`
+- `src/components/meal/__tests__/CalendarPicker.test.tsx`
+- `src/components/meal/__tests__/MealEditor.test.tsx`
+- `src/components/layout/__tests__/`, `src/components/stats/__tests__/`, `src/components/ui/__tests__/`
 
 ### E2E Tests
-End-to-end tests cover user workflows:
+Playwright specs in `tests/e2e/` cover user workflows, e.g.:
 - `meal-editing-flow.spec.ts`
 - `meal-deletion-flow.spec.ts`
 - `calendar-filtering.spec.ts`
@@ -206,16 +184,12 @@ End-to-end tests cover user workflows:
 ## Performance Considerations
 
 ### Image Optimization
-- Lazy loading for photos
-- Thumbnail vs full-size image selection
-- Presigned URL caching
+- `MealCard` uses the photo `thumbnailUrl`; `PhotoCarousel` uses `fullUrl`
 
 ### State Management
-- Optimistic updates for better perceived performance
-- Efficient re-rendering with React.memo
-- Proper dependency arrays in useEffect
+- TanStack Query caching (`staleTime` 50 minutes, `refetchOnWindowFocus: false`, configured in `src/app.tsx`)
+- `useCallback` for handlers passed to `MealCard`
 
 ### Bundle Optimization
-- Code splitting for large components
-- Dynamic imports for heavy libraries
-- Tree shaking for unused code
+- Route-level code splitting with `React.lazy()`
+- Vendor chunks (`react-vendor`, `chart-vendor`, `i18n-vendor`) via `manualChunks` in `vite.config.ts`

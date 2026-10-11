@@ -4,6 +4,8 @@
 
 This document describes the strategies implemented to prevent and detect infinite re-render loops in the React frontend application.
 
+Data fetching in the app now goes through Orval-generated TanStack Query hooks (`frontend/src/api/queries/`), not hand-written `useEffect` fetchers. TanStack Query caches and dedupes requests by query key (hashed by value), which removes the most common source of fetch loops. The `useEffect`/`useCallback` patterns below remain relevant for non-query effects (e.g. `frontend/src/providers/telegram.tsx`, `frontend/src/components/ui/Modal.tsx`).
+
 ## Problem
 
 React applications can experience infinite loops when:
@@ -35,35 +37,32 @@ rules: {
 
 ### 2. Memoization Patterns
 
-#### ✅ **Good: Memoize Date Objects**
+#### ✅ **Good: Memoize Derived Date Ranges**
 ```typescript
-// In Meals.tsx
-const calendarDates = useMemo(() => {
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setMonth(startDate.getMonth() - 1);
-  return { startDate, endDate };
-}, []); // Empty deps - only create once
+// In frontend/src/pages/stats/index.tsx
+const [period, setPeriod] = useState<Period>(7);
+const dateRange = useMemo(() => getDateRange(period), [period]);
+// getDateRange returns { start_date, end_date } as YYYY-MM-DD strings
 
-const { calendarData } = useMealsCalendar(
-  calendarDates.startDate,
-  calendarDates.endDate
-);
+const { data: dailyRaw } =
+  useGetDailyStatisticsApiV1StatisticsDailyGet(dateRange);
 ```
 
 #### ❌ **Bad: Creating Dates on Every Render**
 ```typescript
-// DON'T DO THIS - creates new Date objects on every render
-const calendarStartDate = new Date();
-calendarStartDate.setMonth(calendarStartDate.getMonth() - 1);
-const { calendarData } = useMealsCalendar(calendarStartDate, new Date());
+// DON'T DO THIS - recomputes Date objects on every render and passes
+// them to a hand-written hook whose effect depends on object identity
+const start = new Date();
+start.setMonth(start.getMonth() - 1);
+const { data } = useCustomFetchHook(start, new Date());
 ```
 
 ### 3. useEffect Dependency Management
 
+These patterns apply to hand-written effects. The app currently has no custom fetch hooks (the former `useMeals.ts` was replaced by Orval-generated query hooks); the examples are kept as general guidance.
+
 #### ✅ **Good: Direct Dependencies**
 ```typescript
-// In useMeals.ts
 const fetchCalendar = useCallback(async () => {
   const startStr = startDate.toISOString().split('T')[0];
   const endStr = endDate.toISOString().split('T')[0];
@@ -87,7 +86,9 @@ useEffect(() => {
 
 ## Detection Strategies
 
-### 1. E2E Tests (`infinite-loop-detection.desktop.spec.ts`)
+### 1. E2E Tests (`frontend/tests/e2e/infinite-loop-detection.desktop.spec.ts`)
+
+Runs under the `Desktop Chrome` Playwright project (6 tests). A near-duplicate `infinite-loop-detection.spec.ts` exists without the exclusions below, but no Playwright project's `testMatch` includes it, so it does not run.
 
 **Test Coverage:**
 - Monitors all API requests during page load
@@ -114,9 +115,9 @@ test('should not have infinite loop on Meals page', async ({ page }) => {
 - Infinite loops in any page load scenario
 - Loops triggered by user interactions
 
-**Exclusions:**
-- `/api/v1/logs` - Expected to be called multiple times during init
-- `/api/v1/config` - Expected for multi-stage configuration
+**Exclusions** (any URL containing `/logs` or `/config` is skipped; the current app no longer calls these endpoints, so the exclusion is legacy):
+- `/api/v1/logs`
+- `/api/v1/config/*`
 
 ### 2. Network Monitoring in E2E Tests
 
@@ -227,20 +228,21 @@ When implementing new features:
 
 ## Automated Detection
 
-### In CI/CD:
+### Locally (not run in CI):
+
+`.github/workflows/frontend-ci.yml` runs only the Orval drift check, Vitest, and `bun run build`. Neither ESLint nor Playwright runs in CI, so run these before pushing:
 
 1. **ESLint**: Catches missing dependencies
    ```bash
-   npm run lint
+   bun run lint
    ```
 
 2. **E2E Tests**: Detects runtime loops
    ```bash
-   npm run test:e2e infinite-loop-detection
+   bun run test:e2e infinite-loop-detection
    ```
 
 3. **Manual Testing**: Check browser console
-   - Look for repeated API Request Debug logs
    - Monitor Network tab for duplicate requests
    - Use React DevTools Profiler to count renders
 
@@ -292,13 +294,13 @@ const handleClick = useCallback(() => {
 ### Step 4: Verify the Fix
 ```bash
 # Run lint
-npm run lint
+bun run lint
 
 # Run infinite loop detection tests
-npm run test:e2e infinite-loop-detection
+bun run test:e2e infinite-loop-detection
 
 # Manual browser test
-npm run dev
+bun run dev
 # Open DevTools → Console & Network tab
 ```
 

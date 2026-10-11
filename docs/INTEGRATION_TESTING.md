@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides comprehensive instructions for testing the integration between the frontend and backend components of the Calorie Track AI Bot system. It covers contract testing, API integration, E2E testing, performance validation, and mobile device testing for the Telegram Mini App.
+This guide provides comprehensive instructions for testing the integration between the frontend and backend components of the Calorie Track AI Bot system. It covers contract testing, API integration, E2E testing, and mobile device testing for the Telegram Mini App. No performance/load-testing setup exists in the repo.
 
 ## Integration Test Architecture
 
@@ -19,8 +19,7 @@ graph TB
         subgraph "Backend Tests"
             UNIT_BE[Unit Tests<br/>Pytest]
             CONTRACT_BE[Contract Tests<br/>API Specs]
-            INTEGRATION_BE[Integration Tests<br/>Database & Redis]
-            PERFORMANCE_BE[Performance Tests<br/>Load & Stress]
+            INTEGRATION_BE[Integration Tests<br/>Mocked DB, Queue & Bot]
         end
 
         subgraph "Full Stack Tests"
@@ -34,9 +33,7 @@ graph TB
             VITEST[Vitest + Testing Library]
             PLAYWRIGHT[Playwright Multi-Device]
             PYTEST[Pytest + FastAPI TestClient]
-            MOCK[Mock Services & Fixtures]
-            TESTDB[PostgreSQL Test DB]
-            DOCKER[Docker Test Containers]
+            MOCK[Mock Services & Fixtures<br/>unittest.mock / MSW]
         end
     end
 
@@ -50,7 +47,6 @@ graph TB
     UNIT_BE --> PYTEST
     CONTRACT_BE --> PYTEST
     INTEGRATION_BE --> PYTEST
-    PERFORMANCE_BE --> PYTEST
 
     %% Full stack test connections
     CONNECTIVITY --> MOCK
@@ -59,8 +55,7 @@ graph TB
     THEME_LANG --> PLAYWRIGHT
 
     %% Infrastructure connections
-    INTEGRATION_BE --> TESTDB
-    INTEGRATION_BE --> DOCKER
+    INTEGRATION_BE --> MOCK
     CONTRACT_BE --> MOCK
 ```
 
@@ -71,54 +66,41 @@ graph TB
 ```mermaid
 graph LR
     subgraph "Required Tools"
-        NODE[Node.js 18+]
-        PYTHON[Python 3.11+]
+        BUN[Bun]
+        PYTHON[Python 3.12 + uv]
         DOCKER[Docker]
-        POSTGRES[PostgreSQL]
+        POSTGRES[Neon PostgreSQL]
         REDIS[Redis]
     end
 
     subgraph "Environment Files"
-        ENV_FE[.env.frontend]
-        ENV_BE[.env.backend]
-        ENV_TEST[.env.test]
+        ENV_FE[frontend env vars]
+        ENV_BE[backend/.env]
+        ENV_TEST[backend/pytest.ini env]
     end
 
-    NODE --> ENV_FE
+    BUN --> ENV_FE
     PYTHON --> ENV_BE
-    DOCKER --> ENV_TEST
+    PYTHON --> ENV_TEST
 ```
 
 ### Environment Configuration
 
-#### Frontend Environment (.env.frontend)
+#### Frontend Environment
+The frontend reads only two variables (`frontend/src/api/client.ts`, `frontend/src/config.ts`):
 ```bash
-# API Configuration
+# API base URL (defaults to http://localhost:8000)
 VITE_API_BASE_URL=http://localhost:8000
-VITE_API_TIMEOUT=30000
 
-# Development Features
-VITE_ENABLE_DEBUG_LOGGING=true
-VITE_ENABLE_ERROR_REPORTING=false
-VITE_ENABLE_ANALYTICS=false
-VITE_ENABLE_DEV_TOOLS=true
-
-# Telegram Configuration (for testing)
-VITE_TELEGRAM_BOT_NAME=test_bot
-VITE_TELEGRAM_APP_URL=http://localhost:3000
-
-# Production Configuration
-# VITE_API_BASE_URL=https://calorie-track-ai-bot.fly.dev
-# VITE_ENABLE_DEBUG_LOGGING=false
-# VITE_ENABLE_ERROR_REPORTING=true
-# VITE_ENABLE_ANALYTICS=true
-# VITE_ENABLE_DEV_TOOLS=false
+# Fallback x-user-id in dev when not running inside Telegram (defaults to 59357664)
+VITE_DEV_USER_ID=123456789
 ```
 
-#### Backend Environment (.env.backend)
+#### Backend Environment (backend/.env)
+See `backend/.env.example` and `backend/env.template` for the full list. Minimal set:
 ```bash
-# Database Configuration
-DATABASE_URL=postgresql://localhost:5432/calorie_track_test
+# Database Configuration (Neon PostgreSQL)
+DATABASE_URL=postgresql://user:password@host/neondb?sslmode=require
 
 # Redis Configuration
 REDIS_URL=redis://localhost:6379/0
@@ -132,6 +114,9 @@ BUCKET_NAME=test-bucket
 # Telegram Configuration
 TELEGRAM_BOT_TOKEN=test_token
 USE_WEBHOOK=false
+
+# AI estimation
+OPENAI_API_KEY=test-openai-key
 
 # Logging
 LOG_LEVEL=DEBUG
@@ -148,42 +133,33 @@ sequenceDiagram
     participant FE as Frontend
     participant API as Backend API
     participant DB as Database
-    participant REDIS as Redis
 
     DEV->>FE: Start frontend dev server
     DEV->>API: Start backend server
-    FE->>API: Health check request
-    API-->>FE: Health status
+    FE->>API: GET /health/connectivity
+    API-->>FE: Health status (includes DB ping)
     FE->>API: Test API endpoint
     API->>DB: Database query
     DB-->>API: Query result
-    API->>REDIS: Cache check
-    REDIS-->>API: Cache result
     API-->>FE: API response
     FE-->>DEV: Test results
 ```
 
 ### 2. Authentication Flow Testing
 
+There is no session/token endpoint. The frontend's `customFetch` (`frontend/src/api/client.ts`) sends an `x-user-id` header taken from `window.Telegram.WebApp.initDataUnsafe.user.id` (or `VITE_DEV_USER_ID` in dev). The backend (`api/v1/deps.py`) returns 401 when the header is missing and resolves it to an internal user ID.
+
 ```mermaid
 sequenceDiagram
     participant TEST as Test Suite
     participant FE as Frontend
     participant API as Backend API
-    participant AUTH as Auth Service
     participant DB as Database
 
-    TEST->>FE: Initialize app
-    FE->>API: POST /api/v1/auth/telegram/init
-    API->>AUTH: Validate init data
-    AUTH->>DB: Check/create user
-    DB-->>AUTH: User data
-    AUTH-->>API: Session token
-    API-->>FE: Auth response
-    FE->>FE: Store session
-    FE->>API: Authenticated request
-    API->>AUTH: Validate session
-    AUTH-->>API: Valid session
+    TEST->>FE: Initialize app (mock window.Telegram.WebApp)
+    FE->>API: Request with x-user-id header
+    API->>DB: Resolve telegram user ID to user
+    DB-->>API: User ID
     API-->>FE: Protected resource
     FE-->>TEST: Test passed
 ```
@@ -216,7 +192,7 @@ sequenceDiagram
 
 ### 4. Inline Mode Scenarios
 
-Use these manual and automated checks when validating inline mode end-to-end. Each checklist item maps to automated coverage in `tests/api/v1/test_bot_inline.py` or `tests/integration/test_inline_*`.
+Use these manual and automated checks when validating inline mode end-to-end. Each checklist item maps to automated coverage in `backend/tests/api/v1/test_bot_inline.py`, `backend/tests/integration/test_inline_flows.py`, or `backend/tests/api/v1/test_inline_analytics_endpoint.py`.
 
 - [ ] **Inline query acknowledgement** — Trigger an inline query (`@CalorieTrackAI_bot`) in a private chat and confirm the placeholder message appears within 3 seconds while the JSON response echoes the same `job_id`.
 - [ ] **Private inline summary** — Select the inline result and verify the final message includes calories, macronutrients, confidence, and the privacy disclosure from the quickstart guide.
@@ -232,22 +208,19 @@ Use these manual and automated checks when validating inline mode end-to-end. Ea
 ```bash
 # Install dependencies
 cd frontend
-npm install
+bun install
 
-# Run unit tests
-npm run test
+# Run unit, component, and contract tests (Vitest)
+bun run test
 
-# Run integration tests
-npm run test:integration
-
-# Run E2E tests
-npm run test:e2e
+# Run E2E tests (Playwright)
+bun run test:e2e
 
 # Start development server
-npm run dev
+bun run dev
 
 # Build for production
-npm run build
+bun run build
 ```
 
 ### Backend Testing
@@ -257,8 +230,11 @@ npm run build
 cd backend
 uv sync
 
-# Run unit tests
+# Run all tests
 uv run pytest tests/
+
+# Run unit tests only (excludes tests/integration/)
+make test-unit
 
 # Run integration tests
 uv run pytest tests/integration/
@@ -267,7 +243,7 @@ uv run pytest tests/integration/
 uv run pytest tests/api/
 
 # Start development server
-uv run uvicorn src.calorie_track_ai_bot.main:app --reload --host 0.0.0.0 --port 8000
+make dev   # uv run uvicorn calorie_track_ai_bot.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Run linting
 uv run ruff check
@@ -276,139 +252,54 @@ uv run pyright
 
 ### Full Stack Testing
 
+From the repo root:
 ```bash
-# Start all services
-make dev-up
+# Start backend (port 8000) and frontend (port 3000)
+make dev
 
-# Run connectivity tests
-make test-connectivity
+# Run backend pytest + frontend vitest
+make test
 
-# Run integration tests
-make test-integration
+# Full stack via Docker Compose (redis, minio, backend, worker, frontend, nginx)
+make docker-dev
 
-# Run performance tests
-make test-performance
-
-# Stop all services
-make dev-down
+# Stop Docker containers
+make docker-stop
 ```
 
 ## Test Scenarios
 
-### 1. Basic Connectivity Test
+There is no `frontend/tests/integration/` directory and no `test:integration` script. Frontend-to-backend integration is covered by these Vitest suites (all run by `bun run test`):
+
+- `frontend/src/api/__tests__/client.test.ts` - `customFetch` adds `x-user-id` and `X-Correlation-ID` headers and throws `ApiError` on non-OK responses
+- `frontend/src/tests/contracts/*.test.ts` - Response-shape checks for meals, estimates, photos, and photo display
+- `frontend/src/test/handlers.ts` - MSW handlers mocking `http://localhost:8000` endpoints (`/health/live`, `/api/v1/goals`, `/api/v1/meals`, ...) used by component and page tests
+
+### 1. API Client Test (excerpt)
 
 ```typescript
-// frontend/tests/integration/connectivity.test.ts
-describe('Backend Connectivity', () => {
-  test('should connect to backend API', async () => {
-    const response = await fetch('/health/live');
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(data.status).toBe('ok');
-  });
+// frontend/src/api/__tests__/client.test.ts
+it("adds x-user-id header from Telegram", async () => {
+  const spy = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
 
-  test('should handle CORS properly', async () => {
-    const response = await fetch('/api/v1/health', {
-      method: 'OPTIONS',
-      headers: {
-        'Origin': 'http://localhost:3000',
-        'Access-Control-Request-Method': 'GET',
-      },
-    });
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBeTruthy();
-  });
+  await customFetch({ url: "/health/live", method: "GET" });
+
+  const [, init] = spy.mock.calls[0];
+  expect((init?.headers as Record<string, string>)["x-user-id"]).toBe(
+    "123456",
+  );
 });
 ```
 
-### 2. Authentication Integration Test
-
-```typescript
-// frontend/tests/integration/auth.test.ts
-describe('Authentication Integration', () => {
-  test('should authenticate with Telegram init data', async () => {
-    const mockInitData = 'user=%7B%22id%22%3A123%7D&auth_date=1234567890';
-
-    const response = await authApi.initTelegramAuth(mockInitData);
-
-    expect(response.session_token).toBeDefined();
-    expect(response.user).toBeDefined();
-    expect(response.user.telegram_user_id).toBe(123);
-  });
-
-  test('should maintain session across requests', async () => {
-    // Authenticate first
-    const authResponse = await authApi.initTelegramAuth(mockInitData);
-    sessionManager.setSession(authResponse.session_token);
-
-    // Make authenticated request
-    const response = await mealsApi.getMealsByDate('2025-01-27');
-    expect(response).toBeDefined();
-  });
-});
-```
-
-### 3. Photo Upload Integration Test
-
-```typescript
-// frontend/tests/integration/photo.test.ts
-describe('Photo Upload Integration', () => {
-  test('should upload photo and get estimate', async () => {
-    const testFile = new File(['test image data'], 'test.jpg', {
-      type: 'image/jpeg',
-    });
-
-    const { photo, estimateId } = await apiUtils.uploadPhotoAndEstimate(testFile);
-
-    expect(photo.id).toBeDefined();
-    expect(estimateId).toBeDefined();
-
-    // Poll for estimate completion
-    const estimate = await apiUtils.pollEstimate(estimateId);
-    expect(estimate.status).toBe('done');
-    expect(estimate.kcal_mean).toBeGreaterThan(0);
-  });
-});
-```
+Health endpoints are `GET /health/live`, `GET /health/ready`, and `GET /health/connectivity` (there is no `/api/v1/health`).
 
 ## Performance Testing
 
-### Load Testing Architecture
-
-```mermaid
-graph TB
-    subgraph "Load Testing"
-        K6[K6 Load Tests]
-        ARTILLERY[Artillery Tests]
-        JMETER[JMeter Tests]
-    end
-
-    subgraph "Performance Metrics"
-        RESPONSE_TIME[Response Time]
-        THROUGHPUT[Throughput]
-        ERROR_RATE[Error Rate]
-        RESOURCE_USAGE[Resource Usage]
-    end
-
-    K6 --> RESPONSE_TIME
-    ARTILLERY --> THROUGHPUT
-    JMETER --> ERROR_RATE
-    RESPONSE_TIME --> RESOURCE_USAGE
-    THROUGHPUT --> RESOURCE_USAGE
-    ERROR_RATE --> RESOURCE_USAGE
-```
-
-### Performance Test Commands
-
-```bash
-# Run K6 load tests
-k6 run tests/performance/load-test.js
-
-# Run Artillery tests
-artillery run tests/performance/artillery-config.yml
-
-# Run JMeter tests
-jmeter -n -t tests/performance/api-test.jmx -l results.jtl
-```
+Not implemented. There is no `tests/performance/` directory and no K6, Artillery, or JMeter configuration. `frontend/playwright.config.ts` defines a `Performance` project matching `**/performance-*.spec.ts`, but no such spec files exist.
 
 ## Debugging Integration Issues
 
@@ -444,9 +335,8 @@ graph TD
    - Validate headers
 
 2. **Verify Authentication**
-   - Check session token storage
-   - Validate Telegram init data
-   - Test token expiration
+   - Check the `x-user-id` header is sent (from `Telegram.WebApp.initDataUnsafe.user.id` or `VITE_DEV_USER_ID`)
+   - A missing header returns 401 from `get_authenticated_user_id`
 
 3. **Monitor Network Requests**
    - Check request/response headers
@@ -460,98 +350,30 @@ graph TD
 
 ## Continuous Integration
 
-### CI/CD Pipeline for Integration Tests
+### CI/CD Pipeline
+
+There is no dedicated integration-test workflow. Workflows trigger on path-based changes:
 
 ```mermaid
 graph LR
-    subgraph "CI Pipeline"
-        COMMIT[Code Commit]
-        BUILD[Build Services]
-        UNIT[Unit Tests]
-        INTEGRATION[Integration Tests]
-        E2E[E2E Tests]
-        PRODUCTION[Deploy to Production]
+    subgraph "Backend"
+        BCI[backend-ci.yml<br/>ruff, pyright, pytest -q]
+        BBUILD[backend-build.yml]
+        BDEPLOY[backend-deploy.yml<br/>Fly.io]
     end
 
-    COMMIT --> BUILD
-    BUILD --> UNIT
-    UNIT --> INTEGRATION
-    INTEGRATION --> E2E
-    E2E --> PRODUCTION
+    subgraph "Frontend"
+        FCI[frontend-ci.yml<br/>Orval drift check, vitest, build]
+        FDEPLOY[frontend-deploy.yml<br/>Vercel]
+    end
+
+    BCI --> BBUILD
+    BBUILD --> BDEPLOY
+    FCI --> FDEPLOY
 ```
 
-### GitHub Actions Workflow
-
-```yaml
-# .github/workflows/integration-tests.yml
-name: Integration Tests
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  integration-tests:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: test_password
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install Frontend Dependencies
-        run: |
-          cd frontend
-          npm ci
-
-      - name: Install Backend Dependencies
-        run: |
-          cd backend
-          uv sync
-
-      - name: Run Frontend Tests
-        run: |
-          cd frontend
-          npm run test:integration
-
-      - name: Run Backend Tests
-        run: |
-          cd backend
-          uv run pytest tests/integration/
-
-      - name: Run E2E Tests
-        run: |
-          cd frontend
-          npm run test:e2e
-```
+- `backend-ci.yml` runs `uv run pytest -q` over all of `backend/tests/` (including `tests/integration/`) with dummy env vars; no Postgres or Redis service containers are started (tests mock the DB pool, queue, and bot).
+- `frontend-ci.yml` runs `bun run test` (Vitest) and `bun run build`.
+- Playwright E2E tests are not run in CI; run `bun run test:e2e` locally.
 
 This comprehensive integration testing guide provides all the tools and procedures needed to ensure reliable communication between your frontend and backend components.

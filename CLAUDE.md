@@ -12,14 +12,15 @@ See `backend/CLAUDE.md` and `frontend/CLAUDE.md` for detailed commands, architec
 ```bash
 make dev              # Start both backend (port 8000) and frontend (port 3000)
 make test             # Run all tests (backend + frontend)
-make lint             # Lint both
+make lint             # Lint + typecheck both (runs each side's `make check`)
+make format           # Format both
 make docker-dev       # Full stack via Docker Compose
 ```
 
 ## CI/CD
 
-GitHub Actions workflows trigger on path-based changes:
-- `backend-ci.yml` -> `backend-build.yml` -> `backend-deploy.yml` (Fly.io)
+GitHub Actions. CI workflows trigger on path-based changes (PRs and pushes to `main`); build/deploy workflows chain via `workflow_run` after a successful run on `main` (or run on `v*` tags):
+- `backend-ci.yml` -> `backend-build.yml` (GHCR image) -> `backend-deploy.yml` (Fly.io)
 - `frontend-ci.yml` -> `frontend-deploy.yml` (Vercel)
 
 ## Database
