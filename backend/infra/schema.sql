@@ -1,7 +1,9 @@
 -- Database schema for Neon PostgreSQL.
 -- Mirrors the live production schema (regenerated from pg_dump --schema-only on 2026-10-11).
--- Idempotent: safe to re-run against an existing database. There is no migration tool;
--- apply schema changes to Neon directly and keep this file in sync.
+-- Idempotent for a fresh database or one already at this schema. It does NOT upgrade an
+-- older database (e.g. one built from a previous version of this file): `create table if not
+-- exists` skips existing tables, so later statements that use new columns will fail.
+-- There is no migration tool; apply schema changes to Neon directly and keep this file in sync.
 
 create extension if not exists pgcrypto;
 
@@ -47,7 +49,7 @@ create table if not exists meals (
   meal_type text not null,
   kcal_total numeric not null,
   source text not null,
-  estimate_id uuid references estimates(id),
+  estimate_id uuid constraint fk_meals_estimate references estimates(id),
   description text,
   protein_grams numeric(6,2) check (protein_grams >= 0),
   carbs_grams numeric(6,2) check (carbs_grams >= 0),

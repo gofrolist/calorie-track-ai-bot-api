@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGetDailyStatisticsApiV1StatisticsDailyGet } from "@/api/queries/statistics/statistics";
 import { useGetMacroStatisticsApiV1StatisticsMacrosGet } from "@/api/queries/statistics/statistics";
@@ -16,7 +16,9 @@ import type {
 export default function StatsPage() {
   const { t } = useTranslation();
   const [period, setPeriod] = useState<Period>(7);
-  const dateRange = useMemo(() => getDateRange(period), [period]);
+  // Recomputed every render so a page left open past midnight picks up the
+  // new "today"; query keys are hashed by value, so this does not refetch.
+  const dateRange = getDateRange(period);
 
   const { data: dailyRaw, isLoading: loadingDaily } =
     useGetDailyStatisticsApiV1StatisticsDailyGet(dateRange);
