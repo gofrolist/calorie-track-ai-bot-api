@@ -233,6 +233,7 @@ app.add_middleware(
         "x-correlation-id",
         "x-telegram-color-scheme",
         "x-telegram-language-code",
+        "x-timezone",
         "x-user-id",
         "sec-ch-prefers-color-scheme",
         "user-agent",

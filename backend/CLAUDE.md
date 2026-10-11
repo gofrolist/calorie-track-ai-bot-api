@@ -53,6 +53,8 @@ src/calorie_track_ai_bot/
 
 **Auth:** No JWT/session auth. Telegram user ID arrives via `x-user-id` header. Use `Depends(get_telegram_user_id)` or `Depends(get_authenticated_user_id)` from `api/v1/deps.py`. The `db/_base.py` module resolves telegram_id to internal UUID user with a 5-minute TTL cache (max 1000 entries).
 
+**Dates and time zones:** The Mini App sends the browser's IANA zone in an `x-timezone` header; `get_user_timezone` in `api/v1/deps.py` reads it (falls back to UTC). Meal-day filters and grouping use `LOCAL_MEAL_DATE_SQL` (`created_at AT TIME ZONE tz`), not the `meal_date` column. Bot-side daily totals still use UTC.
+
 **Error handling:** Route handlers use `@handle_api_errors("context_name")` decorator. It re-raises `HTTPException` as-is and wraps unexpected exceptions into generic 500s (no internal details leaked).
 
 **Schemas:** `schemas.py` is the source of truth for API request/response models. Edit it directly. FastAPI auto-generates the OpenAPI spec from these models at runtime (`/docs`, `/openapi.json`). Use `make openapi-export` to dump the spec to a file.

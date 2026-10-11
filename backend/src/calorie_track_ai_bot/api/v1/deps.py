@@ -3,6 +3,8 @@
 Provides reusable dependency functions for authentication and user resolution.
 """
 
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from fastapi import HTTPException, Request
 
 from ...services.db import resolve_user_id
@@ -30,3 +32,20 @@ async def get_authenticated_user_id(request: Request) -> str:
     if not internal_user_id:
         raise HTTPException(status_code=404, detail="User not found")
     return internal_user_id
+
+
+def get_user_timezone(request: Request) -> str:
+    """Return the client's IANA time zone from the x-timezone header.
+
+    Meals are bucketed into the user's local calendar days with it. Falls back to
+    UTC when the header is missing or names an unknown zone.
+    Use as a FastAPI dependency: Depends(get_user_timezone)
+    """
+    tz_name = (request.headers.get("x-timezone") or "").strip()
+    if not tz_name:
+        return "UTC"
+    try:
+        ZoneInfo(tz_name)
+    except (ZoneInfoNotFoundError, ValueError, OSError):
+        return "UTC"
+    return tz_name

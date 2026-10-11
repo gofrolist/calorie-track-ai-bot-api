@@ -6,13 +6,13 @@ Provides endpoints for retrieving aggregated nutrition statistics.
 
 from datetime import date
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from ...schemas import DailyStatisticsResponse, MacroStatisticsResponse
 from ...services.config import logger
 from ...services.statistics_service import get_statistics_service
 from ...utils.error_handling import handle_api_errors
-from .deps import get_authenticated_user_id
+from .deps import get_authenticated_user_id, get_user_timezone
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 
@@ -23,6 +23,7 @@ async def get_daily_statistics(
     request: Request,
     start_date: date = Query(..., description="Start date (inclusive) in YYYY-MM-DD format"),  # noqa: B008
     end_date: date = Query(..., description="End date (exclusive) in YYYY-MM-DD format"),  # noqa: B008
+    tz: str = Depends(get_user_timezone),
 ) -> DailyStatisticsResponse:
     """Get daily nutrition statistics for a date range.
 
@@ -48,6 +49,7 @@ async def get_daily_statistics(
         user_id=user_id,
         start_date=start_date,
         end_date=end_date,
+        tz=tz,
     )
 
     logger.info(
@@ -68,6 +70,7 @@ async def get_macro_statistics(
     request: Request,
     start_date: date = Query(..., description="Start date (inclusive) in YYYY-MM-DD format"),  # noqa: B008
     end_date: date = Query(..., description="End date (exclusive) in YYYY-MM-DD format"),  # noqa: B008
+    tz: str = Depends(get_user_timezone),
 ) -> MacroStatisticsResponse:
     """Get macronutrient breakdown for a date range.
 
@@ -92,6 +95,7 @@ async def get_macro_statistics(
         user_id=user_id,
         start_date=start_date,
         end_date=end_date,
+        tz=tz,
     )
 
     logger.info(

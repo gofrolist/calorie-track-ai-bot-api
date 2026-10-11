@@ -152,6 +152,8 @@ create trigger update_feedback_submissions_updated_at
   for each row execute function update_updated_at_column();
 
 -- Used by services/statistics_service.py. p_end_date is exclusive.
+-- No longer called by the app: statistics_service.py groups meals by the user's local
+-- date (x-timezone header). Kept to mirror the live schema; safe to drop.
 create or replace function query_daily_statistics(p_user_id uuid, p_start_date text, p_end_date text)
   returns table(
     meal_date date,

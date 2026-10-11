@@ -1,13 +1,16 @@
 from typing import Any
 
 from .. import database
-from ._base import resolve_user_id
+from ._base import LOCAL_MEAL_DATE_SQL, resolve_user_id
+
+# Meals whose local calendar day (in the given time zone) equals the given date.
+_ON_LOCAL_DATE = f"{LOCAL_MEAL_DATE_SQL} = %s"
 
 
 async def db_get_daily_summary(
-    date: str, telegram_user_id: str | None = None
+    date: str, telegram_user_id: str | None = None, tz: str = "UTC"
 ) -> dict[str, Any] | None:
-    """Get daily summary for a specific date."""
+    """Get daily summary for a specific calendar date in ``tz``."""
     pool = await database.get_pool()
 
     user_id = await resolve_user_id(telegram_user_id)
@@ -15,11 +18,14 @@ async def db_get_daily_summary(
     async with pool.connection() as conn:
         if user_id:
             cur = await conn.execute(
-                "SELECT kcal_total FROM meals WHERE meal_date = %s AND user_id = %s",
-                (date, user_id),
+                f"SELECT kcal_total FROM meals WHERE {_ON_LOCAL_DATE} AND user_id = %s",  # type: ignore[arg-type]
+                (tz, date, user_id),
             )
         else:
-            cur = await conn.execute("SELECT kcal_total FROM meals WHERE meal_date = %s", (date,))
+            cur = await conn.execute(
+                f"SELECT kcal_total FROM meals WHERE {_ON_LOCAL_DATE}",  # type: ignore[arg-type]
+                (tz, date),
+            )
         rows = await cur.fetchall()
 
     meals = [dict(r) for r in rows]
@@ -35,9 +41,9 @@ async def db_get_daily_summary(
 
 
 async def db_get_summaries_by_date_range(
-    start_date: str, end_date: str, telegram_user_id: str | None = None
+    start_date: str, end_date: str, telegram_user_id: str | None = None, tz: str = "UTC"
 ) -> dict[str, dict[str, Any]]:
-    """Get summaries for a date range in a single query."""
+    """Get summaries for an inclusive range of calendar dates in ``tz`` in a single query."""
     pool = await database.get_pool()
 
     user_id = await resolve_user_id(telegram_user_id)
@@ -45,14 +51,15 @@ async def db_get_summaries_by_date_range(
     async with pool.connection() as conn:
         if user_id:
             cur = await conn.execute(
-                """SELECT meal_date, kcal_total FROM meals
-                   WHERE meal_date >= %s AND meal_date <= %s AND user_id = %s""",
-                (start_date, end_date, user_id),
+                f"""SELECT {LOCAL_MEAL_DATE_SQL} AS meal_date, kcal_total FROM meals
+                   WHERE {LOCAL_MEAL_DATE_SQL} BETWEEN %s AND %s AND user_id = %s""",  # type: ignore[arg-type]
+                (tz, tz, start_date, end_date, user_id),
             )
         else:
             cur = await conn.execute(
-                "SELECT meal_date, kcal_total FROM meals WHERE meal_date >= %s AND meal_date <= %s",
-                (start_date, end_date),
+                f"""SELECT {LOCAL_MEAL_DATE_SQL} AS meal_date, kcal_total FROM meals
+                   WHERE {LOCAL_MEAL_DATE_SQL} BETWEEN %s AND %s""",  # type: ignore[arg-type]
+                (tz, tz, start_date, end_date),
             )
         rows = await cur.fetchall()
 
@@ -72,8 +79,10 @@ async def db_get_summaries_by_date_range(
     return summaries
 
 
-async def db_get_today_data(date: str, telegram_user_id: str | None = None) -> dict[str, Any]:
-    """Get all data needed for the Today page in a single query."""
+async def db_get_today_data(
+    date: str, telegram_user_id: str | None = None, tz: str = "UTC"
+) -> dict[str, Any]:
+    """Get all data needed for the Today page in a single query (``date`` is in ``tz``)."""
     pool = await database.get_pool()
 
     user_id = await resolve_user_id(telegram_user_id)
@@ -81,11 +90,14 @@ async def db_get_today_data(date: str, telegram_user_id: str | None = None) -> d
     async with pool.connection() as conn:
         if user_id:
             cur = await conn.execute(
-                "SELECT * FROM meals WHERE meal_date = %s AND user_id = %s",
-                (date, user_id),
+                f"SELECT * FROM meals WHERE {_ON_LOCAL_DATE} AND user_id = %s",  # type: ignore[arg-type]
+                (tz, date, user_id),
             )
         else:
-            cur = await conn.execute("SELECT * FROM meals WHERE meal_date = %s", (date,))
+            cur = await conn.execute(
+                f"SELECT * FROM meals WHERE {_ON_LOCAL_DATE}",  # type: ignore[arg-type]
+                (tz, date),
+            )
         rows = await cur.fetchall()
 
     meals = [dict(r) for r in rows]

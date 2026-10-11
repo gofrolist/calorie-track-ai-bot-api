@@ -752,7 +752,7 @@
           "meals"
         ],
         "summary": "Delete Meal",
-        "description": "Delete a meal and update daily summary.\n\nFeature: 003-update-logic-for (Meal management)\nCascades to photos and recalculates daily stats.",
+        "description": "Delete a meal and update daily summary.\n\nFeature: 003-update-logic-for (Meal management)\nUnlinks the meal's photos; daily stats are derived from meals at read time.",
         "operationId": "delete_meal_api_v1_meals__meal_id__delete",
         "parameters": [
           {

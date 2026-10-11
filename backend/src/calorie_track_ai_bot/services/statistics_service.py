@@ -5,7 +5,6 @@ Provides real-time aggregation of nutrition statistics for visualization.
 """
 
 from datetime import date
-from typing import Any
 
 from ..schemas import (
     DailyDataPoint,
@@ -16,6 +15,7 @@ from ..schemas import (
 )
 from .config import logger
 from .database import get_pool
+from .db._base import LOCAL_MEAL_DATE_SQL
 
 
 class StatisticsService:
@@ -26,8 +26,13 @@ class StatisticsService:
         user_id: str,
         start_date: date,
         end_date: date,
+        tz: str = "UTC",
     ) -> DailyStatisticsResponse:
-        """Get daily nutrition statistics for a date range."""
+        """Get daily nutrition statistics for a date range.
+
+        Meals are grouped by their calendar day in the ``tz`` time zone; ``end_date``
+        is exclusive.
+        """
         if start_date >= end_date:
             raise ValueError("Start date must be before end date")
 
@@ -38,23 +43,21 @@ class StatisticsService:
             pool = await get_pool()
 
             async with pool.connection() as conn:
-                # Try RPC function first
                 cur = await conn.execute(
-                    "SELECT * FROM query_daily_statistics(%s, %s, %s)",
-                    (user_id, start_date.isoformat(), end_date.isoformat()),
+                    f"""SELECT {LOCAL_MEAL_DATE_SQL} AS meal_date,
+                              coalesce(sum(kcal_total), 0) AS total_calories,
+                              coalesce(sum(protein_grams), 0) AS total_protein,
+                              coalesce(sum(fats_grams), 0) AS total_fat,
+                              coalesce(sum(carbs_grams), 0) AS total_carbs,
+                              count(*) AS meal_count
+                       FROM meals
+                       WHERE user_id = %s
+                         AND {LOCAL_MEAL_DATE_SQL} >= %s AND {LOCAL_MEAL_DATE_SQL} < %s
+                       GROUP BY 1
+                       ORDER BY 1""",  # type: ignore[arg-type]
+                    (tz, user_id, tz, start_date, tz, end_date),
                 )
                 daily_data = [dict(r) for r in await cur.fetchall()]
-
-                if not daily_data:
-                    # Fallback: query raw meals and group in Python
-                    cur = await conn.execute(
-                        """SELECT created_at, kcal_total, protein_grams, fats_grams, carbs_grams
-                           FROM meals
-                           WHERE user_id = %s AND created_at >= %s AND created_at < %s""",
-                        (user_id, start_date.isoformat(), end_date.isoformat()),
-                    )
-                    raw_meals = [dict(r) for r in await cur.fetchall()]
-                    daily_data = self._group_by_date(raw_meals)
 
                 # Get user's goal
                 cur = await conn.execute(
@@ -130,8 +133,12 @@ class StatisticsService:
         user_id: str,
         start_date: date,
         end_date: date,
+        tz: str = "UTC",
     ) -> MacroStatisticsResponse:
-        """Get macronutrient breakdown for a date range."""
+        """Get macronutrient breakdown for a date range.
+
+        Dates are calendar days in the ``tz`` time zone; ``end_date`` is exclusive.
+        """
         if start_date >= end_date:
             raise ValueError("Start date must be before end date")
 
@@ -143,10 +150,11 @@ class StatisticsService:
 
             async with pool.connection() as conn:
                 cur = await conn.execute(
-                    """SELECT kcal_total, protein_grams, fats_grams, carbs_grams
+                    f"""SELECT kcal_total, protein_grams, fats_grams, carbs_grams
                        FROM meals
-                       WHERE user_id = %s AND created_at >= %s AND created_at < %s""",
-                    (user_id, start_date.isoformat(), end_date.isoformat()),
+                       WHERE user_id = %s
+                         AND {LOCAL_MEAL_DATE_SQL} >= %s AND {LOCAL_MEAL_DATE_SQL} < %s""",  # type: ignore[arg-type]
+                    (user_id, tz, start_date, tz, end_date),
                 )
                 rows = [dict(r) for r in await cur.fetchall()]
 
@@ -190,30 +198,6 @@ class StatisticsService:
                 exc_info=True,
             )
             raise
-
-    def _group_by_date(self, meals: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Group meals by date and aggregate nutrition data."""
-        from collections import defaultdict
-
-        daily_data: dict[str, dict[str, float]] = defaultdict(
-            lambda: {
-                "total_calories": 0.0,
-                "total_protein": 0.0,
-                "total_fat": 0.0,
-                "total_carbs": 0.0,
-                "meal_count": 0,
-            }
-        )
-
-        for meal in meals:
-            meal_date = str(meal["created_at"])[:10]
-            daily_data[meal_date]["total_calories"] += float(meal.get("kcal_total", 0) or 0)
-            daily_data[meal_date]["total_protein"] += float(meal.get("protein_grams", 0) or 0)
-            daily_data[meal_date]["total_fat"] += float(meal.get("fats_grams", 0) or 0)
-            daily_data[meal_date]["total_carbs"] += float(meal.get("carbs_grams", 0) or 0)
-            daily_data[meal_date]["meal_count"] += 1
-
-        return [{"meal_date": meal_date, **data} for meal_date, data in sorted(daily_data.items())]
 
 
 # Global service instance

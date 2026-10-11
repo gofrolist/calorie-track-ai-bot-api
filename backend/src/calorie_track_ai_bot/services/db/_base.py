@@ -2,6 +2,9 @@ from datetime import UTC, datetime, timedelta
 
 from ..config import logger
 
+# The user's local calendar date of a meal; takes the IANA time zone as its parameter.
+LOCAL_MEAL_DATE_SQL = "(created_at AT TIME ZONE %s)::date"
+
 # User ID cache: maps telegram_user_id -> (db_user_id, expiry_time)
 _user_id_cache: dict[str, tuple[str, datetime]] = {}
 CACHE_TTL_SECONDS = 300  # 5 minutes

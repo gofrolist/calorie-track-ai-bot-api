@@ -1027,7 +1027,7 @@ export const getDeleteMealApiV1MealsMealIdDeleteUrl = (mealId: string) => {
  * Delete a meal and update daily summary.
  *
  * Feature: 003-update-logic-for (Meal management)
- * Cascades to photos and recalculates daily stats.
+ * Unlinks the meal's photos; daily stats are derived from meals at read time.
  * @summary Delete Meal
  */
 export const deleteMealApiV1MealsMealIdDelete = async (

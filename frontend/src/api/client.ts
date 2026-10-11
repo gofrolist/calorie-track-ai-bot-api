@@ -9,6 +9,16 @@ function getTelegramUserId(): string | undefined {
   );
 }
 
+// IANA zone (e.g. "America/New_York") the backend uses to bucket meals into
+// the user's local calendar days.
+function getTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function getBaseUrl(): string {
   return import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 }
@@ -71,6 +81,11 @@ export async function customFetch<T>(
   const userId = getTelegramUserId();
   if (userId) {
     headers["x-user-id"] = userId;
+  }
+
+  const timeZone = getTimeZone();
+  if (timeZone) {
+    headers["X-Timezone"] = timeZone;
   }
 
   const response = await fetch(fullUrl, {
