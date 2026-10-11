@@ -185,7 +185,7 @@ async def delete_meal(meal_id: str, request: Request):
     """Delete a meal and update daily summary.
 
     Feature: 003-update-logic-for (Meal management)
-    Cascades to photos and recalculates daily stats.
+    Unlinks the meal's photos; daily stats are derived from meals at read time.
     """
     user_id = await get_authenticated_user_id(request)
 
@@ -201,7 +201,7 @@ async def delete_meal(meal_id: str, request: Request):
     if str(existing_meal.userId) != user_id:
         raise HTTPException(status_code=403, detail="You do not own this meal")
 
-    # Delete meal (cascades to photos, updates daily summary)
+    # Delete meal (unlinks its photos; daily summary is derived from meals)
     success = await db_delete_meal(meal_id)  # db_delete_meal expects str
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete meal")

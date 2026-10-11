@@ -246,10 +246,15 @@ async def db_update_meal(meal_id: str, updates: dict[str, Any]) -> dict[str, Any
 
 
 async def db_delete_meal(meal_id: str) -> bool:
-    """Delete a meal by ID."""
+    """Delete a meal by ID, unlinking its photos first.
+
+    The photos.meal_id foreign key has no ON DELETE action, so linked photos must be
+    detached in the same transaction or the delete is rejected.
+    """
     pool = await database.get_pool()
 
     async with pool.connection() as conn:
+        await conn.execute("UPDATE photos SET meal_id = NULL WHERE meal_id = %s", (meal_id,))
         cur = await conn.execute("DELETE FROM meals WHERE id = %s RETURNING id", (meal_id,))
         row = await cur.fetchone()
         return row is not None

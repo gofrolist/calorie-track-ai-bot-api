@@ -18,6 +18,7 @@ from calorie_track_ai_bot.services.db import (
     db_create_meal_from_estimate,
     db_create_meal_from_manual,
     db_create_photo,
+    db_delete_meal,
     db_fetch_inline_analytics,
     db_get_estimate,
     db_increment_inline_permission_block,
@@ -274,6 +275,31 @@ class TestDatabaseFunctions:
 
             with pytest.raises(ValueError, match="Estimate not found"):
                 await db_create_meal_from_estimate(data, "user123")
+
+    # ------------------------------------------------------------------
+    # db_delete_meal
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_db_delete_meal_unlinks_photos_before_delete(self, mock_pool):
+        """Photos are detached before the meal row is deleted (FK has no ON DELETE action)."""
+        _pool, conn, cursor = mock_pool
+        cursor.fetchone.return_value = {"id": "meal-1"}
+
+        assert await db_delete_meal("meal-1") is True
+
+        statements = [call[0][0] for call in conn.execute.call_args_list]
+        assert statements[0].startswith("UPDATE photos SET meal_id = NULL")
+        assert statements[1].startswith("DELETE FROM meals")
+        assert all(call[0][1] == ("meal-1",) for call in conn.execute.call_args_list)
+
+    @pytest.mark.asyncio
+    async def test_db_delete_meal_not_found(self, mock_pool):
+        """Returns False when no meal row was deleted."""
+        _pool, _conn, cursor = mock_pool
+        cursor.fetchone.return_value = None
+
+        assert await db_delete_meal("missing") is False
 
     # ------------------------------------------------------------------
     # Inline analytics
