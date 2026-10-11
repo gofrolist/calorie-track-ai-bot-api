@@ -7,21 +7,11 @@ import { PeriodSelector } from "@/components/stats/PeriodSelector";
 import type { Period } from "@/components/stats/PeriodSelector";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { unwrap } from "@/api/unwrap";
-import { formatDate } from "@/utils/date";
+import { getDateRange } from "@/utils/date";
 import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
 } from "@/api/model";
-
-function getDateRange(days: number) {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(end.getDate() - days);
-  return {
-    start_date: formatDate(start),
-    end_date: formatDate(end),
-  };
-}
 
 export default function StatsPage() {
   const { t } = useTranslation();
