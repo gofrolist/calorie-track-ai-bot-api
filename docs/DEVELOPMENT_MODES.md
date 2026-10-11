@@ -4,9 +4,9 @@
 
 | Mode | Command | Services | Redis | Database | Storage | Use Case |
 |------|---------|----------|-------|----------|---------|----------|
-| **Docker Full Stack** | `make docker-dev` | All containerized | Local (6379) | Local PostgreSQL | MinIO | Full integration testing |
-| **Local Dev** | `make dev` | Local processes | Upstash (cloud) | Neon (cloud) | Tigris/Cloud | Rapid development |
-| **Backend Only** | `cd backend && make run` | Backend only | From .env | From .env | From .env | Backend testing |
+| **Docker Full Stack** | `make docker-dev` | All containerized | Local (6379) | Neon (`DATABASE_URL` from shell or root `.env`) | MinIO | Full integration testing |
+| **Local Dev** | `make dev` | Local processes | From `backend/.env` (Upstash or local) | Neon (cloud) | Tigris/Cloud | Rapid development |
+| **Backend Only** | `cd backend && make dev` | Backend only | From .env | From .env | From .env | Backend testing |
 
 ## Detailed Comparison
 
@@ -24,21 +24,22 @@
 ```
 
 **Environment Configuration:**
-- Hardcoded in `docker-compose.yml`
-- Ignores `backend/.env` for service URLs
-- Always uses local containers
+- Hardcoded in `docker-compose.yml` (`environment:` of the `backend` and `worker` services)
+- `DATABASE_URL` is substituted from your shell or a root-level `.env` file; if unset it falls back to `postgresql://postgres:postgres@host.docker.internal:5432/calorie_track`
+- `backend/.env` is not used for service URLs (it is copied into the image and loaded by python-dotenv, which never overrides variables already set by Compose)
+- Redis and storage always use local containers
 
 **Pros:**
 - ✅ Complete environment in one command
 - ✅ Production-like setup
 - ✅ Isolated from host system
-- ✅ Easy to reset (`make docker-restart`)
-- ✅ No production credentials needed
-- ✅ Free to run (no cloud costs)
+- ✅ Easy to reset (`make docker-stop && make docker-dev`)
+- ✅ Only `DATABASE_URL` is required (OpenAI/Telegram keys optional)
+- ✅ No Redis/storage cloud costs
 
 **Cons:**
 - ❌ Slower iteration (Docker overhead)
-- ❌ Caching issues (fixed with `make docker-restart`)
+- ❌ Caching issues (see [DOCKER_CACHE_TROUBLESHOOTING.md](DOCKER_CACHE_TROUBLESHOOTING.md))
 - ❌ More memory usage
 - ❌ Frontend hot reload can be flaky
 
@@ -55,7 +56,8 @@
 **What Starts:**
 ```
 ✅ Backend (local)        → localhost:8000
-✅ Frontend (local)       → localhost:5173
+✅ Frontend (local)       → localhost:3000
+❌ Worker                 → not started (set ENABLE_WORKER=true or run `make -C backend worker`)
 ⚠️  Redis (Upstash)       → Cloud service
 ⚠️  Neon (cloud)           → Cloud database
 ⚠️  Tigris (cloud)        → Cloud storage
@@ -94,25 +96,25 @@
 ✅ Redis (container)      → docker compose up redis
 ✅ MinIO (container)      → docker compose up minio
 ✅ Backend (container)    → docker compose up backend
-✅ Frontend (local)       → cd frontend && npm run dev
+✅ Frontend (local)       → cd frontend && bun run dev
 ```
 
 **Commands:**
 ```bash
-# Start backend services in Docker
+# Start backend services in Docker (add `worker` if you need photo estimation)
 docker compose up redis minio backend
 
 # In separate terminal, run frontend locally
 cd frontend
-npm run dev
+bun run dev
 ```
 
 **Pros:**
 - ✅ **Best of both worlds**
 - ✅ Fast frontend hot reload
 - ✅ Backend in Docker (isolated)
-- ✅ No production credentials needed
-- ✅ No cloud costs
+- ✅ Only `DATABASE_URL` needed
+- ✅ No Redis/storage cloud costs
 
 **Cons:**
 - ❌ Need to manage two terminals
@@ -132,10 +134,10 @@ npm run dev
 # docker-compose.yml (root)
 environment:
   REDIS_URL: redis://redis:6379/0          # ← Hardcoded
-  DATABASE_URL: postgresql://host.docker.internal:5432/neondb
+  DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@host.docker.internal:5432/calorie_track}
   AWS_ENDPOINT_URL_S3: http://minio:9000
 
-  # These CAN come from .env:
+  # These come from your shell or a root-level .env (not backend/.env):
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}      # ← Optional from shell
   TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
 ```
@@ -173,7 +175,7 @@ docker compose up redis minio backend
 
 # Terminal 2: Run frontend
 cd frontend
-npm run dev
+bun run dev
 ```
 
 ## Troubleshooting
@@ -194,7 +196,7 @@ docker compose exec backend env | grep REDIS_URL
 
 **Solution:**
 ```bash
-make docker-restart  # Clean restart
+make docker-stop && make docker-dev  # Clean restart (rebuilds images)
 # Then hard refresh browser (Cmd+Shift+R)
 ```
 
@@ -204,7 +206,8 @@ make docker-restart  # Clean restart
 
 **Solution:**
 ```bash
-# Ensure DATABASE_URL is set in backend/.env, then start Docker
+# Ensure DATABASE_URL is exported in your shell (or set in a root-level .env), then start Docker
+export DATABASE_URL='postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require'
 make docker-dev
 ```
 
@@ -213,12 +216,12 @@ make docker-dev
 ### For New Developers
 
 1. **Clone repo**
-2. **Copy template:** `cp backend/env.template backend/.env`
-3. **Set DATABASE_URL** to your Neon connection string
+2. **Copy template:** `cp backend/env.template backend/.env` (supplies non-service settings)
+3. **Export DATABASE_URL** with your Neon connection string (shell or root-level `.env`; Compose does not read `backend/.env`)
 4. **Start Docker:** `make docker-dev`
 5. **Open browser:** http://localhost:3000
 
-You're done! No credentials needed.
+You're done! Only the database URL is required; OpenAI and Telegram keys are optional.
 
 ### For Existing Developers
 
@@ -226,7 +229,7 @@ If you already have `backend/.env` with production credentials:
 
 ```bash
 # Docker will IGNORE these values for Redis/Database/MinIO
-# It uses local containers instead
+# Redis and storage use local containers; DATABASE_URL comes from your shell/root .env
 make docker-dev
 
 # Everything just works!
@@ -237,13 +240,13 @@ make docker-dev
 ```
 calorie-track-ai-bot-api/
 ├── docker-compose.yml          ← SINGLE docker-compose file
-├── Makefile                    ← Docker commands (docker-dev, docker-restart, etc.)
+├── Makefile                    ← Root commands (dev, test, docker-dev, docker-stop, etc.)
 ├── backend/
 │   ├── .env                    ← Production credentials (gitignored)
 │   ├── env.template            ← Template for .env
-│   └── Makefile                ← Backend commands (run, test, etc.)
+│   └── Makefile                ← Backend commands (dev, worker, test, etc.)
 └── frontend/
-    └── Makefile                ← Frontend commands (if any)
+    └── Makefile                ← Frontend commands (dev, test, check, etc.)
 ```
 
 ## Key Takeaways
@@ -252,4 +255,4 @@ calorie-track-ai-bot-api/
 2. ✅ **Docker mode uses local containers** (ignores production URLs in .env)
 3. ✅ **Local mode uses production services** (reads from .env)
 4. ✅ **Hybrid mode recommended for frontend dev** (best performance)
-5. ✅ **No credentials needed for Docker development**
+5. ✅ **Docker development only needs `DATABASE_URL`** (exported in the shell or a root-level `.env`)

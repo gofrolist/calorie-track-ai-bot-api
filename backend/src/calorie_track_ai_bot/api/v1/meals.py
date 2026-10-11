@@ -1,7 +1,8 @@
 from datetime import datetime
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from ...schemas import (
     MealCreateFromEstimateRequest,
@@ -22,7 +23,7 @@ from ...services.db import (
     db_update_meal_with_macros,
 )
 from ...utils.error_handling import handle_api_errors
-from .deps import get_authenticated_user_id
+from .deps import get_authenticated_user_id, get_user_timezone
 
 router = APIRouter()
 
@@ -49,6 +50,7 @@ async def get_meals(
     start_date: str | None = Query(None, description="Start date for range (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date for range (YYYY-MM-DD)"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of meals to return"),
+    tz: str = Depends(get_user_timezone),
 ) -> MealsListResponse:
     """Get meals with photos and macronutrients.
 
@@ -72,8 +74,8 @@ async def get_meals(
             query_start = datetime.fromisoformat(start_date).date()
             query_end = datetime.fromisoformat(end_date).date()
         else:
-            # Default to today
-            query_date = datetime.now().date()
+            # Default to today in the user's time zone
+            query_date = datetime.now(ZoneInfo(tz)).date()
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid date format: {e}"
@@ -86,6 +88,7 @@ async def get_meals(
         start_date=query_start,
         end_date=query_end,
         limit=limit,
+        tz=tz,
     )
 
     return MealsListResponse(meals=meals, total=len(meals))
@@ -97,6 +100,7 @@ async def get_meals_calendar(
     request: Request,
     start_date: str = Query(..., description="Start date (YYYY-MM-DD)"),
     end_date: str = Query(..., description="End date (YYYY-MM-DD)"),
+    tz: str = Depends(get_user_timezone),
 ) -> MealsCalendarResponse:
     """Get daily meal summaries for calendar view.
 
@@ -118,7 +122,7 @@ async def get_meals_calendar(
 
     # Get calendar summary
     calendar_data = await db_get_meals_calendar_summary(
-        user_id=UUID(user_id), start_date=query_start, end_date=query_end
+        user_id=UUID(user_id), start_date=query_start, end_date=query_end, tz=tz
     )
 
     return MealsCalendarResponse(dates=calendar_data)
@@ -185,7 +189,7 @@ async def delete_meal(meal_id: str, request: Request):
     """Delete a meal and update daily summary.
 
     Feature: 003-update-logic-for (Meal management)
-    Cascades to photos and recalculates daily stats.
+    Unlinks the meal's photos; daily stats are derived from meals at read time.
     """
     user_id = await get_authenticated_user_id(request)
 
@@ -201,7 +205,7 @@ async def delete_meal(meal_id: str, request: Request):
     if str(existing_meal.userId) != user_id:
         raise HTTPException(status_code=403, detail="You do not own this meal")
 
-    # Delete meal (cascades to photos, updates daily summary)
+    # Delete meal (unlinks its photos; daily summary is derived from meals)
     success = await db_delete_meal(meal_id)  # db_delete_meal expects str
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete meal")

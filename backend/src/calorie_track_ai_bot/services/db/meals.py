@@ -13,7 +13,7 @@ from ...schemas import (
 from .. import database
 from ..config import logger
 from ..storage import BUCKET_NAME, s3
-from ._base import resolve_user_id
+from ._base import LOCAL_MEAL_DATE_SQL, resolve_user_id
 from .estimates import db_get_estimate
 from .photos import db_get_photo
 
@@ -246,10 +246,15 @@ async def db_update_meal(meal_id: str, updates: dict[str, Any]) -> dict[str, Any
 
 
 async def db_delete_meal(meal_id: str) -> bool:
-    """Delete a meal by ID."""
+    """Delete a meal by ID, unlinking its photos first.
+
+    The photos.meal_id foreign key has no ON DELETE action, so linked photos must be
+    detached in the same transaction or the delete is rejected.
+    """
     pool = await database.get_pool()
 
     async with pool.connection() as conn:
+        await conn.execute("UPDATE photos SET meal_id = NULL WHERE meal_id = %s", (meal_id,))
         cur = await conn.execute("DELETE FROM meals WHERE id = %s RETURNING id", (meal_id,))
         row = await cur.fetchone()
         return row is not None
@@ -321,8 +326,12 @@ async def db_get_meals_with_photos(
     start_date: Any | None = None,
     end_date: Any | None = None,
     limit: int = 50,
+    tz: str = "UTC",
 ) -> list[Any]:
-    """Get meals with photos for date/range (filters meals older than 1 year)."""
+    """Get meals with photos for date/range (filters meals older than 1 year).
+
+    Dates are calendar days in the ``tz`` time zone.
+    """
     pool = await database.get_pool()
 
     from datetime import date as date_type
@@ -334,15 +343,11 @@ async def db_get_meals_with_photos(
     params: list[Any] = [str(user_id), one_year_ago]
 
     if query_date:
-        conditions.append("created_at >= %s")
-        conditions.append("created_at < %s")
-        params.append(f"{query_date}T00:00:00")
-        params.append(f"{query_date}T23:59:59.999999")
+        conditions.append(f"{LOCAL_MEAL_DATE_SQL} = %s")
+        params.extend([tz, query_date])
     elif start_date and end_date:
-        conditions.append("created_at >= %s")
-        conditions.append("created_at <= %s")
-        params.append(f"{start_date}T00:00:00")
-        params.append(f"{end_date}T23:59:59.999999")
+        conditions.append(f"{LOCAL_MEAL_DATE_SQL} BETWEEN %s AND %s")
+        params.extend([tz, start_date, end_date])
 
     where = " AND ".join(conditions)
     params.append(limit)
@@ -474,9 +479,9 @@ async def db_update_meal_with_macros(meal_id: uuid.UUID, updates: Any) -> Any | 
 
 
 async def db_get_meals_calendar_summary(
-    user_id: uuid.UUID, start_date: Any, end_date: Any
+    user_id: uuid.UUID, start_date: Any, end_date: Any, tz: str = "UTC"
 ) -> list[Any]:
-    """Get daily meal summaries for calendar view."""
+    """Get daily meal summaries for calendar view, bucketed by calendar day in ``tz``."""
     pool = await database.get_pool()
 
     try:
@@ -484,16 +489,12 @@ async def db_get_meals_calendar_summary(
 
         async with pool.connection() as conn:
             cur = await conn.execute(
-                """SELECT created_at, kcal_total, protein_grams, carbs_grams, fats_grams
+                f"""SELECT {LOCAL_MEAL_DATE_SQL} AS local_date,
+                          kcal_total, protein_grams, carbs_grams, fats_grams
                    FROM meals
                    WHERE user_id = %s AND created_at >= %s
-                     AND created_at >= %s AND created_at <= %s""",
-                (
-                    str(user_id),
-                    one_year_ago,
-                    f"{start_date}T00:00:00",
-                    f"{end_date}T23:59:59.999999",
-                ),
+                     AND {LOCAL_MEAL_DATE_SQL} BETWEEN %s AND %s""",  # type: ignore[arg-type]
+                (tz, str(user_id), one_year_ago, tz, start_date, end_date),
             )
             rows = await cur.fetchall()
 
@@ -503,7 +504,7 @@ async def db_get_meals_calendar_summary(
         daily_data: dict[str, dict[str, float]] = {}
         for meal in rows:
             meal = dict(meal)
-            meal_date = str(meal["created_at"]).split("T")[0]
+            meal_date = str(meal["local_date"])
 
             if meal_date not in daily_data:
                 daily_data[meal_date] = {

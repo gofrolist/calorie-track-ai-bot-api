@@ -5,10 +5,10 @@ This guide will help you set up and run the Calorie Track AI Bot application loc
 ## Prerequisites
 
 Make sure you have the following installed:
-- **Node.js** (v18 or later) - [Download](https://nodejs.org/)
+- **Bun** (frontend package manager and runtime) - [Install](https://bun.sh/)
 - **Python 3.12** - [Download](https://python.org/)
 - **uv** (Python package manager) - [Install](https://docs.astral.sh/uv/getting-started/installation/)
-- **npm** (comes with Node.js)
+- **Docker** (optional, for Redis/MinIO or the full Docker stack)
 
 ## Quick Start
 
@@ -18,8 +18,9 @@ Make sure you have the following installed:
 git clone <repository-url>
 cd calorie-track-ai-bot-api
 
-# Complete setup (installs all dependencies)
-make setup
+# Install dependencies
+(cd backend && uv sync)
+(cd frontend && bun install)
 ```
 
 ### 2. Configure Environment
@@ -28,7 +29,7 @@ make setup
 Create a `.env` file in the `backend/` directory with your service credentials:
 
 ```bash
-# Copy the example (if available)
+# Copy the example (backend/env.template is a more detailed alternative)
 cp backend/.env.example backend/.env
 
 # Or create manually
@@ -68,11 +69,13 @@ INLINE_HASH_SALT=change-me-inline-hash-salt
 INLINE_THROUGHPUT_PER_MIN=60
 INLINE_BURST_RPS=5
 
-# Optional API overrides
-API_BASE_URL=http://localhost:8000
+# Run the estimate/inline workers inside the API process (otherwise run `make -C backend worker`)
+ENABLE_WORKER=false
 ```
 
-> Inline mode prerequisites: when enabling inline features, set `INLINE_MODE_ENABLED=true`, provide a high-entropy `INLINE_HASH_SALT`, and keep `INLINE_THROUGHPUT_PER_MIN` / `INLINE_BURST_RPS` aligned with the 60 requests-per-minute (≈5 rps burst) capacity. See `specs/004-add-inline-mode/quickstart.md` for end-to-end inline verification steps.
+The backend loads `backend/.env` automatically (`services/config.py`). The full list of variables is in `backend/src/calorie_track_ai_bot/services/config.py`; feedback notifications additionally read `ADMIN_NOTIFICATION_CHAT_ID` and `FEEDBACK_NOTIFICATIONS_ENABLED`, and dev endpoints read `DEV_ENDPOINTS_ENABLED`.
+
+> Inline mode prerequisites: inline handling is always on (`INLINE_MODE_ENABLED` is defined in config but not read anywhere). Provide a high-entropy `INLINE_HASH_SALT`, and keep `INLINE_THROUGHPUT_PER_MIN` / `INLINE_BURST_RPS` aligned with the 60 requests-per-minute (≈5 rps burst) capacity.
 
 #### Frontend Configuration
 Create a `.env.local` file in the `frontend/` directory:
@@ -82,22 +85,13 @@ cd frontend
 nano .env.local
 ```
 
-Frontend environment variables:
+Frontend environment variables (the only ones read by `frontend/src`):
 ```env
-# API Configuration
+# API Configuration (defaults to http://localhost:8000)
 VITE_API_BASE_URL=http://localhost:8000
 
-# Development Features
-VITE_ENABLE_DEBUG_LOGGING=true
-VITE_ENABLE_ERROR_REPORTING=false
-VITE_ENABLE_ANALYTICS=false
-VITE_ENABLE_DEV_TOOLS=true
-
-# App Metadata
-VITE_APP_VERSION=1.0.0
-
-# API Timeout (milliseconds)
-VITE_API_TIMEOUT=30000
+# Telegram user ID sent as x-user-id when running outside Telegram (dev only)
+VITE_DEV_USER_ID=123456789
 ```
 
 ### 3. Start Development Servers
@@ -109,41 +103,42 @@ make dev
 
 This will start:
 - **Backend API**: http://localhost:8000
-- **Frontend App**: http://localhost:5173
+- **Frontend App**: http://localhost:3000
 - **API Documentation**: http://localhost:8000/docs
+
+`make dev` does not start the background worker. Either set `ENABLE_WORKER=true` in `backend/.env` or run `make -C backend worker` in another terminal. A Redis instance is required for the queue (for example `docker compose up redis`).
 
 ## Development Commands
 
-### Essential Commands
+### Essential Commands (root)
 ```bash
-make setup          # Complete setup (backend + frontend)
-make dev            # Start both servers in development mode
-make test           # Run all tests
-make lint           # Run linting for both backend and frontend
+make dev            # Start backend and frontend dev servers
+make test           # Run all tests (backend + frontend)
+make lint           # Lint + typecheck both (runs `check` in each)
+make format         # Format backend and frontend
 make clean          # Clean up temporary files
+make docker-dev     # Start all services via Docker Compose
+make docker-stop    # Stop Docker containers
 make help           # Show all available commands
 ```
 
-### Backend Commands
+### Backend Commands (`make -C backend <target>` or from `backend/`)
 ```bash
-make dev-backend    # Start only backend server
-make test-backend   # Run backend tests
-make lint-backend   # Run backend linting and type checking
+make dev            # Start only the backend server (port 8000, hot reload)
+make worker         # Start the background estimate worker
+make test           # Run backend tests
+make test-unit      # Unit tests only (ignores tests/integration/)
+make check          # Ruff lint + pyright
+make openapi-export # Export OpenAPI spec to frontend/openapi.json
 ```
 
-### Frontend Commands
+### Frontend Commands (`make -C frontend <target>` or `bun run` from `frontend/`)
 ```bash
-make dev-frontend   # Start only frontend server
-make test-frontend  # Run frontend tests
-make build-frontend # Build frontend for production
-```
-
-### Utility Commands
-```bash
-make health-check   # Check if backend is running
-make telegram-setup # Setup Telegram webhook
-make api-docs       # Open API documentation
-make check-deps     # Verify all dependencies are installed
+make dev            # Start only the frontend server (port 3000)
+make test           # Run frontend unit tests (vitest)
+make check          # Type-check + lint + format check
+bun run build       # Build frontend for production
+bun run api:gen     # Regenerate API client from openapi.json (Orval)
 ```
 
 ## Testing
@@ -151,21 +146,22 @@ make check-deps     # Verify all dependencies are installed
 ### Backend Testing
 ```bash
 # Run all backend tests
-make test-backend
+make -C backend test
 
 # Run specific test categories
 cd backend
 uv run pytest tests/services/ -v
 uv run pytest tests/api/v1/ -v
+uv run pytest tests/integration/ -v
 ```
 
 ### Frontend Testing
 ```bash
 # Run frontend unit tests
-make test-frontend
+make -C frontend test
 
-# Run end-to-end tests
-make test-e2e
+# Run end-to-end tests (Playwright)
+cd frontend && bun run test:e2e
 ```
 
 ## Telegram Bot Setup
@@ -177,12 +173,13 @@ make test-e2e
 4. Save the bot token you receive
 
 ### 2. Configure Webhook (Development)
+The bot only receives updates via webhook (there is no polling mode), so the backend must be reachable from the internet (for example through a tunnel). Set `USE_WEBHOOK=true` and `WEBHOOK_URL=https://<public-host>/bot` in `backend/.env`; the webhook is registered on startup, or manually:
 ```bash
 # Start your backend first
 make dev-backend
 
-# In another terminal, setup the webhook
-make telegram-setup
+# In another terminal, register the webhook
+curl -X POST http://localhost:8000/bot/setup
 ```
 
 ### 3. Test Your Bot
@@ -202,6 +199,9 @@ make telegram-setup
 # Health check
 curl http://localhost:8000/health/live
 
+# Database connectivity
+curl http://localhost:8000/health/connectivity
+
 # Get webhook info
 curl http://localhost:8000/bot/webhook-info
 
@@ -220,23 +220,26 @@ make dev-frontend
 
 # Or navigate to frontend directory
 cd frontend
-npm run dev
+bun run dev
 ```
 
 ### Frontend Features
-- **Today View**: Daily meal tracking and progress
-- **Meal Detail**: Edit and manage individual meals
-- **Stats**: Weekly and monthly progress charts
-- **Goals**: Set and track daily calorie goals
+- **Meals** (`/`): Daily meal list with calendar, photo carousel, edit and delete
+- **Stats** (`/stats`): Daily calorie and macro charts over a selectable period
+- **Goals** (`/goals`): Set and track daily calorie goals
+- **Feedback** (`/feedback`): Send feedback to the admins
 - **Telegram Integration**: Full WebApp SDK integration
 
 ### Frontend Architecture
-- **React 18** with TypeScript
+- **React 19** with TypeScript
 - **Vite** for fast development
 - **React Router** for navigation
+- **TanStack Query** with hooks generated by **Orval** for API communication
+- **Tailwind CSS v4** for styling
 - **i18next** for internationalization (EN/RU)
 - **Telegram WebApp SDK** for bot integration
-- **Axios** for API communication
+
+See `frontend/CLAUDE.md` for details.
 
 ## Troubleshooting
 
@@ -245,30 +248,29 @@ npm run dev
 #### Backend Issues
 ```bash
 # Check if backend is running
-make health-check
+curl http://localhost:8000/health/live
 
-# Check logs
-make logs
+# Check database connectivity
+curl http://localhost:8000/health/connectivity
 
-# Restart backend
-make restart
+# Restart backend: stop `make dev-backend` (Ctrl+C) and start it again
 ```
 
 #### Frontend Issues
 ```bash
 # Clear frontend cache
-make clean-frontend
+make -C frontend clean
 
 # Reinstall frontend dependencies
 cd frontend
-rm -rf node_modules package-lock.json
-npm install
+rm -rf node_modules
+bun install
 ```
 
 #### Environment Issues
 ```bash
-# Verify dependencies
-make check-deps
+# Verify tools are installed
+uv --version && bun --version
 
 # Check environment files exist
 ls -la backend/.env
@@ -278,14 +280,16 @@ ls -la frontend/.env.local
 ### Port Conflicts
 If you have port conflicts:
 - **Backend**: Change port in `backend/Makefile` (line with `--port 8000`)
-- **Frontend**: Change port in `frontend/vite.config.ts`
+- **Frontend**: Change port in `frontend/package.json` (`dev` script, `--port 3000`) and `frontend/vite.config.ts`
 
 ### Database Issues
 - Ensure your Neon PostgreSQL project is active
 - Check that DATABASE_URL is set correctly
-- Verify the database schema is up to date (see `backend/infra/schema.sql`)
+- Verify the database schema is up to date (see `backend/infra/schema.sql` and [database-schema-changes.md](database-schema-changes.md))
 
 ## Production Deployment
+
+Deployments normally happen automatically from GitHub Actions on push to `main` (`backend-ci.yml` -> `backend-build.yml` -> `backend-deploy.yml`, and `frontend-ci.yml` -> `frontend-deploy.yml`). Manual deploys:
 
 ### Backend (Fly.io)
 ```bash
@@ -295,8 +299,8 @@ flyctl deploy
 
 ### Frontend (Vercel)
 ```bash
-cd frontend
-vercel deploy
+# The CI workflow runs this from the repository root
+vercel --prod
 ```
 
 ## Contributing

@@ -36,6 +36,21 @@ describe("customFetch", () => {
     ).toBeDefined();
   });
 
+  it("adds X-Timezone header with the browser's IANA time zone", async () => {
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      );
+
+    await customFetch({ url: "/health/live", method: "GET" });
+
+    const [, init] = spy.mock.calls[0];
+    expect((init?.headers as Record<string, string>)["X-Timezone"]).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+  });
+
   it("throws ApiError on non-ok response", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ detail: "Not found" }), { status: 404 }),

@@ -1,7 +1,8 @@
 # Calorie Track AI Bot
 
-[![Backend CI](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml)
-[![Backend Build](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-build.yml/badge.svg)](https://github.com/evgenii.vasilenko/calorie-track-ai-bot-api/actions/workflows/backend-build.yml)
+[![Backend CI](https://github.com/gofrolist/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/gofrolist/calorie-track-ai-bot-api/actions/workflows/backend-ci.yml)
+[![Backend Build](https://github.com/gofrolist/calorie-track-ai-bot-api/actions/workflows/backend-build.yml/badge.svg)](https://github.com/gofrolist/calorie-track-ai-bot-api/actions/workflows/backend-build.yml)
+[![Frontend CI](https://github.com/gofrolist/calorie-track-ai-bot-api/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/gofrolist/calorie-track-ai-bot-api/actions/workflows/frontend-ci.yml)
 
 A full-stack application for tracking calories using AI-powered photo analysis with multi-photo support and enhanced meal history features.
 
@@ -9,23 +10,27 @@ A full-stack application for tracking calories using AI-powered photo analysis w
 
 ### Multi-Photo Meal Tracking
 - Upload up to 5 photos per meal for better calorie estimation
-- AI-powered analysis using OpenAI GPT-4 Vision
+- AI-powered calorie and macronutrient analysis using OpenAI `gpt-5-mini` (configurable via `OPENAI_MODEL`)
 - Automatic macronutrient breakdown (protein, carbs, fats)
-- Telegram bot integration with media group support
+- Instagram-style photo carousel with thumbnails
 
 ### Enhanced Meal History
-- Calendar-based meal navigation
+- Calendar-based meal navigation with date range filtering
 - Inline meal card expansion
-- Instagram-style photo carousel
 - Meal editing and deletion with confirmation
 - Responsive design for mobile devices
+
+### Telegram Integration
+- Telegram Bot for photo submission, with media group support for multi-photo uploads
+- Telegram Mini App for meal management
+- Background AI estimation processing
 
 ### Technical Features
 - FastAPI backend with automatic OpenAPI documentation
 - React frontend with TypeScript
 - Neon PostgreSQL database
 - Tigris S3-compatible storage
-- Upstash Redis for background job queuing
+- Redis (Upstash) for background job queuing
 
 ## Repository Structure
 
@@ -44,8 +49,8 @@ See [backend/README.md](backend/README.md) for detailed backend setup instructio
 # Install dependencies
 cd backend && uv sync
 
-# Start development server
-cd backend && uv run uvicorn src.calorie_track_ai_bot.main:app --reload --host 0.0.0.0 --port 8000
+# Start development server (port 8000)
+cd backend && make dev
 ```
 
 ### Frontend Development
@@ -54,43 +59,31 @@ See [frontend/README.md](frontend/README.md) for detailed frontend setup instruc
 
 ```bash
 # Install dependencies
-cd frontend && npm install
+cd frontend && bun install
 
-# Start development server
-cd frontend && npm run dev
+# Start development server (port 3000)
+cd frontend && bun run dev
 ```
-
-## Features
-
-### Multi-Photo Meal Tracking
-- Upload up to 5 photos per meal
-- AI-powered calorie and macronutrient estimation
-- Instagram-style photo carousel
-- Thumbnail optimization for fast loading
-
-### Enhanced Meal History
-- Calendar-based meal browsing
-- Date range filtering
-- Meal editing and deletion
-- Responsive design for mobile devices
-
-### Telegram Integration
-- Telegram Bot for photo submission
-- Telegram Mini App for meal management
-- Media group support for multi-photo uploads
-- Real-time AI estimation processing
 
 ## Available Commands
 
 ```bash
+# From the repository root
+make dev                # Start backend (port 8000) and frontend (port 3000)
+make test               # Run backend and frontend tests
+make lint               # Lint + typecheck backend and frontend
+make format             # Format backend and frontend
+make docker-dev         # Start the full stack via Docker Compose
+
 # Backend development (run from backend folder)
 cd backend
-make venv               # Install dependencies
-make run                # Start dev server
+make dev                # Start dev server with hot reload
+make worker             # Start background estimate worker
 make test               # Run all tests
-make precommit          # Run linting and formatting
-make validate           # Validate OpenAPI spec
-make codegen            # Generate schemas from OpenAPI spec
+make test-unit          # Run tests excluding tests/integration/
+make check              # Lint (ruff) + typecheck (pyright)
+make format             # Format code with ruff
+make openapi-export     # Export OpenAPI spec to frontend/openapi.json
 
 # Or run commands directly with uv
 cd backend
@@ -100,7 +93,14 @@ uv run pytest           # Run all tests
 uv run ruff check       # Run linting
 uv run pyright          # Run type checking
 
-# Deployment (requires flyctl)
+# Frontend development (run from frontend folder)
+cd frontend
+bun run dev             # Start Vite dev server
+bun run test            # Run unit tests (Vitest)
+bun run check           # Type-check + lint + format check
+bun run api:gen         # Regenerate API client (Orval) from openapi.json
+
+# Deployment (requires flyctl; normally done by CI)
 cd backend
 flyctl deploy           # Deploy to Fly.io
 ```
@@ -112,7 +112,7 @@ flyctl deploy           # Deploy to Fly.io
 - **Queue**: Redis (Upstash)
 - **Storage**: Tigris (S3-compatible)
 - **AI**: OpenAI GPT-5-mini for image analysis
-- **Frontend**: Telegram Mini App (planned)
+- **Frontend**: React Telegram Mini App on Vercel
 
 ## CI/CD Workflows
 
@@ -120,21 +120,22 @@ This repository uses optimized GitHub Actions workflows that only run when relev
 
 ### Workflow Strategy
 
-- **`backend-ci.yml`** - Backend CI (tests, linting, type checking)
-  - Triggers: Backend changes, workflow changes
+- **`backend-ci.yml`** - Backend CI (ruff lint, ruff format check, pyright, pytest)
+  - Triggers: Pull requests and pushes to `main` that touch `backend/**` or the workflow file
   - Skips: Frontend-only changes
 
-- **`backend-build.yml`** - Docker image build and push
-  - Triggers: Backend changes, workflow changes
-  - Skips: Frontend-only changes
+- **`backend-build.yml`** - Docker image build and push to GHCR
+  - Triggers: After a successful Backend CI run on `main` (`workflow_run`), or on `v*` tags
 
 - **`backend-deploy.yml`** - Deploy to Fly.io
-  - Triggers: After successful build or on version tags
+  - Triggers: After a successful Backend Build run on `main` (`workflow_run`), or on `v*` tags
   - Only runs when backend is actually built
 
-- **`frontend-ci.yml`** - Frontend CI (when implemented)
-  - Triggers: Frontend changes only
-  - Placeholder for future frontend development
+- **`frontend-ci.yml`** - Frontend CI (Bun: verify generated API client is up to date, Vitest, build)
+  - Triggers: Pull requests and pushes to `main` that touch `frontend/**` or the workflow file; manual dispatch
+
+- **`frontend-deploy.yml`** - Deploy to Vercel
+  - Triggers: After a successful Frontend CI run on `main` (`workflow_run`), on `v*` tags, or manual dispatch
 
 ### Benefits
 
@@ -147,4 +148,5 @@ This repository uses optimized GitHub Actions workflows that only run when relev
 ## Documentation
 
 - [Backend Documentation](backend/README.md)
+- [Frontend Documentation](frontend/README.md)
 - [GitHub Secrets Setup](docs/GITHUB_SECRETS.md)

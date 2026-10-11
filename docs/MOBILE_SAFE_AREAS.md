@@ -43,294 +43,118 @@ graph TB
 
 ## Architecture Overview
 
-### Safe Area Detection System
+### Safe Area Handling
+
+Safe areas are handled primarily in CSS. There is no `SafeAreaWrapper` component or `useSafeAreaDetection` hook; the JavaScript side is a small part of `TelegramProvider` in `frontend/src/providers/telegram.tsx`.
 
 ```mermaid
 graph TD
-    subgraph "Safe Area Detection Architecture"
-        APP[App.tsx<br/>Main Application]
-        WRAPPER[SafeAreaWrapper<br/>Container Component]
-        DETECTOR[useSafeAreaDetection<br/>Custom Hook]
+    subgraph "Safe Area Handling"
+        META[index.html<br/>viewport-fit=cover]
+        CSS_VARS[app.css<br/>--safe-area-* from env()]
 
-        subgraph "Detection Sources"
-            CSS_ENV[CSS env() Variables]
-            VIEWPORT_API[Visual Viewport API]
-            ORIENTATION[Screen Orientation API]
-            TELEGRAM[Telegram WebApp API]
+        subgraph "Layout (Tailwind arbitrary values)"
+            LAYOUT[AppLayout main<br/>pt-var --safe-area-top]
+            NAV[Navigation<br/>pb-var --safe-area-bottom]
         end
 
-        subgraph "State Management"
-            CONTEXT[React Context]
-            LOCAL_STATE[Local State]
-            BACKEND_SYNC[Backend Sync]
-        end
-
-        subgraph "UI Application"
-            DYNAMIC_CSS[Dynamic CSS Properties]
-            RESPONSIVE[Responsive Layout]
-            CONTENT_INSETS[Content Insets]
+        subgraph "React Context"
+            PROVIDER[TelegramProvider<br/>getSafeAreas on mount + resize]
+            HOOK[useTelegram().safeAreas]
         end
     end
 
-    APP --> WRAPPER
-    WRAPPER --> DETECTOR
-
-    %% Detection connections
-    DETECTOR --> CSS_ENV
-    DETECTOR --> VIEWPORT_API
-    DETECTOR --> ORIENTATION
-    DETECTOR --> TELEGRAM
-
-    %% State management
-    DETECTOR --> CONTEXT
-    CONTEXT --> LOCAL_STATE
-    LOCAL_STATE --> BACKEND_SYNC
-
-    %% UI application
-    CONTEXT --> DYNAMIC_CSS
-    DYNAMIC_CSS --> RESPONSIVE
-    RESPONSIVE --> CONTENT_INSETS
+    META --> CSS_VARS
+    CSS_VARS --> LAYOUT
+    CSS_VARS --> NAV
+    CSS_VARS --> PROVIDER
+    PROVIDER --> HOOK
 
     %% Styling
     classDef app fill:#e1f5fe
-    classDef detection fill:#f3e5f5
-    classDef state fill:#e8f5e8
     classDef ui fill:#fff3e0
+    classDef state fill:#e8f5e8
 
-    class APP,WRAPPER app
-    class DETECTOR,CSS_ENV,VIEWPORT_API,ORIENTATION,TELEGRAM detection
-    class CONTEXT,LOCAL_STATE,BACKEND_SYNC state
-    class DYNAMIC_CSS,RESPONSIVE,CONTENT_INSETS ui
+    class META,CSS_VARS app
+    class LAYOUT,NAV ui
+    class PROVIDER,HOOK state
 ```
+
+Safe area values are not synced to the backend. The backend UI configuration (`/api/v1/config/ui`) has `safe_area_top/bottom/left/right` fields, but the frontend does not call that endpoint.
 
 ## Implementation Guide
 
-### 1. SafeAreaWrapper Component
+### 1. Viewport Meta Tag
 
-Our `SafeAreaWrapper` component automatically detects and applies safe area insets:
+`frontend/index.html` opts into edge-to-edge rendering so `env(safe-area-inset-*)` returns non-zero values on notched devices:
 
-```typescript
-// src/components/SafeAreaWrapper.tsx
-import React, { useEffect, useState } from 'react';
-import { useSafeAreaDetection } from '../hooks/useSafeAreaDetection';
-import styles from './SafeAreaWrapper.module.css';
-
-interface SafeAreaWrapperProps {
-  children: React.ReactNode;
-  enableAllSides?: boolean;
-  className?: string;
-  onSafeAreaChange?: (safeAreas: SafeAreaInsets) => void;
-}
-
-interface SafeAreaInsets {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-}
-
-export const SafeAreaWrapper: React.FC<SafeAreaWrapperProps> = ({
-  children,
-  enableAllSides = true,
-  className = '',
-  onSafeAreaChange,
-}) => {
-  const safeAreas = useSafeAreaDetection();
-
-  useEffect(() => {
-    if (onSafeAreaChange) {
-      onSafeAreaChange(safeAreas);
-    }
-  }, [safeAreas, onSafeAreaChange]);
-
-  return (
-    <div
-      className={`${styles.safeAreaWrapper} ${className}`}
-      style={{
-        '--safe-area-inset-top': `${safeAreas.top}px`,
-        '--safe-area-inset-bottom': `${safeAreas.bottom}px`,
-        '--safe-area-inset-left': `${safeAreas.left}px`,
-        '--safe-area-inset-right': `${safeAreas.right}px`,
-      } as React.CSSProperties}
-    >
-      {children}
-    </div>
-  );
-};
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 ```
 
-### 2. Safe Area Detection Hook
+### 2. CSS Custom Properties
 
-The custom hook handles all detection logic:
-
-```typescript
-// src/hooks/useSafeAreaDetection.ts
-import { useState, useEffect } from 'react';
-
-export const useSafeAreaDetection = () => {
-  const [safeAreas, setSafeAreas] = useState({
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  });
-
-  useEffect(() => {
-    const detectSafeAreas = () => {
-      // CSS Environment Variables (iOS)
-      const cssTop = getCSSEnvValue('safe-area-inset-top');
-      const cssBottom = getCSSEnvValue('safe-area-inset-bottom');
-      const cssLeft = getCSSEnvValue('safe-area-inset-left');
-      const cssRight = getCSSEnvValue('safe-area-inset-right');
-
-      // Visual Viewport API
-      const viewportHeight = window.visualViewport?.height || window.innerHeight;
-      const screenHeight = window.screen.height;
-
-      // Calculate safe areas
-      setSafeAreas({
-        top: cssTop || calculateTopInset(),
-        bottom: cssBottom || calculateBottomInset(),
-        left: cssLeft || 0,
-        right: cssRight || 0,
-      });
-    };
-
-    // Initial detection
-    detectSafeAreas();
-
-    // Listen for changes
-    window.addEventListener('resize', detectSafeAreas);
-    window.addEventListener('orientationchange', detectSafeAreas);
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', detectSafeAreas);
-    }
-
-    return () => {
-      window.removeEventListener('resize', detectSafeAreas);
-      window.removeEventListener('orientationchange', detectSafeAreas);
-
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', detectSafeAreas);
-      }
-    };
-  }, []);
-
-  return safeAreas;
-};
-```
-
-### 3. CSS Implementation
-
-Safe area CSS using modern CSS features:
+`frontend/src/app.css` maps the CSS environment variables to app-level custom properties when `env()` is supported:
 
 ```css
-/* src/components/SafeAreaWrapper.module.css */
-.safeAreaWrapper {
-  /* Full viewport height with safe areas */
-  min-height: 100dvh;
-
-  /* Use CSS environment variables for safe areas */
-  padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
-  padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
-  padding-left: max(env(safe-area-inset-left), var(--safe-area-inset-left, 0px));
-  padding-right: max(env(safe-area-inset-right), var(--safe-area-inset-right, 0px));
-
-  /* Box sizing to include padding */
-  box-sizing: border-box;
-
-  /* Flexbox for content layout */
-  display: flex;
-  flex-direction: column;
-
-  /* Ensure content doesn't overflow */
-  overflow-x: hidden;
-
-  /* Background color for safe areas */
-  background-color: var(--tg-bg-color, #ffffff);
-}
-
-/* Content area within safe wrapper */
-.safeAreaWrapper > * {
-  flex: 1;
-  width: 100%;
-}
-
-/* Debug mode for development */
-.safeAreaWrapper[data-debug="true"] {
-  background:
-    linear-gradient(to bottom,
-      rgba(255, 0, 0, 0.1) 0%,
-      rgba(255, 0, 0, 0.1) env(safe-area-inset-top),
-      transparent env(safe-area-inset-top),
-      transparent calc(100% - env(safe-area-inset-bottom)),
-      rgba(255, 0, 0, 0.1) calc(100% - env(safe-area-inset-bottom)),
-      rgba(255, 0, 0, 0.1) 100%
-    );
-}
-
-/* Responsive breakpoints */
-@media (max-width: 768px) {
-  .safeAreaWrapper {
-    /* Ensure minimum safe areas on small screens */
-    padding-top: max(env(safe-area-inset-top), 20px);
-    padding-bottom: max(env(safe-area-inset-bottom), 20px);
+/* frontend/src/app.css */
+@supports (padding-top: env(safe-area-inset-top)) {
+  :root {
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-bottom: env(safe-area-inset-bottom);
+    --safe-area-left: env(safe-area-inset-left);
+    --safe-area-right: env(safe-area-inset-right);
   }
-}
-
-/* Landscape orientation adjustments */
-@media (orientation: landscape) and (max-height: 500px) {
-  .safeAreaWrapper {
-    /* Reduce vertical padding in landscape */
-    padding-top: max(env(safe-area-inset-top), 10px);
-    padding-bottom: max(env(safe-area-inset-bottom), 10px);
-
-    /* Increase horizontal padding */
-    padding-left: max(env(safe-area-inset-left), 16px);
-    padding-right: max(env(safe-area-inset-right), 16px);
-  }
-}
-
-/* Telegram-specific adjustments */
-.telegram-webapp .safeAreaWrapper {
-  /* Telegram WebApp specific safe areas */
-  background-color: var(--tg-bg-color);
-  color: var(--tg-text-color);
-}
-
-/* Dark theme support */
-[data-theme="dark"] .safeAreaWrapper {
-  background-color: var(--tg-bg-color, #1a1a1a);
-}
-
-/* Safe area utilities */
-.safe-area-top {
-  padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
-}
-
-.safe-area-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
-}
-
-.safe-area-left {
-  padding-left: max(env(safe-area-inset-left), var(--safe-area-inset-left, 0px));
-}
-
-.safe-area-right {
-  padding-right: max(env(safe-area-inset-right), var(--safe-area-inset-right, 0px));
-}
-
-.safe-area-horizontal {
-  padding-left: max(env(safe-area-inset-left), var(--safe-area-inset-left, 0px));
-  padding-right: max(env(safe-area-inset-right), var(--safe-area-inset-right, 0px));
-}
-
-.safe-area-vertical {
-  padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
-  padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
 }
 ```
+
+### 3. Applying Insets in Layout
+
+Components consume the variables through Tailwind CSS v4 arbitrary values, with a `0px` fallback when unsupported:
+
+```tsx
+// frontend/src/components/layout/AppLayout.tsx
+<main className="flex-1 pb-16 pt-[var(--safe-area-top,0px)]">
+
+// frontend/src/components/layout/Navigation.tsx (fixed bottom bar)
+<nav className="fixed bottom-0 left-0 right-0 z-50 flex ... pb-[var(--safe-area-bottom,0px)]">
+```
+
+Only the top (main content) and bottom (navigation bar) insets are applied today; left/right insets are defined but not used by any component.
+
+### 4. Reading Insets in JavaScript
+
+`TelegramProvider` reads the custom properties into context on mount and on `window` `resize`, and exposes them via `useTelegram()`:
+
+```typescript
+// frontend/src/providers/telegram.tsx
+function getSafeAreas(): SafeAreaInsets {
+  if (typeof document === "undefined")
+    return { top: 0, bottom: 0, left: 0, right: 0 };
+  const style = getComputedStyle(document.documentElement);
+  return {
+    top: parseFloat(style.getPropertyValue("--safe-area-top")) || 0,
+    bottom: parseFloat(style.getPropertyValue("--safe-area-bottom")) || 0,
+    left: parseFloat(style.getPropertyValue("--safe-area-left")) || 0,
+    right: parseFloat(style.getPropertyValue("--safe-area-right")) || 0,
+  };
+}
+
+// inside TelegramProvider
+useEffect(() => {
+  const handleResize = () => setSafeAreas(getSafeAreas());
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
+```
+
+Usage:
+
+```typescript
+const { safeAreas } = useTelegram(); // { top, bottom, left, right } in px
+```
+
+No component currently consumes `safeAreas`; layout relies on the CSS variables directly. The provider does not listen to `orientationchange`, `visualViewport` resize, or Telegram `safeAreaChanged` / `contentSafeAreaChanged` events.
 
 ## Testing Safe Areas
 
@@ -370,66 +194,15 @@ graph TB
 
 ### Automated Testing
 
-```typescript
-// tests/e2e/safe-areas.spec.ts
-import { test, expect, devices } from '@playwright/test';
+E2E coverage lives in `frontend/tests/e2e/safe-areas.spec.ts`. It runs under the `iPhone 14 Pro`, `iPhone SE`, `Samsung Galaxy S23`, and `iPad Pro` Playwright projects (see `frontend/playwright.config.ts`), and inside each project it iterates its own viewport list (`iPhone 12`, `iPhone 12 Landscape`, `Android Pixel 5`, `iPad Air`) via `page.setViewportSize`. It mocks `window.Telegram.WebApp` before navigation.
 
-const mobileDevices = [
-  'iPhone 14 Pro',
-  'iPhone SE',
-  'Samsung Galaxy S23',
-  'iPad Pro',
-];
+Test groups: CSS `env()` support, safe-area wrapper styling, overlap with system UI, dynamic changes on `resize`, orientation changes, Telegram theme integration, performance, accessibility/touch targets, and cross-browser consistency.
 
-mobileDevices.forEach(deviceName => {
-  test.describe(`Safe Areas - ${deviceName}`, () => {
-    test.use({ ...devices[deviceName] });
+Note: several assertions look for `[data-safe-area-supported]` or `.safe-area-wrapper` elements, which the current app does not render. Those checks are guarded by `if (count > 0)` or only assert `toBeDefined()`, so they pass without exercising real layout.
 
-    test('should apply correct safe area padding', async ({ page }) => {
-      await page.goto('/');
-
-      // Wait for safe area detection
-      await page.waitForTimeout(1000);
-
-      // Check safe area wrapper exists
-      const wrapper = page.locator('.safe-area-wrapper');
-      await expect(wrapper).toBeVisible();
-
-      // Verify padding is applied
-      const paddingTop = await wrapper.evaluate(el =>
-        getComputedStyle(el).paddingTop
-      );
-      const paddingBottom = await wrapper.evaluate(el =>
-        getComputedStyle(el).paddingBottom
-      );
-
-      // Safe areas should be detected (non-zero padding)
-      expect(parseInt(paddingTop)).toBeGreaterThanOrEqual(0);
-      expect(parseInt(paddingBottom)).toBeGreaterThanOrEqual(0);
-    });
-
-    test('should handle orientation changes', async ({ page }) => {
-      await page.goto('/');
-
-      // Test portrait
-      await page.setViewportSize({ width: 375, height: 812 });
-      await page.waitForTimeout(500);
-
-      const portraitPadding = await page.locator('.safe-area-wrapper')
-        .evaluate(el => getComputedStyle(el).paddingTop);
-
-      // Test landscape
-      await page.setViewportSize({ width: 812, height: 375 });
-      await page.waitForTimeout(500);
-
-      const landscapePadding = await page.locator('.safe-area-wrapper')
-        .evaluate(el => getComputedStyle(el).paddingTop);
-
-      // Padding should adjust for orientation
-      expect(portraitPadding).not.toBe(landscapePadding);
-    });
-  });
-});
+```bash
+cd frontend
+bun run test:e2e safe-areas
 ```
 
 ## Browser Support
@@ -481,7 +254,7 @@ function detectSafeAreaSupport() {
 
 ### 2. Performance Considerations
 
-- **Debounce resize events** - Avoid excessive recalculations during orientation changes
+- **Debounce resize events** - Avoid excessive recalculations during orientation changes (the `TelegramProvider` resize handler is not debounced)
 - **Use CSS when possible** - Native CSS env() is more performant than JavaScript
 - **Cache safe area values** - Store detected values to avoid repeated calculations
 - **Minimize DOM updates** - Batch safe area changes to reduce layout thrashing
@@ -497,11 +270,13 @@ function detectSafeAreaSupport() {
 
 ### Development Tools
 
+Example overlay (not part of the codebase; paste into a component temporarily):
+
 ```typescript
 // Debug utility for development
 export const SafeAreaDebugger = () => {
   const [debugMode, setDebugMode] = useState(false);
-  const safeAreas = useSafeAreaDetection();
+  const { safeAreas } = useTelegram();
 
   if (!debugMode) {
     return (
@@ -579,6 +354,8 @@ export const SafeAreaDebugger = () => {
 
 ### Console Debugging
 
+Paste into the browser console (the app does not define `window.debugSafeAreas`):
+
 ```javascript
 // Console commands for debugging
 window.debugSafeAreas = () => {
@@ -609,7 +386,7 @@ window.debugSafeAreas = () => {
 **Problem**: Safe area insets are returning 0 on devices that should have safe areas.
 
 **Solutions**:
-1. Check viewport meta tag: `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`
+1. Check viewport meta tag includes `viewport-fit=cover` (already set in `frontend/index.html`)
 2. Verify CSS support: Use feature detection for env() support
 3. Test on real devices: Simulators may not accurately represent safe areas
 

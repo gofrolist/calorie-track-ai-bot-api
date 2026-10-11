@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGetDailyStatisticsApiV1StatisticsDailyGet } from "@/api/queries/statistics/statistics";
 import { useGetMacroStatisticsApiV1StatisticsMacrosGet } from "@/api/queries/statistics/statistics";
@@ -7,26 +7,18 @@ import { PeriodSelector } from "@/components/stats/PeriodSelector";
 import type { Period } from "@/components/stats/PeriodSelector";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { unwrap } from "@/api/unwrap";
-import { formatDate } from "@/utils/date";
+import { getDateRange } from "@/utils/date";
 import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
 } from "@/api/model";
 
-function getDateRange(days: number) {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(end.getDate() - days);
-  return {
-    start_date: formatDate(start),
-    end_date: formatDate(end),
-  };
-}
-
 export default function StatsPage() {
   const { t } = useTranslation();
   const [period, setPeriod] = useState<Period>(7);
-  const dateRange = useMemo(() => getDateRange(period), [period]);
+  // Recomputed every render so a page left open past midnight picks up the
+  // new "today"; query keys are hashed by value, so this does not refetch.
+  const dateRange = getDateRange(period);
 
   const { data: dailyRaw, isLoading: loadingDaily } =
     useGetDailyStatisticsApiV1StatisticsDailyGet(dateRange);

@@ -4,43 +4,35 @@ This document explains how to configure GitHub secrets for the CI/CD pipeline.
 
 ## Required Secrets
 
-To enable full testing and deployment, you need to add the following secrets to your GitHub repository:
+These are the secrets referenced by the workflows in `.github/workflows/`. Add them to your GitHub repository:
 
 ### Go to: Settings → Secrets and variables → Actions → Repository secrets
 
-## OpenAI Configuration
-
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `OPENAI_API_KEY` | OpenAI API key for AI estimation | `sk-proj-...` |
-
-## Database Configuration
-
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `DATABASE_URL` | Neon PostgreSQL connection string | `postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require` |
-
-## Redis Configuration
-
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` or `redis://user:pass@host:port` |
-
-## Tigris/S3 Configuration
-
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `AWS_ENDPOINT_URL_S3` | Tigris endpoint URL | `https://fly.storage.tigris.dev` |
-| `AWS_ACCESS_KEY_ID` | Tigris access key | `your-access-key` |
-| `AWS_SECRET_ACCESS_KEY` | Tigris secret key | `your-secret-key` |
-| `BUCKET_NAME` | Tigris bucket name | `your-bucket-name` |
-| `AWS_REGION` | AWS region | `auto` |
-
-## Deployment Secrets
+## Backend Deployment (`backend-deploy.yml`)
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
 | `FLY_API_TOKEN` | Fly.io API token for deployment | `your-fly-api-token` |
+
+## Frontend Deployment (`frontend-deploy.yml`)
+
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `VERCEL_TOKEN` | Vercel access token used by `vercel --prod` | `your-vercel-token` |
+| `VERCEL_ORG_ID` | Vercel team/organization ID | `team_...` |
+| `VERCEL_PROJECT_ID` | Vercel project ID | `prj_...` |
+
+## Backend CI (`backend-ci.yml`, optional)
+
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `OPENAI_API_KEY` | Passed to the pytest step. Optional: tests mock OpenAI and `tests/conftest.py` overrides this variable with a test value | `sk-proj-...` |
+
+`GITHUB_TOKEN` (used by `backend-build.yml` to push the image to GHCR) is provided automatically by GitHub Actions.
+
+## Runtime Configuration (not GitHub secrets)
+
+No workflow reads `DATABASE_URL`, `REDIS_URL`, `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `BUCKET_NAME`, `AWS_REGION` or `TELEGRAM_BOT_TOKEN` from GitHub secrets. Backend CI uses hardcoded test values for these, and `fly.toml` only sets `USE_WEBHOOK`, `WEBHOOK_URL` and `ENABLE_WORKER`, so production values must be configured on the Fly.io app itself (e.g. `fly secrets set DATABASE_URL=...`).
 
 ## How to Add Secrets
 
@@ -53,34 +45,32 @@ To enable full testing and deployment, you need to add the following secrets to 
 
 ## Local Development
 
-For local development, create a `.env` file in the project root with the same variables:
+For local development, create a `.env` file in `backend/` (loaded by `services/config.py`) with the runtime variables listed above:
 
 ```bash
-# Run the setup script to create .env template
-make setup
+# Create .env from the template
+cp backend/.env.example backend/.env
 
 # Edit .env with your actual values
-nano .env
+nano backend/.env
 ```
 
 ## CI/CD Pipeline Behavior
 
-### Basic Tests (Always Run)
-- Runs on every push and PR
-- Uses mock/test environment variables
-- Tests: config, health endpoints, auth endpoints
-- No real service credentials required
+### Backend CI
+- Runs on pull requests and pushes to `main` that touch `backend/**` (or the workflow file)
+- Ruff lint, ruff format check, pyright, and the full pytest suite
+- External services are mocked; no real service credentials required
 
-### Full Tests (Main Branch Only)
-- Runs only on pushes to main branch
-- Uses real service credentials from GitHub secrets
-- Tests all modules including external service integrations
-- Requires all secrets to be configured
-
-### Deployment (Main Branch Only)
-- Runs only on pushes to main branch
-- Deploys to Fly.io using the configured image
+### Backend Build and Deploy (Main Branch / Tags)
+- `backend-build.yml` runs after a successful Backend CI run on `main` (or on `v*` tags) and pushes `ghcr.io/<owner>/<repo>:latest`
+- `backend-deploy.yml` runs after a successful Backend Build on `main` (or on `v*` tags) and deploys that image to Fly.io
 - Requires `FLY_API_TOKEN` secret
+
+### Frontend CI and Deploy
+- `frontend-ci.yml` runs on pull requests and pushes to `main` that touch `frontend/**`, plus manual dispatch
+- `frontend-deploy.yml` runs after a successful Frontend CI run on `main`, on `v*` tags, or manual dispatch, and deploys to Vercel
+- Requires `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` secrets
 
 ## Security Notes
 
@@ -93,16 +83,15 @@ nano .env
 ## Troubleshooting
 
 ### Tests Failing
-- Check that all required secrets are set
-- Verify secret values are correct
-- Check service connectivity (Neon PostgreSQL, Redis, etc.)
+- Backend tests do not need real services; reproduce locally with `cd backend && make test`
+- Check the ruff, ruff format and pyright steps, which run before pytest
 
 ### Deployment Failing
-- Verify `FLY_API_TOKEN` is set correctly
+- Verify `FLY_API_TOKEN` (backend) or the `VERCEL_*` secrets (frontend) are set correctly
 - Check Fly.io app configuration
 - Ensure Docker image builds successfully
 
 ### Local Development Issues
-- Run `make setup` to create `.env` template
+- Copy `backend/.env.example` to `backend/.env`
 - Fill in actual values in `.env` file
-- Run `make dev` to start development server
+- Run `make dev` (from the repository root or `backend/`) to start the development server

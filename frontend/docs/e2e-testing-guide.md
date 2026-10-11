@@ -2,97 +2,100 @@
 
 ## Overview
 
-This guide provides comprehensive E2E testing procedures for the Calorie Track AI Bot Mini App, including happy path scenarios, test scripts, and expected screenshots.
+This guide describes E2E testing for the Calorie Track AI Bot Mini App: the Playwright setup, manual happy-path scenarios, and how the existing specs in `tests/e2e/` are structured.
+
+> **Status:** Many specs in `tests/e2e/` predate the current UI (e.g. they expect a "Today" heading, a `/meal/:id` detail route, expandable meal cards, or `data-testid`s that components no longer render). In addition, Playwright projects only pick up files matching their `testMatch` patterns (see [Projects](#projects)), so only 9 of the 22 spec files are run by `bun run test:e2e`. E2E tests are not run in CI.
 
 ## Test Environment Setup
 
 ### Prerequisites
-- Node.js 18+ installed
-- Backend API running on `http://localhost:8000`
-- Telegram Bot configured and running
-- Test database with sample data
+- [Bun](https://bun.sh) installed
+- Backend API running on `http://localhost:8000` (or API calls mocked with `page.route()`)
 
 ### Installation
 ```bash
 cd frontend
-npm install
-npm install --save-dev @playwright/test
-npx playwright install
+bun install
+bunx playwright install
 ```
+`@playwright/test`, `playwright`, and `@axe-core/playwright` are already in `devDependencies`.
 
 ### Configuration
-```typescript
-// playwright.config.ts
-import { defineConfig, devices } from '@playwright/test';
+`frontend/playwright.config.ts` (abridged):
 
+```typescript
 export default defineConfig({
   testDir: './tests/e2e',
+  timeout: 30 * 1000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
-  use: {
-    baseURL: 'http://localhost:5173',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-  },
-  projects: [
+  reporter: [['html', { open: 'never' }], ['json', ...], ['junit', ...], ...],
+  outputDir: 'test-results/',
+  webServer: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      command: 'npm run dev',          // Vite dev server
+      url: 'http://localhost:3000',
+      reuseExistingServer: !process.env.CI,
     },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
+    // On CI only: `cd ../backend && make dev`, waiting for /health/live
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+    video: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    locale: 'en-US',
   },
+  projects: [ /* see below */ ],
 });
 ```
 
+### Projects
+
+Each project only runs files matching its `testMatch`:
+
+| Project | Device | `testMatch` |
+|---|---|---|
+| Desktop Chrome | Desktop Chrome 1280x720 | `*.desktop.spec.ts`, `basic-*.spec.ts` |
+| iPhone 14 Pro | iPhone 14 Pro | `*.mobile.spec.ts`, `safe-areas.spec.ts`, `theme-*.spec.ts` |
+| iPhone 14 Pro Dark | iPhone 14 Pro, dark | `theme-switching.spec.ts` |
+| iPhone SE, Samsung Galaxy S23, iPad Pro | respective devices | `*.mobile.spec.ts` / `*.tablet.spec.ts`, `safe-areas.spec.ts` |
+| Russian Language | iPhone 14 Pro, `ru-RU` | `language-detection.spec.ts` |
+| Performance | iPhone 14 Pro | `performance-*.spec.ts` (no matching files) |
+| Accessibility | iPhone 14 Pro, reduced motion | `accessibility.spec.ts` |
+| UI-UX Validation | iPhone 14 Pro | `ui-ux-validation.spec.ts` |
+
+Spec files that match no project and are therefore never run: `calendar-filtering.spec.ts`, `feedback-submission.spec.ts`, `goals.spec.ts`, `infinite-loop-detection.spec.ts`, `meal-card-expansion.spec.ts`, `meal-deletion-flow.spec.ts`, `meal-detail.spec.ts`, `meal-editing-flow.spec.ts`, `meals-history.spec.ts`, `mobile-devices.spec.ts`, `photo-carousel.spec.ts`, `stats-responsive.spec.ts`, `today.spec.ts`. Run `bunx playwright test --list` to see what is collected.
+
 ## Happy Path Test Scenarios
 
-### Scenario 1: First-Time User Onboarding
+These scenarios describe the current UI and can be run manually (in Telegram or at `http://localhost:3000`).
+
+### Scenario 1: First-Time User
 
 #### Test Steps
 1. **Launch Mini App**
    - Open Telegram bot
    - Send `/start` command
    - Tap "Open Mini App" button
-   - **Expected**: App loads with Today view
+   - **Expected**: App loads on the Meals page (`/`)
 
-2. **View Today Screen**
-   - **Expected**: Empty state with "No meals recorded today"
-   - **Expected**: Daily summary shows 0 calories
-   - **Expected**: Navigation shows Today (active), Stats, Goals
+2. **View Meals Screen**
+   - **Expected**: Heading "Meals"
+   - **Expected**: Empty state "No meals logged for this date"
+   - **Expected**: Bottom navigation shows Meals (active), Stats, Goals
 
 3. **Set Daily Goal**
    - Navigate to Goals tab
-   - Tap "Set Daily Goal"
+   - Tap "Edit Goal"
    - Enter "2000" calories
    - Tap "Save"
-   - **Expected**: Goal saved successfully
-   - **Expected**: Progress bar shows 0%
+   - **Expected**: Modal closes and the goal shows "2000 kcal"
+   - **Expected**: Today's progress bar reflects consumed calories
 
-#### Screenshots
-- `screenshots/01-onboarding-today-empty.png`
-- `screenshots/02-goals-setup.png`
-- `screenshots/03-goal-saved.png`
-
-### Scenario 2: Adding First Meal
+### Scenario 2: Adding and Editing a Meal
 
 #### Test Steps
 1. **Add Meal via Bot**
@@ -101,480 +104,178 @@ export default defineConfig({
    - **Expected**: Bot responds with calorie estimate
 
 2. **View Meal in Mini App**
-   - Refresh Mini App
-   - Navigate to Today view
-   - **Expected**: Meal appears in list
-   - **Expected**: Daily summary updates with calories
-   - **Expected**: Progress bar shows percentage
+   - Reopen or refresh the Mini App
+   - **Expected**: Meal card appears in the list with thumbnail, time, kcal, and P/C/F
+   - **Expected**: Daily summary updates with total kcal and macros
 
 3. **Edit Meal Details**
-   - Tap on meal item
-   - **Expected**: Meal detail page opens
-   - **Expected**: Shows calories, macros, meal type
-   - Tap "Edit" button
-   - Change calories from estimated to actual
+   - Tap "Edit" on the meal card
+   - **Expected**: Edit modal opens with description and protein/carbs/fat inputs
+   - Change a macro value
+   - **Expected**: Calories recalculate (`protein*4 + carbs*4 + fat*9`)
    - Tap "Save"
-   - **Expected**: Changes saved successfully
-   - **Expected**: "Corrected" indicator appears
+   - **Expected**: Modal closes and the list/summary update
 
-#### Screenshots
-- `screenshots/04-meal-added.png`
-- `screenshots/05-meal-detail-view.png`
-- `screenshots/06-meal-edited.png`
+4. **Delete Meal**
+   - Tap "Delete" on the meal card
+   - **Expected**: Confirmation modal "Are you sure you want to delete this meal?"
+   - Tap "Confirm Delete"
+   - **Expected**: Meal is removed and the summary updates
 
 ### Scenario 3: Viewing Statistics
 
 #### Test Steps
 1. **Navigate to Stats**
    - Tap "Stats" in navigation
-   - **Expected**: Stats page loads
-   - **Expected**: Shows "This Week" and "This Month" tabs
+   - **Expected**: Heading "Nutrition Statistics"
+   - **Expected**: Period buttons "Last 7 Days" (selected), "Last 30 Days", "Last 90 Days"
 
-2. **View Weekly Data**
-   - Ensure "This Week" tab is selected
-   - **Expected**: Bar chart shows daily calories
-   - **Expected**: Summary shows total and average calories
-   - **Expected**: Macros breakdown displayed
+2. **View Data**
+   - **Expected**: Summary cards (average daily calories, total meals)
+   - **Expected**: Calories-over-time line chart and macro distribution pie chart
+   - **Expected**: "No Data Yet" empty state when there are no meals in the period
 
-3. **View Monthly Data**
-   - Tap "This Month" tab
-   - **Expected**: Line chart shows daily calories
-   - **Expected**: Monthly summary updates
-   - **Expected**: Goal progress section visible
+3. **Change Period**
+   - Tap "Last 30 Days"
+   - **Expected**: Button becomes selected (`aria-pressed="true"`) and charts reload
 
-#### Screenshots
-- `screenshots/07-stats-weekly.png`
-- `screenshots/08-stats-monthly.png`
-- `screenshots/09-goal-progress.png`
-
-### Scenario 4: Multiple Meals and Progress Tracking
+### Scenario 4: Feedback
 
 #### Test Steps
-1. **Add Multiple Meals**
-   - Add breakfast (400 kcal)
-   - Add lunch (600 kcal)
-   - Add dinner (800 kcal)
-   - Add snack (200 kcal)
-
-2. **View Progress**
-   - Navigate to Today view
-   - **Expected**: All meals listed
-   - **Expected**: Total calories = 2000
-   - **Expected**: Progress bar at 100%
-   - **Expected**: "Goal achieved!" message
-
-3. **Share Progress**
-   - Tap share button in daily summary
-   - **Expected**: Share dialog opens
-   - **Expected**: Share text includes calories and meals
-
-#### Screenshots
-- `screenshots/10-multiple-meals.png`
-- `screenshots/11-goal-achieved.png`
-- `screenshots/12-share-dialog.png`
+1. Open `/feedback` (not linked from the bottom navigation)
+2. Enter a message (max 5000 characters; remaining count is shown)
+3. Tap "Send Feedback"
+   - **Expected**: "Thank you! We received your feedback."
 
 ### Scenario 5: Error Handling
 
 #### Test Steps
-1. **Network Error**
-   - Disconnect internet
-   - Try to refresh data
-   - **Expected**: Error message displayed
-   - **Expected**: Retry button available
+1. **Invalid Goal**
+   - Go to Goals, tap "Edit Goal"
+   - Enter "100" and tap "Save"
+   - **Expected**: "Daily calorie goal must be between 500 and 10,000"
 
-2. **Invalid Input**
-   - Go to Goals
-   - Try to set goal as "-100"
-   - **Expected**: Validation error shown
-   - **Expected**: Save button disabled
+2. **Failed Mutation**
+   - Stop the backend and try to save or delete a meal
+   - **Expected**: Error banner on the Meals page
 
-3. **Meal Not Found**
-   - Try to access non-existent meal ID
-   - **Expected**: "Meal not found" error
-   - **Expected**: Back button to return to Today
-
-#### Screenshots
-- `screenshots/13-network-error.png`
-- `screenshots/14-validation-error.png`
-- `screenshots/15-not-found-error.png`
+3. **Render Error**
+   - **Expected**: `ErrorBoundary` shows "Something went wrong" with a reload button
 
 ## Test Implementation
 
-### Base Test Class
-```typescript
-// tests/e2e/base.test.ts
-import { test as base, expect } from '@playwright/test';
+### Telegram WebApp Mocking
+There is no shared base fixture; specs import `test`/`expect` from `@playwright/test` directly. Specs that need Telegram data inject it with `page.addInitScript()`:
 
-export const test = base.extend({
-  // Mock Telegram WebApp API
-  page: async ({ page }, use) => {
-    await page.addInitScript(() => {
-      window.Telegram = {
-        WebApp: {
-          ready: () => {},
-          expand: () => {},
-          initData: 'test_init_data',
-          initDataUnsafe: {
-            user: {
-              id: 12345,
-              first_name: 'Test',
-              last_name: 'User',
-              username: 'testuser'
-            }
-          },
-          themeParams: {
-            bg_color: '#ffffff',
-            text_color: '#000000',
-            hint_color: '#999999',
-            button_color: '#007aff',
-            button_text_color: '#ffffff'
-          },
-          colorScheme: 'light',
-          HapticFeedback: {
-            impactOccurred: () => {},
-            notificationOccurred: () => {}
-          },
-          showAlert: (message: string) => alert(message)
-        }
-      };
-    });
-    await use(page);
-  }
+```typescript
+await page.addInitScript(() => {
+  (window as any).Telegram = {
+    WebApp: {
+      ready: () => {},
+      expand: () => {},
+      initData: 'test_init_data',
+      initDataUnsafe: { user: { id: 12345, first_name: 'Test', language_code: 'en' } },
+      colorScheme: 'light',
+      themeParams: {},
+    },
+  };
 });
 ```
 
-### Today View Tests
+Without `initData`, `src/main.tsx` skips WebApp initialization and the API client sends `VITE_DEV_USER_ID` (or a default dev ID) as `x-user-id` in dev mode.
+
+### API Mocking
+API calls are mocked per test with `page.route()` / `context.route()`:
+
 ```typescript
-// tests/e2e/today.spec.ts
-import { test, expect } from './base.test';
-
-test.describe('Today View', () => {
-  test('displays empty state when no meals', async ({ page }) => {
-    await page.goto('/');
-
-    await expect(page.locator('h1')).toContainText('Today');
-    await expect(page.locator('[data-testid="empty-meals"]')).toBeVisible();
-    await expect(page.locator('.progress-bar')).toBeVisible();
-  });
-
-  test('displays meals when available', async ({ page }) => {
-    // Mock API response with meals
-    await page.route('**/api/v1/daily-summary/today', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          meals: [
-            {
-              id: '1',
-              meal_type: 'breakfast',
-              kcal_total: 400,
-              macros: { protein_g: 20, fat_g: 15, carbs_g: 45 },
-              corrected: false,
-              created_at: new Date().toISOString()
-            }
-          ],
-          daily_summary: {
-            kcal_total: 400,
-            macros_totals: { protein_g: 20, fat_g: 15, carbs_g: 45 }
-          }
-        })
-      });
-    });
-
-    await page.goto('/');
-
-    await expect(page.locator('[data-testid="meal-item"]')).toHaveCount(1);
-    await expect(page.locator('.daily-summary')).toContainText('400 kcal');
-  });
-
-  test('navigates to meal detail on click', async ({ page }) => {
-    await page.goto('/');
-    await page.click('[data-testid="meal-item"]');
-
-    await expect(page).toHaveURL(/\/meal\/\d+/);
-    await expect(page.locator('h1')).toContainText('Meal Detail');
+await page.route('**/api/v1/meals**', async (route) => {
+  await route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ meals: [], total: 0 }),
   });
 });
+await page.goto('/');
 ```
 
-### Goals Tests
+Response shapes must match the Orval-generated types in `src/api/model/` (e.g. `MealsListResponse`, `DailySummary`, `GoalResponse`).
+
+### Selectors
+Prefer role/text selectors that match the real UI, for example:
+
 ```typescript
-// tests/e2e/goals.spec.ts
-import { test, expect } from './base.test';
-
-test.describe('Goals Page', () => {
-  test('allows setting daily goal', async ({ page }) => {
-    await page.goto('/goals');
-
-    await page.click('text=Set Daily Goal');
-    await page.fill('input[type="number"]', '2000');
-    await page.click('text=Save');
-
-    await expect(page.locator('text=Goal updated successfully')).toBeVisible();
-    await expect(page.locator('.goal-display')).toContainText('2000 kcal');
-  });
-
-  test('validates goal input', async ({ page }) => {
-    await page.goto('/goals');
-
-    await page.click('text=Set Daily Goal');
-    await page.fill('input[type="number"]', '100');
-    await page.click('text=Save');
-
-    await expect(page.locator('.validation-error')).toBeVisible();
-    await expect(page.locator('.validation-error')).toContainText('between 500 and 10,000');
-  });
-});
+await expect(page.getByRole('heading', { name: 'Meals' })).toBeVisible();
+await page.getByRole('button', { name: 'Edit Goal' }).click();
+await expect(page.getByRole('dialog')).toBeVisible();
 ```
 
-### Stats Tests
-```typescript
-// tests/e2e/stats.spec.ts
-import { test, expect } from './base.test';
-
-test.describe('Stats Page', () => {
-  test('displays weekly statistics', async ({ page }) => {
-    await page.goto('/stats');
-
-    await expect(page.locator('h1')).toContainText('Week/Month Stats');
-    await expect(page.locator('text=This Week')).toBeVisible();
-    await expect(page.locator('text=This Month')).toBeVisible();
-  });
-
-  test('switches between weekly and monthly views', async ({ page }) => {
-    await page.goto('/stats');
-
-    await page.click('text=This Month');
-    await expect(page.locator('text=Monthly Summary')).toBeVisible();
-
-    await page.click('text=This Week');
-    await expect(page.locator('text=Weekly Summary')).toBeVisible();
-  });
-});
-```
-
-## Screenshot Management
-
-### Screenshot Naming Convention
-```
-screenshots/
-├── 01-onboarding-today-empty.png
-├── 02-goals-setup.png
-├── 03-goal-saved.png
-├── 04-meal-added.png
-├── 05-meal-detail-view.png
-├── 06-meal-edited.png
-├── 07-stats-weekly.png
-├── 08-stats-monthly.png
-├── 09-goal-progress.png
-├── 10-multiple-meals.png
-├── 11-goal-achieved.png
-├── 12-share-dialog.png
-├── 13-network-error.png
-├── 14-validation-error.png
-└── 15-not-found-error.png
-```
-
-### Screenshot Test
-```typescript
-// tests/e2e/screenshots.spec.ts
-import { test, expect } from './base.test';
-
-test.describe('Screenshot Tests', () => {
-  test('captures today view with empty state', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.locator('h1')).toContainText('Today');
-    await page.screenshot({ path: 'screenshots/01-onboarding-today-empty.png' });
-  });
-
-  test('captures goals setup flow', async ({ page }) => {
-    await page.goto('/goals');
-    await page.screenshot({ path: 'screenshots/02-goals-setup.png' });
-
-    await page.click('text=Set Daily Goal');
-    await page.screenshot({ path: 'screenshots/03-goal-saved.png' });
-  });
-});
-```
+Components render almost no `data-testid`s (only `modal-backdrop` in `Modal`).
 
 ## Running Tests
 
 ### Local Development
 ```bash
-# Run all tests
-npm run test:e2e
+# Run all collected E2E tests (starts the dev server if not running)
+bun run test:e2e
+
+# Headed mode
+bun run test:e2e:headed
 
 # Run specific test file
-npx playwright test tests/e2e/today.spec.ts
+bunx playwright test tests/e2e/accessibility.spec.ts
+
+# Run one project
+bunx playwright test --project="UI-UX Validation"
 
 # Run with UI mode
-npx playwright test --ui
+bunx playwright test --ui
 
-# Generate screenshots
-npx playwright test tests/e2e/screenshots.spec.ts
+# List collected tests
+bunx playwright test --list
+
+# Open the HTML report
+bunx playwright show-report
 ```
 
 ### CI/CD Pipeline
-```yaml
-# .github/workflows/e2e.yml
-name: E2E Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - run: npm run test:e2e
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-```
+E2E tests are not part of CI. `.github/workflows/frontend-ci.yml` runs `bun install --frozen-lockfile`, verifies generated API code (`bun run api:gen` + `bun run format`), then `bun run test` (Vitest) and `bun run build`.
 
 ## Test Data Management
 
 ### Mock Data
-```typescript
-// tests/fixtures/mock-data.ts
-export const mockMeals = [
-  {
-    id: '1',
-    meal_type: 'breakfast',
-    kcal_total: 400,
-    macros: { protein_g: 20, fat_g: 15, carbs_g: 45 },
-    corrected: false,
-    created_at: '2024-01-15T08:00:00Z'
-  },
-  {
-    id: '2',
-    meal_type: 'lunch',
-    kcal_total: 600,
-    macros: { protein_g: 30, fat_g: 20, carbs_g: 60 },
-    corrected: true,
-    created_at: '2024-01-15T13:00:00Z'
-  }
-];
+There is no shared E2E fixtures directory; mock data is defined inline in each spec. For unit tests, MSW handlers live in `src/test/handlers.ts`.
 
-export const mockDailySummary = {
-  kcal_total: 1000,
-  macros_totals: { protein_g: 50, fat_g: 35, carbs_g: 105 }
-};
-
-export const mockGoal = {
-  daily_kcal_target: 2000
-};
-```
-
-### API Mocking
-```typescript
-// tests/utils/api-mocks.ts
-export const setupApiMocks = (page: Page) => {
-  // Mock successful API responses
-  page.route('**/api/v1/daily-summary/today', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        meals: mockMeals,
-        daily_summary: mockDailySummary
-      })
-    });
-  });
-
-  page.route('**/api/v1/goals', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(mockGoal)
-    });
-  });
-
-  // Mock error responses
-  page.route('**/api/v1/meals/invalid-id', route => {
-    route.fulfill({
-      status: 404,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Meal not found' })
-    });
-  });
-};
-```
+### Artifacts
+Screenshots (on failure), videos (retained on failure), and traces (on first retry) go to `test-results/`; the HTML report goes to `playwright-report/`. Both are gitignored.
 
 ## Performance Testing
 
-### Load Time Tests
-```typescript
-// tests/e2e/performance.spec.ts
-import { test, expect } from './base.test';
-
-test.describe('Performance Tests', () => {
-  test('page loads within acceptable time', async ({ page }) => {
-    const startTime = Date.now();
-    await page.goto('/');
-    await page.waitForSelector('h1');
-    const loadTime = Date.now() - startTime;
-
-    expect(loadTime).toBeLessThan(2000); // 2 seconds max
-  });
-
-  test('API responses are fast', async ({ page }) => {
-    await page.goto('/');
-
-    const response = await page.waitForResponse('**/api/v1/daily-summary/today');
-    expect(response.status()).toBe(200);
-    expect(response.request().timing().responseEnd).toBeLessThan(1000);
-  });
-});
-```
+`tests/e2e/ui-ux-validation.spec.ts` contains performance checks (FPS during chart animations, page load under 2 seconds, JavaScript bundle under 250KB). The `Performance` project in `playwright.config.ts` matches `performance-*.spec.ts`, but no such files exist.
 
 ## Accessibility Testing
 
-### Keyboard Navigation
+`tests/e2e/accessibility.spec.ts` (Accessibility project) uses `@axe-core/playwright`:
+
 ```typescript
-// tests/e2e/accessibility.spec.ts
-import { test, expect } from './base.test';
+import AxeBuilder from '@axe-core/playwright';
 
-test.describe('Accessibility Tests', () => {
-  test('supports keyboard navigation', async ({ page }) => {
-    await page.goto('/');
-
-    // Tab through navigation
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-
-    // Check focus indicators
-    const focusedElement = page.locator(':focus');
-    await expect(focusedElement).toBeVisible();
-  });
-
-  test('has proper ARIA labels', async ({ page }) => {
-    await page.goto('/');
-
-    const progressBar = page.locator('.progress-bar');
-    await expect(progressBar).toHaveAttribute('role', 'progressbar');
-    await expect(progressBar).toHaveAttribute('aria-valuenow');
-  });
-});
+const results = await new AxeBuilder({ page })
+  .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+  .analyze();
+expect(results.violations).toHaveLength(0);
 ```
+
+Keyboard navigation tests (tab order, focus in modals) are in `tests/e2e/ui-ux-validation.spec.ts`.
 
 ## Maintenance
 
 ### Regular Updates
-- Update test data monthly
-- Refresh screenshots quarterly
+- Update specs when UI text, routes, or components change (many current specs are stale)
+- Keep file names in sync with project `testMatch` patterns, or the spec will not run
 - Review and update test scenarios based on feature changes
 - Monitor test execution time and optimize as needed
 
 ### Documentation Updates
 - Keep test scenarios current with UI changes
-- Update screenshot references when UI changes
-- Maintain test data consistency
+- Maintain mock data consistency with `src/api/model/`
 - Document any new test patterns or utilities

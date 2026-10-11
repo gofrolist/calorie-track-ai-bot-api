@@ -83,7 +83,7 @@ class TestDailySummaryEndpoints:
         assert data == mock_daily_summary_data
 
         # Verify that db_get_daily_summary was called with the correct parameters
-        mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "59357664")
+        mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "59357664", tz="UTC")
 
     def test_get_daily_summary_without_user_id_header(self, client):
         """Test getting daily summary without x-user-id header returns 401."""
@@ -132,7 +132,7 @@ class TestDailySummaryEndpoints:
         assert data == mock_today_data
 
         # Verify that db_get_today_data was called with the correct parameters
-        mock_db_get_today_data.assert_called_once_with("2025-09-28", "59357664")
+        mock_db_get_today_data.assert_called_once_with("2025-09-28", "59357664", tz="UTC")
 
     def test_get_today_data_without_user_id_header(self, client):
         """Test getting today data without x-user-id header returns 401."""
@@ -179,7 +179,9 @@ class TestDailySummaryEndpoints:
 
             assert response.status_code == 200
             # Should use the user ID as-is (including whitespace)
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "  59357664  ")
+            mock_db_get_daily_summary.assert_called_once_with(
+                "2025-09-28", "  59357664  ", tz="UTC"
+            )
 
     def test_user_id_case_sensitivity(self, client):
         """Test that x-user-id header is case insensitive (FastAPI behavior)."""
@@ -194,7 +196,7 @@ class TestDailySummaryEndpoints:
 
             assert response.status_code == 200
             # Should use the user ID since FastAPI is case-insensitive
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "59357664")
+            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "59357664", tz="UTC")
 
     def test_multiple_user_id_headers(self, client):
         """Test behavior with multiple x-user-id headers (HTTP spec behavior)."""
@@ -210,7 +212,9 @@ class TestDailySummaryEndpoints:
 
             assert response.status_code == 200
             # Should use the full comma-separated value
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "59357664,99999999")
+            mock_db_get_daily_summary.assert_called_once_with(
+                "2025-09-28", "59357664,99999999", tz="UTC"
+            )
 
     def test_special_characters_in_user_id(self, client):
         """Test user ID with special characters (should still be passed as is)."""
@@ -224,7 +228,7 @@ class TestDailySummaryEndpoints:
             response = client.get("/daily-summary/2025-09-28", headers=headers)
 
             assert response.status_code == 200
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", special_id)
+            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", special_id, tz="UTC")
 
     def test_very_long_user_id(self, client):
         """Test user ID with very long string."""
@@ -239,7 +243,7 @@ class TestDailySummaryEndpoints:
 
             assert response.status_code == 200
             # Should use the user ID as-is
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", long_user_id)
+            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", long_user_id, tz="UTC")
 
     def test_numeric_user_id(self, client):
         """Test user ID that is purely numeric."""
@@ -253,7 +257,7 @@ class TestDailySummaryEndpoints:
 
             assert response.status_code == 200
             # Should use the user ID as-is
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "123456789")
+            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", "123456789", tz="UTC")
 
     def test_uuid_user_id(self, client):
         """Test user ID that is a UUID."""
@@ -268,4 +272,4 @@ class TestDailySummaryEndpoints:
 
             assert response.status_code == 200
             # Should use the user ID as-is
-            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", uuid_user_id)
+            mock_db_get_daily_summary.assert_called_once_with("2025-09-28", uuid_user_id, tz="UTC")
