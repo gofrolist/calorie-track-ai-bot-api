@@ -482,7 +482,7 @@ graph TB
     LOGS --> METRICS
 ```
 
-The backend image is built by `backend-build.yml` (Dockerfile `runtime` stage), pushed to GHCR, and deployed with `flyctl deploy --image` by `backend-deploy.yml`. The frontend is built and deployed with the Vercel CLI by `frontend-deploy.yml`.
+Deploys run from `deploy.yml` when release-please publishes a release: it waits for CI on the release commit, builds the backend image (Dockerfile `runtime` stage), pushes it to GHCR as `vX.Y.Z`, deploys it with `flyctl deploy --image`, and builds and deploys the frontend with the Vercel CLI.
 
 ## Environment Configuration
 

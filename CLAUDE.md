@@ -19,9 +19,11 @@ make docker-dev       # Full stack via Docker Compose
 
 ## CI/CD
 
-GitHub Actions. CI workflows trigger on path-based changes (PRs and pushes to `main`); build/deploy workflows chain via `workflow_run` after a successful run on `main` (or run on `v*` tags):
-- `backend-ci.yml` -> `backend-build.yml` (GHCR image) -> `backend-deploy.yml` (Fly.io)
-- `frontend-ci.yml` -> `frontend-deploy.yml` (Vercel)
+GitHub Actions. Merging to `main` does not deploy:
+- `backend-ci.yml`, `frontend-ci.yml` — path-filtered CI on PRs and pushes to `main`
+- `release-please.yml` — keeps a release PR open from Conventional Commits (`feat:`, `fix:`; `chore:` is left out of the changelog); merging it bumps `backend/pyproject.toml`, `backend/uv.lock`, `frontend/package.json` and `CHANGELOG.md` and publishes `vX.Y.Z`
+- `deploy.yml` — on a published release (or manual dispatch with an existing tag, for rollback): waits for CI on the release commit, builds `ghcr.io/<repo>:vX.Y.Z`, deploys it to Fly.io and the frontend to Vercel
+- `dependabot-auto-merge.yml` — squash-merges Dependabot uv/bun patch and minor bumps once every other workflow on the PR passed; majors and GitHub Actions bumps wait for a human
 
 ## Database
 

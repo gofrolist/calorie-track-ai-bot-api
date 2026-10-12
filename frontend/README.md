@@ -204,7 +204,7 @@ const MyComponent = () => {
 ## 🚀 Deployment
 
 ### Vercel
-Production deploys run from GitHub Actions (`.github/workflows/frontend-deploy.yml`) after `Frontend CI` succeeds on `main` (or on `v*` tags / manual dispatch): `bun run build`, then `vercel --prod`. To deploy manually:
+Production deploys run from GitHub Actions (`.github/workflows/deploy.yml`) when a release is published, after `Frontend CI` passes on the release commit: `bun run build`, then `vercel --prod`. To deploy manually:
 ```bash
 bun install --global vercel
 vercel --prod
