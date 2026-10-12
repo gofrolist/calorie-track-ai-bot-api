@@ -12,7 +12,7 @@ These are the secrets referenced by the workflows in `.github/workflows/`. Add t
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `RELEASE_PLEASE_TOKEN` | Fine-grained PAT for this repository with **Contents** and **Pull requests** read/write. Not `GITHUB_TOKEN`: PRs and releases created with it trigger no workflows, so the release PR would get no CI and the release would never deploy | `github_pat_...` |
+| `RELEASE_PLEASE_TOKEN` | Fine-grained PAT for this repository with **Contents**, **Issues** and **Pull requests** read/write (Issues: release-please labels the release PR). Not `GITHUB_TOKEN`: PRs and releases created with it trigger no workflows, so the release PR would get no CI and the release would never deploy | `github_pat_...` |
 
 ## Backend Deployment (`deploy.yml`)
 
