@@ -1,6 +1,6 @@
 # Calorie Track AI - Telegram Mini App
 
-A modern, mobile-first Telegram Mini App for calorie tracking with AI-powered food recognition. Built with React 19, TypeScript 5.9, Vite 7, Tailwind CSS v4, and TanStack Query (with an Orval-generated API client), featuring meal tracking, goal setting, and statistics.
+A modern, mobile-first Telegram Mini App for calorie tracking with AI-powered food recognition. Built with React 19, TypeScript 5.9, Vite 8, Tailwind CSS v4, and TanStack Query (with an Orval-generated API client), featuring meal tracking, goal setting, and statistics.
 
 ## 🚀 Quick Start
 
@@ -230,7 +230,7 @@ VITE_API_BASE_URL=https://your-api-domain.com
 
 ### Performance Optimization
 - **Code Splitting**: Route-based splitting with `React.lazy()`
-- **Vendor Chunks**: `react-vendor`, `chart-vendor`, `i18n-vendor` (`manualChunks` in `vite.config.ts`)
+- **Vendor Chunks**: `react-vendor`, `chart-vendor`, `i18n-vendor` (`codeSplitting.groups` in `vite.config.ts`)
 - **Tree Shaking**: Unused code elimination
 
 ## 📊 Performance
