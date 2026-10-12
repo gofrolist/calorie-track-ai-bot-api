@@ -67,7 +67,7 @@ src/calorie_track_ai_bot/
 
 ## Deployment
 
-Do NOT offer to deploy to Fly.io unless explicitly asked. GitHub Actions deploys automatically on push to main (Backend CI → Backend Build → Backend Deploy).
+Do NOT offer to deploy to Fly.io unless explicitly asked. Merging to main does not deploy: merging the release-please PR publishes a `vX.Y.Z` release, and `deploy.yml` then deploys that tag to Fly.io (and the frontend to Vercel).
 
 ## Code Style
 
