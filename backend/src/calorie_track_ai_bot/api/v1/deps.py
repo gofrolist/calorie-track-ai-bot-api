@@ -7,30 +7,70 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import HTTPException, Request
 
+from ...services import config
 from ...services.db import resolve_user_id
+from ...services.telegram_auth import InitDataError, validate_init_data
+
+INIT_DATA_SCHEME = "tma "
 
 
-def get_telegram_user_id(request: Request) -> str:
-    """Extract and validate telegram user ID from x-user-id header.
+def _identify_telegram_user(request: Request) -> str:
+    """Return the telegram user ID from signed Mini App initData.
+
+    initData is sent as `Authorization: tma <initData>`. If it is absent and
+    ALLOW_INSECURE_USER_ID_HEADER is on, the unsigned x-user-id header is used.
+    """
+    authorization = request.headers.get("authorization", "")
+    if authorization[: len(INIT_DATA_SCHEME)].lower() == INIT_DATA_SCHEME:
+        if not config.TELEGRAM_BOT_TOKEN:
+            config.logger.error("Cannot validate initData: TELEGRAM_BOT_TOKEN not configured")
+            raise HTTPException(status_code=500, detail="Authentication not configured")
+        try:
+            user_id = validate_init_data(
+                authorization[len(INIT_DATA_SCHEME) :].strip(), config.TELEGRAM_BOT_TOKEN
+            )
+        except InitDataError as e:
+            config.logger.warning(f"Rejected initData: {e}")
+            raise HTTPException(status_code=401, detail="Invalid Telegram initData") from e
+        return str(user_id)
+
+    if config.ALLOW_INSECURE_USER_ID_HEADER:
+        telegram_user_id = request.headers.get("x-user-id")
+        if telegram_user_id:
+            return telegram_user_id
+
+    raise HTTPException(status_code=401, detail="Missing Telegram initData")
+
+
+async def _authenticate(request: Request) -> tuple[str, str]:
+    """Return (telegram user ID, internal user ID) for a registered user.
+
+    Raises 403 for a Telegram user who is not in the users table: the API serves
+    only users registered through the bot.
+    """
+    telegram_user_id = _identify_telegram_user(request)
+    internal_user_id = await resolve_user_id(telegram_user_id)
+    if not internal_user_id:
+        config.logger.warning(f"Rejected request from unregistered user {telegram_user_id}")
+        raise HTTPException(status_code=403, detail="User not registered")
+    return telegram_user_id, internal_user_id
+
+
+async def get_telegram_user_id(request: Request) -> str:
+    """Return the telegram user ID of the registered user making the request.
 
     Use as a FastAPI dependency: Depends(get_telegram_user_id)
     """
-    telegram_user_id = request.headers.get("x-user-id")
-    if not telegram_user_id:
-        raise HTTPException(status_code=401, detail="Missing x-user-id header")
+    telegram_user_id, _ = await _authenticate(request)
     return telegram_user_id
 
 
 async def get_authenticated_user_id(request: Request) -> str:
-    """Authenticate the request and resolve the telegram user to an internal user ID.
+    """Return the internal user ID of the registered user making the request.
 
-    Combines user authentication (x-user-id header extraction) with database
-    user ID resolution into a single reusable dependency.
+    Use as a FastAPI dependency, or await it directly with the request.
     """
-    telegram_user_id = get_telegram_user_id(request)
-    internal_user_id = await resolve_user_id(telegram_user_id)
-    if not internal_user_id:
-        raise HTTPException(status_code=404, detail="User not found")
+    _, internal_user_id = await _authenticate(request)
     return internal_user_id
 
 
