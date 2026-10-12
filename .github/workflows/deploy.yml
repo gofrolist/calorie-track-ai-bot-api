@@ -140,7 +140,7 @@ jobs:
       contents: read
       packages: write # push to GHCR
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.ci-gate.outputs.sha }}
           persist-credentials: false
@@ -195,7 +195,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.ci-gate.outputs.sha }}
           persist-credentials: false
@@ -220,7 +220,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.ci-gate.outputs.sha }}
           persist-credentials: false
