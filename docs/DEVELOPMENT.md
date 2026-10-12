@@ -300,7 +300,7 @@ If you have port conflicts:
 
 ## Production Deployment
 
-Merging to `main` does not deploy. `release-please.yml` keeps a release PR open; merging it publishes a `vX.Y.Z` release, and `deploy.yml` then builds the image and deploys the backend to Fly.io and the frontend to Vercel (it can also be dispatched manually with an existing tag to roll back). Manual deploys:
+Deployments normally happen from GitHub Actions when the release-please PR is merged: the published `vX.Y.Z` release runs `deploy.yml`, which waits for CI on the release commit and deploys both apps. Run `deploy.yml` manually with an existing tag to redeploy or roll back. Manual deploys:
 
 > **New Neon project?** Apply the schema before the first release is deployed — no workflow runs it: `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/infra/schema.sql` (see [step 3](#3-set-up-the-database-schema)). Without it, the deployed backend starts and passes health checks, but any message the bot processes fails with `relation "users" does not exist`.
 

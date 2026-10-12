@@ -1,6 +1,6 @@
 {
   "name": "calorie-track-mini-app",
-  "version": "0.2.0",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -48,8 +48,8 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^5",
-    "ajv": "^8.18.0",
+    "@vitejs/plugin-react": "^6",
+    "ajv": "^8.20.0",
     "eslint": "^9",
     "eslint-plugin-react-hooks": "^7",
     "eslint-plugin-react-refresh": "^0.5",
@@ -62,7 +62,7 @@
     "tailwindcss": "^4",
     "typescript": "^5.9",
     "typescript-eslint": "^8",
-    "vite": "^7",
-    "vitest": "^4"
+    "vite": "^8",
+    "vitest": "^5"
   }
 }

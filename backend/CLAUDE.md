@@ -67,7 +67,7 @@ src/calorie_track_ai_bot/
 
 ## Deployment
 
-Do NOT offer to deploy to Fly.io unless explicitly asked. Merging to main does not deploy: merging the release-please PR publishes a `vX.Y.Z` release, and `deploy.yml` then deploys that tag to Fly.io (and the frontend to Vercel).
+Do NOT offer to deploy to Fly.io unless explicitly asked. Pushes to main do not deploy: `deploy.yml` deploys when release-please publishes a `vX.Y.Z` release (after CI passes on the release commit), or by manual dispatch with an existing tag.
 
 ## Code Style
 
