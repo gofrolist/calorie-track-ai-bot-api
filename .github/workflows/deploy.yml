@@ -17,8 +17,10 @@ on:
 
 permissions: {}
 
-# Two deploys must not interleave: on the whole workflow, so two releases cut
-# close together deploy in the order they were published. queue: max keeps
+# Two deploys must not interleave: on the whole workflow. Queued runs start
+# in the order they began waiting, which GitHub does not guarantee matches
+# publish order; if two releases land minutes apart, check that prod ended on
+# the newer one (or redeploy it by hand). queue: max keeps
 # every pending run; by default a newer run cancels the one pending before
 # it, and prod would silently skip that version.
 concurrency:
@@ -153,9 +155,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # A redeploy or rollback ships the image the release already pushed, not
+      # a rebuild: the Dockerfile's uv:0.8 and apk packages float, so a rebuild
+      # would differ and overwrite the release's tag. Built only when missing.
+      - name: Look for the release image
+        id: existing
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if docker buildx imagetools inspect "${IMAGE}:${VERSION}" >/dev/null 2>&1; then
+            echo "found=true" >>"$GITHUB_OUTPUT"
+            echo "${IMAGE}:${VERSION} exists; deploying it as is"
+          fi
+
       # Tagged with the version so a rollback deploys the image that release
       # shipped; :latest follows the newest deploy for anyone pulling by hand.
       - name: Build & push image
+        if: steps.existing.outputs.found != 'true'
         uses: docker/build-push-action@v7
         with:
           context: ./backend
@@ -165,6 +180,10 @@ jobs:
             ${{ env.IMAGE }}:latest
           cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+
+      - name: Point :latest at the release image
+        if: steps.existing.outputs.found == 'true'
+        run: docker buildx imagetools create --tag "${IMAGE}:latest" "${IMAGE}:${VERSION}"
 
   backend-deploy:
     needs: [ci-gate, backend-image]
@@ -189,8 +208,10 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl deploy --image "${IMAGE}:${VERSION}"
 
+  # After the backend: a frontend that calls endpoints the backend failed to
+  # ship would break in production.
   frontend-deploy:
-    needs: ci-gate
+    needs: [ci-gate, backend-deploy]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

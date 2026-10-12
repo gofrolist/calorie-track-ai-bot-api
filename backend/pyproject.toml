@@ -1,6 +1,6 @@
 [project]
 name = "calorie-track-ai-bot"
-version = "0.1.0"
+version = "0.1.2"
 description = "Telegram bot to track calories using AI"
 authors = [
   {name = "Evgenii Vasilenko", email = "vasilenko.e@gmail.com"}
