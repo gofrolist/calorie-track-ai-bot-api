@@ -303,6 +303,8 @@ Deployments normally happen automatically from GitHub Actions on push to `main` 
 
 > **New Neon project?** Apply the schema before the first deploy — it is not run automatically: `psql "$DATABASE_URL" -f backend/infra/schema.sql`. Without it, the deployed backend starts and passes health checks, but any message the bot processes fails with `relation "users" does not exist`.
 
+> **Deploying your own fork?** Set the `CORS_ORIGINS` secret on your backend to your frontend's actual URL (e.g. `fly secrets set CORS_ORIGINS=https://your-frontend.vercel.app,https://t.me`). With `APP_ENV=production` and no `CORS_ORIGINS` set, the backend defaults to allowing only this repo's own Vercel domain — your Mini App will load, but every API call is silently blocked by CORS, so pages like meals/goals/statistics appear empty with nothing obviously wrong in the backend logs. See `get_cors_origins()` in `backend/src/calorie_track_ai_bot/services/config.py`.
+
 ### Backend (Fly.io)
 ```bash
 cd backend
