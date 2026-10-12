@@ -289,7 +289,7 @@ If you have port conflicts:
 
 ## Production Deployment
 
-Deployments normally happen automatically from GitHub Actions on push to `main` (`backend-ci.yml` -> `backend-build.yml` -> `backend-deploy.yml`, and `frontend-ci.yml` -> `frontend-deploy.yml`). Manual deploys:
+Deployments normally happen from GitHub Actions when the release-please PR is merged: the published `vX.Y.Z` release runs `deploy.yml`, which waits for CI on the release commit and deploys both apps. Run `deploy.yml` manually with an existing tag to redeploy or roll back. Manual deploys:
 
 ### Backend (Fly.io)
 ```bash
