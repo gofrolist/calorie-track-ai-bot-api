@@ -6,25 +6,44 @@ Provides reusable dependency functions for authentication and user resolution.
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import HTTPException, Request
+from fastapi.security.utils import get_authorization_scheme_param
 
+from ...services import config
 from ...services.db import resolve_user_id
+from ...services.telegram_auth import InitDataError, validate_init_data
 
 
 def get_telegram_user_id(request: Request) -> str:
-    """Extract and validate telegram user ID from x-user-id header.
+    """Return the telegram user ID from signed Mini App initData.
 
+    initData is sent as `Authorization: tma <initData>`. If it is absent and
+    ALLOW_INSECURE_USER_ID_HEADER is on, the unsigned x-user-id header is used.
     Use as a FastAPI dependency: Depends(get_telegram_user_id)
     """
-    telegram_user_id = request.headers.get("x-user-id")
-    if not telegram_user_id:
-        raise HTTPException(status_code=401, detail="Missing x-user-id header")
-    return telegram_user_id
+    scheme, init_data = get_authorization_scheme_param(request.headers.get("authorization"))
+    if scheme.lower() == "tma":
+        if not config.TELEGRAM_BOT_TOKEN:
+            config.logger.error("Cannot validate initData: TELEGRAM_BOT_TOKEN not configured")
+            raise HTTPException(status_code=500, detail="Authentication not configured")
+        try:
+            user_id = validate_init_data(init_data, config.TELEGRAM_BOT_TOKEN)
+        except InitDataError as e:
+            config.logger.warning(f"Rejected initData: {e}")
+            raise HTTPException(status_code=401, detail="Invalid Telegram initData") from e
+        return str(user_id)
+
+    if config.ALLOW_INSECURE_USER_ID_HEADER:
+        telegram_user_id = request.headers.get("x-user-id")
+        if telegram_user_id:
+            return telegram_user_id
+
+    raise HTTPException(status_code=401, detail="Missing Telegram initData")
 
 
 async def get_authenticated_user_id(request: Request) -> str:
     """Authenticate the request and resolve the telegram user to an internal user ID.
 
-    Combines user authentication (x-user-id header extraction) with database
+    Combines user authentication (get_telegram_user_id) with database
     user ID resolution into a single reusable dependency.
     """
     telegram_user_id = get_telegram_user_id(request)
