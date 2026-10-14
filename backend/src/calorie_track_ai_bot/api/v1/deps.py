@@ -46,7 +46,7 @@ def get_telegram_user_id(request: Request) -> str:
 async def get_authenticated_user_id(request: Request) -> str:
     """Authenticate the request and resolve the telegram user to an internal user ID.
 
-    Combines user authentication (x-user-id header extraction) with database
+    Combines user authentication (get_telegram_user_id) with database
     user ID resolution into a single reusable dependency.
     """
     telegram_user_id = get_telegram_user_id(request)
