@@ -51,6 +51,7 @@ class TestEstimator:
             "kcal_min": 400,
             "kcal_max": 600,
             "confidence": 0.8,
+            "macronutrients": {"protein": 20, "carbs": 60, "fats": 18},
             "items": [{"label": "pizza", "kcal": 500, "confidence": 0.8}],
         }
 
@@ -87,7 +88,8 @@ class TestEstimator:
             # Check response format
             response_format = call_args.kwargs["response_format"]
             assert response_format["type"] == "json_schema"
-            assert "json_schema" in response_format
+            assert response_format["json_schema"]["schema"] is SCHEMA_WITH_MACROS
+            assert response_format["json_schema"]["strict"] is True
 
     @pytest.mark.asyncio
     async def test_estimate_from_image_url_no_content(self):

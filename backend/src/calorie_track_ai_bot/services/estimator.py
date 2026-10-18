@@ -3,6 +3,7 @@ import os
 from typing import Any
 
 from openai import AsyncOpenAI
+from openai.types.shared_params import ResponseFormatJSONSchema
 
 from .config import APP_ENV, OPENAI_API_KEY, OPENAI_MODEL, logger
 
@@ -21,7 +22,7 @@ elif APP_ENV == "dev":
 else:
     raise ValueError("OPENAI_API_KEY must be set")
 
-# Extended schema for multi-photo with macronutrients (Feature: 003-update-logic-for)
+# Structured-output schema shared by single-photo and multi-photo estimation
 SCHEMA_WITH_MACROS = {
     "type": "object",
     "properties": {
@@ -60,6 +61,20 @@ SCHEMA_WITH_MACROS = {
     "additionalProperties": False,
 }
 
+RESPONSE_FORMAT: ResponseFormatJSONSchema = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "EstimateWithMacros",
+        "schema": SCHEMA_WITH_MACROS,
+        "strict": True,
+    },
+}
+
+ESTIMATE_INSTRUCTIONS = (
+    "Estimate total calories (min, max, mean) and macronutrients "
+    "(protein, carbs, fats in grams). Return structured JSON."
+)
+
 
 async def estimate_from_image_url(image_url: str) -> dict[str, Any]:
     if os.getenv("PYTEST_CURRENT_TEST") and client is None:
@@ -89,25 +104,12 @@ async def estimate_from_image_url(image_url: str) -> dict[str, Any]:
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": (
-                            "Estimate total calories (min, max, mean) and macronutrients "
-                            "(protein, carbs, fats in grams). Return structured JSON."
-                        ),
-                    },
+                    {"type": "text", "text": ESTIMATE_INSTRUCTIONS},
                     {"type": "image_url", "image_url": {"url": image_url}},
                 ],
             }
         ],
-        response_format={
-            "type": "json_schema",
-            "json_schema": {
-                "name": "EstimateWithMacros",
-                "schema": SCHEMA_WITH_MACROS,
-                "strict": True,
-            },
-        },
+        response_format=RESPONSE_FORMAT,
     )
     logger.info("OpenAI usage (single photo): %s", resp.usage)
     content = resp.choices[0].message.content
@@ -182,10 +184,7 @@ class CalorieEstimator:
         if description:
             prompt_text += f"Description: {description}. "
 
-        prompt_text += (
-            "Estimate total calories (min, max, mean) and macronutrients "
-            "(protein, carbs, fats in grams). Return structured JSON."
-        )
+        prompt_text += ESTIMATE_INSTRUCTIONS
 
         # Build content with all photos
         content: list[dict[str, Any]] = [{"type": "text", "text": prompt_text}]
@@ -196,14 +195,7 @@ class CalorieEstimator:
         resp = await self.client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[{"role": "user", "content": content}],  # type: ignore
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "EstimateWithMacros",
-                    "schema": SCHEMA_WITH_MACROS,
-                    "strict": True,
-                },
-            },
+            response_format=RESPONSE_FORMAT,
         )
 
         logger.info("OpenAI usage (%d photos): %s", len(valid_urls), resp.usage)
