@@ -5,29 +5,30 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from calorie_track_ai_bot.services.estimator import SCHEMA, estimate_from_image_url
+from calorie_track_ai_bot.services.estimator import SCHEMA_WITH_MACROS, estimate_from_image_url
 
 
 class TestEstimator:
     """Test estimator functions."""
 
     def test_schema_structure(self):
-        """Test that SCHEMA has the correct structure."""
-        assert "type" in SCHEMA
-        assert SCHEMA["type"] == "object"
-        assert "properties" in SCHEMA
-        assert "required" in SCHEMA
+        """Test that SCHEMA_WITH_MACROS has the correct structure."""
+        assert "type" in SCHEMA_WITH_MACROS
+        assert SCHEMA_WITH_MACROS["type"] == "object"
+        assert "properties" in SCHEMA_WITH_MACROS
+        assert "required" in SCHEMA_WITH_MACROS
 
         # Check required fields
-        required_fields = SCHEMA["required"]
+        required_fields = SCHEMA_WITH_MACROS["required"]
         assert "kcal_mean" in required_fields
         assert "kcal_min" in required_fields
         assert "kcal_max" in required_fields
         assert "confidence" in required_fields
+        assert "macronutrients" in required_fields
         assert "items" in required_fields
 
         # Check properties structure
-        properties = SCHEMA["properties"]
+        properties = SCHEMA_WITH_MACROS["properties"]
         assert "kcal_mean" in properties
         assert "kcal_min" in properties
         assert "kcal_max" in properties
