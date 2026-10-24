@@ -1,7 +1,9 @@
-import uuid
 from typing import Any
 
+from psycopg import errors
+
 from .. import database
+from ..config import logger
 from ._base import resolve_user_id
 
 
@@ -27,22 +29,25 @@ async def db_create_or_update_goal(telegram_user_id: str, daily_kcal_target: int
     if not user_id:
         raise ValueError(f"Could not resolve user ID for telegram_user_id: {telegram_user_id}")
 
-    existing = await db_get_goal(telegram_user_id)
-
+    # Atomic upsert; relies on the unique index on goals(user_id)
     async with pool.connection() as conn:
-        if existing:
+        try:
             cur = await conn.execute(
-                "UPDATE goals SET daily_kcal_target = %s, updated_at = NOW() WHERE id = %s RETURNING *",
-                (daily_kcal_target, existing["id"]),
+                """
+                INSERT INTO goals (user_id, daily_kcal_target) VALUES (%s, %s)
+                ON CONFLICT (user_id) DO UPDATE
+                    SET daily_kcal_target = EXCLUDED.daily_kcal_target, updated_at = NOW()
+                RETURNING *
+                """,
+                (user_id, daily_kcal_target),
             )
-            row = await cur.fetchone()
-            if row:
-                return dict(row)
-
-        # Create new goal
-        goal_id = str(uuid.uuid4())
-        await conn.execute(
-            "INSERT INTO goals (id, user_id, daily_kcal_target) VALUES (%s, %s, %s)",
-            (goal_id, user_id, daily_kcal_target),
-        )
-        return {"id": goal_id, "user_id": user_id, "daily_kcal_target": daily_kcal_target}
+        except errors.InvalidColumnReference:
+            logger.error(
+                "Cannot save goals: the database is missing the unique index "
+                "idx_goals_user_id_unique on goals(user_id). Apply it as in backend/infra/schema.sql."
+            )
+            raise
+        row = await cur.fetchone()
+        # An upsert with RETURNING always returns the inserted or updated row
+        assert row is not None
+        return dict(row)
