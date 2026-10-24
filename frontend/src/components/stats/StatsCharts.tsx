@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
+  ReferenceLine,
   PieChart,
   Pie,
   Cell,
@@ -14,6 +16,9 @@ import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
 } from "@/api/model";
+import { parseLocalDate } from "@/utils/date";
+import { dailyCalories } from "./chartData";
+import { formatDecimal } from "@/utils/number";
 
 interface StatsChartsProps {
   dailyStats: DailyStatisticsResponse;
@@ -22,8 +27,21 @@ interface StatsChartsProps {
 
 const MACRO_COLORS = ["#4CAF50", "#FF9800", "#2196F3"];
 
+function formatChartDate(date: string, language: string): string {
+  return parseLocalDate(date).toLocaleDateString(language, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // Index of the hovered day in the calories chart, to keep its tooltip on one side
+  const [activeDay, setActiveDay] = useState<number | null>(null);
+  const formatNumber = (value: number) => formatDecimal(value, i18n.language);
+  const formatDate = (date: string) => formatChartDate(date, i18n.language);
+  const formatGrams = (value: number) =>
+    t("common.grams", { value: formatNumber(value) });
 
   if (dailyStats.data.length === 0) {
     return (
@@ -39,9 +57,13 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
   }
 
   const { summary } = dailyStats;
+  const chartData = dailyCalories(dailyStats);
+  const goalCalories = dailyStats.data.find(
+    (day) => day.goal_calories,
+  )?.goal_calories;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-tg-secondary-bg p-4 text-center">
@@ -62,41 +84,58 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
         </div>
       </div>
 
-      {/* Calories line chart */}
+      {/* Daily calories bar chart */}
       <div>
         <h3 className="mb-2 text-sm font-medium text-tg-text">
           {t("statistics.caloriesOverTime")}
         </h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={dailyStats.data}>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart
+            data={chartData}
+            onMouseMove={(state) =>
+              setActiveDay(
+                state.activeTooltipIndex == null
+                  ? null
+                  : Number(state.activeTooltipIndex),
+              )
+            }
+            onMouseLeave={() => setActiveDay(null)}
+          >
             <XAxis
               dataKey="date"
-              tickFormatter={(d) =>
-                new Date(d).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                })
-              }
+              tickFormatter={formatDate}
               tick={{ fontSize: 10 }}
             />
             <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Line
-              type="monotone"
+            {/* Left-half days show the tooltip on their right, right-half days on their
+                left. Left to recharts, the side depends on the tooltip's width, so
+                neighbouring days with wider and narrower values flip sides; and the
+                default animation slid it across the bar each time. */}
+            <Tooltip
+              isAnimationActive={false}
+              reverseDirection={{
+                x: activeDay !== null && activeDay >= chartData.length / 2,
+              }}
+              labelFormatter={(date) => formatDate(String(date))}
+              formatter={(kcal) => [
+                formatNumber(Math.round(Number(kcal))),
+                t("statistics.chart.calories"),
+              ]}
+            />
+            <Bar
               dataKey="total_calories"
-              stroke="var(--color-tg-button)"
-              strokeWidth={2}
-              dot={false}
+              fill="var(--color-tg-button)"
+              radius={[3, 3, 0, 0]}
             />
-            <Line
-              type="monotone"
-              dataKey="goal_calories"
-              stroke="var(--color-tg-hint)"
-              strokeWidth={1}
-              strokeDasharray="4 4"
-              dot={false}
-            />
-          </LineChart>
+            {goalCalories && (
+              <ReferenceLine
+                y={goalCalories}
+                stroke="var(--color-tg-hint)"
+                strokeDasharray="4 4"
+                ifOverflow="extendDomain"
+              />
+            )}
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
@@ -136,16 +175,18 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
             </ResponsiveContainer>
             <div className="flex flex-col gap-1 text-sm">
               <span style={{ color: MACRO_COLORS[0] }}>
-                {t("statistics.chart.protein")}: {macroStats.protein_grams}g (
-                {macroStats.protein_percent}%)
+                {t("statistics.chart.protein")}:{" "}
+                {formatGrams(macroStats.protein_grams)} (
+                {formatNumber(macroStats.protein_percent)}%)
               </span>
               <span style={{ color: MACRO_COLORS[1] }}>
-                {t("statistics.chart.fat")}: {macroStats.fat_grams}g (
-                {macroStats.fat_percent}%)
+                {t("statistics.chart.fat")}: {formatGrams(macroStats.fat_grams)}{" "}
+                ({formatNumber(macroStats.fat_percent)}%)
               </span>
               <span style={{ color: MACRO_COLORS[2] }}>
-                {t("statistics.chart.carbs")}: {macroStats.carbs_grams}g (
-                {macroStats.carbs_percent}%)
+                {t("statistics.chart.carbs")}:{" "}
+                {formatGrams(macroStats.carbs_grams)} (
+                {formatNumber(macroStats.carbs_percent)}%)
               </span>
             </div>
           </div>
