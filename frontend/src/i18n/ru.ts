@@ -210,6 +210,7 @@ const ru = {
   },
   common: {
     retry: "Повторить",
+    grams: "{{value}} г",
   },
   share: {
     button: "Поделиться",

@@ -209,6 +209,7 @@ const en = {
   },
   common: {
     retry: "Retry",
+    grams: "{{value}}g",
   },
   share: {
     button: "Share",
