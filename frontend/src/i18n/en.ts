@@ -209,6 +209,8 @@ const en = {
   },
   common: {
     retry: "Retry",
+    sessionExpired:
+      "Your session has expired. Please reopen the app to continue.",
   },
   share: {
     button: "Share",
@@ -230,6 +232,12 @@ const en = {
     errorDetails: "Error Details",
     reload: "Reload Page",
     goHome: "Go Home",
+  },
+  notRegistered: {
+    title: "Start the bot first",
+    message:
+      "To use the app, open the bot's chat and tap Start. Then open the app again.",
+    close: "Back to the chat",
   },
 } as const;
 
