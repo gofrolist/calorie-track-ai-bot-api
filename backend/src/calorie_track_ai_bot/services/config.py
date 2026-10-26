@@ -60,6 +60,9 @@ MEMORY_THRESHOLD_MB: float = float(os.getenv("MEMORY_THRESHOLD_MB", "100"))
 CPU_THRESHOLD_PERCENT: float = float(os.getenv("CPU_THRESHOLD_PERCENT", "200"))
 WEBHOOK_URL: str | None = os.getenv("WEBHOOK_URL")
 USE_WEBHOOK: bool = os.getenv("USE_WEBHOOK", "false").lower() == "true"
+# Bearer token for admin-only routes (webhook management, analytics, dev diagnostics).
+# Unset: those routes are disabled (404).
+ADMIN_API_TOKEN: str | None = os.getenv("ADMIN_API_TOKEN") or None
 ENABLE_WORKER: bool = os.getenv("ENABLE_WORKER", "false").lower() == "true"
 
 
