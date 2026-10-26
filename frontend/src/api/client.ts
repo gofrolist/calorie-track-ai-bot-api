@@ -1,12 +1,30 @@
+import i18n from "@/i18n";
+
 const SESSION_CORRELATION_ID = crypto.randomUUID();
 
-function getTelegramUserId(): string | undefined {
-  return (
-    window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() ??
-    (import.meta.env.DEV
-      ? (import.meta.env.VITE_DEV_USER_ID ?? "59357664")
-      : undefined)
-  );
+// Signed Mini App launch data; the backend verifies it and takes the user from it.
+function getTelegramInitData(): string | undefined {
+  return window.Telegram?.WebApp?.initData || undefined;
+}
+
+let sessionExpiredShown = false;
+
+// initData is fixed when the Mini App opens and the backend rejects it after
+// 24 hours, so a 401 to a signed request means the app has to be reopened.
+// Shown once, as several queries usually fail together.
+function handleExpiredSession(): void {
+  const webapp = window.Telegram?.WebApp;
+  if (sessionExpiredShown || !webapp) return;
+  sessionExpiredShown = true;
+  webapp.showAlert(i18n.t("common.sessionExpired"), () => webapp.close());
+}
+
+// Unsigned user ID for dev builds outside Telegram. Accepted only by a backend
+// running with ALLOW_INSECURE_USER_ID_HEADER=true.
+function getDevUserId(): string | undefined {
+  return import.meta.env.DEV
+    ? (import.meta.env.VITE_DEV_USER_ID ?? "59357664")
+    : undefined;
 }
 
 // IANA zone (e.g. "America/New_York") the backend uses to bucket meals into
@@ -78,9 +96,14 @@ export async function customFetch<T>(
     headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
   }
 
-  const userId = getTelegramUserId();
-  if (userId) {
-    headers["x-user-id"] = userId;
+  const initData = getTelegramInitData();
+  if (initData) {
+    headers["Authorization"] = `tma ${initData}`;
+  } else {
+    const devUserId = getDevUserId();
+    if (devUserId) {
+      headers["x-user-id"] = devUserId;
+    }
   }
 
   const timeZone = getTimeZone();
@@ -96,6 +119,9 @@ export async function customFetch<T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401 && initData) {
+      handleExpiredSession();
+    }
     const errorBody = await response
       .json()
       .catch(() => ({ detail: response.statusText }));
