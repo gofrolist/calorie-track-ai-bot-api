@@ -14,6 +14,7 @@ import type {
   DailyStatisticsResponse,
   MacroStatisticsResponse,
 } from "@/api/model";
+import { formatDecimal } from "@/utils/number";
 
 interface StatsChartsProps {
   dailyStats: DailyStatisticsResponse;
@@ -23,7 +24,10 @@ interface StatsChartsProps {
 const MACRO_COLORS = ["#4CAF50", "#FF9800", "#2196F3"];
 
 export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const formatNumber = (value: number) => formatDecimal(value, i18n.language);
+  const formatGrams = (value: number) =>
+    t("common.grams", { value: formatNumber(value) });
 
   if (dailyStats.data.length === 0) {
     return (
@@ -80,7 +84,7 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
               tick={{ fontSize: 10 }}
             />
             <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip />
+            <Tooltip formatter={(value) => formatNumber(Number(value))} />
             <Line
               type="monotone"
               dataKey="total_calories"
@@ -136,16 +140,18 @@ export function StatsCharts({ dailyStats, macroStats }: StatsChartsProps) {
             </ResponsiveContainer>
             <div className="flex flex-col gap-1 text-sm">
               <span style={{ color: MACRO_COLORS[0] }}>
-                {t("statistics.chart.protein")}: {macroStats.protein_grams}g (
-                {macroStats.protein_percent}%)
+                {t("statistics.chart.protein")}:{" "}
+                {formatGrams(macroStats.protein_grams)} (
+                {formatNumber(macroStats.protein_percent)}%)
               </span>
               <span style={{ color: MACRO_COLORS[1] }}>
-                {t("statistics.chart.fat")}: {macroStats.fat_grams}g (
-                {macroStats.fat_percent}%)
+                {t("statistics.chart.fat")}: {formatGrams(macroStats.fat_grams)}{" "}
+                ({formatNumber(macroStats.fat_percent)}%)
               </span>
               <span style={{ color: MACRO_COLORS[2] }}>
-                {t("statistics.chart.carbs")}: {macroStats.carbs_grams}g (
-                {macroStats.carbs_percent}%)
+                {t("statistics.chart.carbs")}:{" "}
+                {formatGrams(macroStats.carbs_grams)} (
+                {formatNumber(macroStats.carbs_percent)}%)
               </span>
             </div>
           </div>
