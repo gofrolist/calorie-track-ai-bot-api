@@ -26,6 +26,7 @@ from .api.v1 import (
 from .services.config import (
     ENABLE_WORKER,
     TELEGRAM_BOT_TOKEN,
+    TELEGRAM_WEBHOOK_SECRET,
     USE_WEBHOOK,
     WEBHOOK_URL,
     get_app_env,
@@ -63,6 +64,11 @@ async def correlation_id_middleware(request: Request, call_next):
     return response
 
 
+# Request headers never written to the logs: they carry credentials
+# (Telegram initData, the admin token, Telegram's webhook secret).
+REDACTED_HEADERS = {"authorization", "cookie", "x-user-id", "x-telegram-bot-api-secret-token"}
+
+
 async def request_logging_middleware(request: Request, call_next):
     """Log all requests with structured logging."""
     start_time = time.time()
@@ -71,11 +77,7 @@ async def request_logging_middleware(request: Request, call_next):
     correlation_id = getattr(request.state, "correlation_id", "unknown")
 
     # Log request start (redact sensitive headers)
-    safe_headers = {
-        k: v
-        for k, v in request.headers.items()
-        if k.lower() not in {"authorization", "cookie", "x-user-id"}
-    }
+    safe_headers = {k: v for k, v in request.headers.items() if k.lower() not in REDACTED_HEADERS}
     struct_logger.info(
         "Request started",
         method=request.method,
@@ -135,7 +137,11 @@ async def lifespan(app: FastAPI):
         logger.info("Setting up Telegram webhook automatically...")
         try:
             bot = get_bot()
-            success = await bot.set_webhook(WEBHOOK_URL)
+            success = await bot.set_webhook(WEBHOOK_URL, secret_token=TELEGRAM_WEBHOOK_SECRET)
+            if not TELEGRAM_WEBHOOK_SECRET:
+                logger.warning(
+                    "TELEGRAM_WEBHOOK_SECRET is not set: webhook updates are not verified"
+                )
             if success:
                 logger.info(f"✅ Telegram webhook set successfully: {WEBHOOK_URL}")
             else:
