@@ -1,0 +1,56 @@
+# Changelog
+
+## [0.2.0](https://github.com/gofrolist/calorie-track-ai-bot-api/compare/v0.1.2...v0.2.0) (2026-10-18)
+
+
+### Features
+
+* add OpenAPI spec export to backend Makefile ([523bcac](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/523bcaccd09ef07cfc9fe9431c6ca1f51cf3bc5e))
+* build AppLayout, Navigation, and ErrorBoundary components ([02bb055](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/02bb05548693665ecdf873e123da3efdaa1b8f92))
+* build CalendarPicker and PhotoCarousel components ([aa60179](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/aa601798ac88e414a7ead59cf0bcb4013304c134))
+* build Feedback page ([fa092c6](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/fa092c639e39f7dfe6fa61d387bff33148de4617))
+* build Goals page with goal setting and progress tracking ([d162e0c](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/d162e0c66f55c9df94268d0f6df13eb22b840330))
+* build MealCard component ([465e307](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/465e307b74c43764ab103e719e72c2b397ea6709))
+* build MealEditor modal component ([b32e651](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/b32e651508fe6be0fe63615e0b449855b72f96ec))
+* build Meals page with daily summary and meal list ([bbe6816](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/bbe68169f63e152f45fa048d421465fdc3aa57c1))
+* build Stats page with charts and period selection ([957948c](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/957948c6a2bb784aa67ae689641d028f443b947c))
+* build StatsCharts and PeriodSelector components ([4e666bb](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/4e666bb1103a508400238e5f72c1921ee6197dcf))
+* build TelegramProvider with theme/language/safe-area detection ([237e231](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/237e2319ef711e88d8ea653efde1053ddf5cc556))
+* build UI primitives (Skeleton, Modal) ([0a15133](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/0a15133966b821c0cc313b7c94f9c81345237052))
+* configure Orval v8 and generate API client with TanStack Query hooks ([631f634](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/631f634f8df150b371b097551789ee4db9ff18b7))
+* configure Tailwind CSS v4 with Telegram theme tokens ([e2613b4](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/e2613b4fe1cd08d94fee2f2b79fbaa07fe527c95))
+* migrate frontend to bun package manager ([1ec6596](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/1ec6596c8c935bf9e8401d8feb89a428190e11b3))
+* set up testing infrastructure with Vitest, Testing Library, MSW ([1aa549e](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/1aa549e1a8cfd8258adb12d227a088709c2f8f9f))
+* split i18n translations into separate en.ts and ru.ts files ([acf5798](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/acf5798c19a5b94e1325df7cd281a45aefc4037e))
+* update CI/CD workflows to use bun ([f2c1ae9](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/f2c1ae97cf2b4e52634987ba7c5502a60b85a23f))
+* update Dependabot, Docker, and Makefiles for bun ([a3cf0cc](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/a3cf0cc9c0f7eadc456361679f082606a00d31fc))
+* wire up app entry point, router, and placeholder pages ([147f235](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/147f2355c349482e3d6ebda89dc009915f904ec7))
+
+
+### Bug Fixes
+
+* add retry and health checks to Redis client for Upstash connection stability ([0c2ccd9](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/0c2ccd97c075429f18466dee6e2ffa59af48991e))
+* add TCP keepalives to the Postgres connection pool ([#116](https://github.com/gofrolist/calorie-track-ai-bot-api/issues/116)) ([b19d703](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/b19d703747959c295610a215821693799727ec25))
+* add timeouts to prevent infinite typing indicator loop ([4a28d50](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/4a28d50a91597070e48768e546ba21bea98ab31a))
+* address review findings on schema header and stats date range ([5fcb71e](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/5fcb71e11e552f387254203e70ccdf1ed8c2e182))
+* **backend:** unlink photos before deleting a meal ([f192f0b](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/f192f0be2882c4c0fe764a367a8c1a6e04f95923))
+* bucket meals into the user's local calendar days ([75a149e](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/75a149ef93ecfa2da8124af69d97215cf0078e3a))
+* **db:** regenerate schema.sql from live Neon schema ([cf9c534](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/cf9c53479f19fc37062355aa0d8768bfa7e828a1))
+* **frontend:** include today's meals on the Stats page ([58b82c1](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/58b82c136096cae9e497be4677485c829eb1f54b))
+* handle nullable AbortSignal in customFetch ([49389ab](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/49389ab8a786deda4579afe883669a1355a67713))
+* increase query staleTime to 50min to prevent image reloads ([f2b8dbd](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/f2b8dbda0e71a5bf9aa71696167e8a5f34c43a74))
+* increase Redis socket_timeout to prevent brpop timeout errors ([5c1b011](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/5c1b011a9f6fc426cb8292a8a55166ac92f51ba2))
+* meal deletion, local-day stats and time zones; align docs and schema.sql ([239946d](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/239946dddca488ac0ded68be3c7bccb09618c406))
+* mock send_group_inline_placeholder in bot inline test ([ca8f0bc](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/ca8f0bc6fb95b6d72c69a004166eaa5fe9a82006))
+* notify user on worker failure and add typing indicators during AI analysis ([fe3d618](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/fe3d618bfeee6a4bfca3450ef8ef13829b4233e4))
+* prevent modal from being hidden behind navigation on mobile ([ea4d5eb](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/ea4d5eb97a2800a1ddcee8e2e201452b69c07f59))
+* remove redundant get_telegram_user_id call in statistics endpoints ([4810ead](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/4810eadfb996660ce2c4fb2bda8506774db89e92))
+* request macronutrients for single-photo estimates; remove Spec Kit/Cursor config ([#129](https://github.com/gofrolist/calorie-track-ai-bot-api/issues/129)) ([c42bbca](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/c42bbca527d501ac20bb956b7a7edb4d2f882178))
+* resolve frontend bugs found in code review ([1b3e91e](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/1b3e91ee4fa70a79ef39d83947c439323e330c24))
+* run Prettier after Orval generation in CI ([22e772e](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/22e772e7257c57c500e8bd84452ade5cd86b9585))
+* run vercel deploy from repo root to avoid doubled frontend path ([32dce37](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/32dce3712df76eb772cec50fe00b5dddf24f14e1))
+* show Telegram handle instead of numeric ID in worker logs ([8c339ea](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/8c339ea74ce17c47d2238955994d42ea51e5b543))
+* skip Telegram WebApp SDK calls outside Telegram ([78440fb](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/78440fb17196df173670330b131f161104552f22))
+* use native bun ecosystem for Dependabot ([0da3062](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/0da3062dc9eb1dc39b37009b78421ae26431c6a0))
+* use specific macro patterns in MealCard test ([6ae5530](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/6ae55308a160a483d8abff25b174b0259fc2d2b3))
+* use telegram handle/id instead of UUID in logs ([a51e53d](https://github.com/gofrolist/calorie-track-ai-bot-api/commit/a51e53dd6a6781171524a9eb6a538b4fa15ce744))
