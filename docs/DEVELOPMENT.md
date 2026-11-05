@@ -90,7 +90,8 @@ Frontend environment variables (the only ones read by `frontend/src`):
 # API Configuration (defaults to http://localhost:8000)
 VITE_API_BASE_URL=http://localhost:8000
 
-# Telegram user ID sent as x-user-id when running outside Telegram (dev only)
+# Telegram user ID sent as x-user-id when running outside Telegram (dev only);
+# the backend must run with ALLOW_INSECURE_USER_ID_HEADER=true to accept it
 VITE_DEV_USER_ID=123456789
 ```
 
@@ -317,6 +318,21 @@ flyctl deploy
 # The CI workflow runs this from the repository root
 vercel --prod
 ```
+
+### Authentication settings
+
+The backend authenticates Mini App requests with Telegram `initData`, so production needs `TELEGRAM_BOT_TOKEN` set to the token of the bot that opens the Mini App. A different token makes every API request fail with 401 "Invalid Telegram initData".
+
+`ALLOW_INSECURE_USER_ID_HEADER` must be unset or `false` in production. When it is `true`, the backend also accepts the unsigned `x-user-id` header, and anyone can act as any user.
+
+#### Rolling out initData authentication
+
+Frontends built before initData authentication send only `x-user-id`; a backend with initData authentication rejects them unless the flag is on. `deploy.yml` deploys the backend before the frontend, and Mini Apps that are already open keep running the old frontend, so turn the flag on for the release that ships this change:
+
+1. Before publishing the release, turn the flag on: `flyctl secrets set ALLOW_INSECURE_USER_ID_HEADER=true -a calorie-track-ai-bot`.
+2. Merge the change, then merge the release PR to publish the release.
+3. After `deploy.yml` finishes, open the Mini App from Telegram and check in the browser dev tools that requests carry `Authorization: tma ...` and succeed.
+4. Turn the flag off: `flyctl secrets unset ALLOW_INSECURE_USER_ID_HEADER -a calorie-track-ai-bot`, then fully close and reopen the Mini App and check that it still loads your data.
 
 ## Contributing
 

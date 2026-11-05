@@ -18,6 +18,8 @@ test_env_vars = {
     "BUCKET_NAME": "test-bucket",
     "AWS_REGION": "auto",
     "APP_ENV": "dev",
+    # Route tests identify users by x-user-id; initData auth is covered in test_deps.py
+    "ALLOW_INSECURE_USER_ID_HEADER": "true",
 }
 
 # Set environment variables immediately
@@ -72,6 +74,26 @@ def setup_test_env():
     for key in test_env_vars.keys():
         if key in os.environ:
             del os.environ[key]
+
+
+# Internal user ID that route tests' requests resolve to
+REGISTERED_USER_ID = "550e8400-e29b-41d4-a716-446655440000"
+
+
+@pytest.fixture(autouse=True)
+def registered_user():
+    """Treat every request's Telegram user as registered unless a test patches it.
+
+    The API serves only users in the users table; tests that cover unregistered
+    users patch deps.resolve_user_id themselves, which overrides this. Some tests
+    import the app as `src.calorie_track_ai_bot`, so both module names are patched.
+    """
+    mock_resolve = AsyncMock(return_value=REGISTERED_USER_ID)
+    with (
+        patch("calorie_track_ai_bot.api.v1.deps.resolve_user_id", mock_resolve),
+        patch("src.calorie_track_ai_bot.api.v1.deps.resolve_user_id", mock_resolve),
+    ):
+        yield mock_resolve
 
 
 @pytest.fixture(scope="session")
