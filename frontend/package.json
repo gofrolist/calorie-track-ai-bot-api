@@ -60,7 +60,7 @@
     "playwright": "^1",
     "prettier": "^3",
     "tailwindcss": "^4",
-    "typescript": "^5.9",
+    "typescript": "^7.0",
     "typescript-eslint": "^8",
     "vite": "^8",
     "vitest": "^5"
